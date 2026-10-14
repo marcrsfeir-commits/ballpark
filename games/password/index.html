@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Password Panic · BALLPARK</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect x='2' y='7' width='12' height='8' rx='2' fill='%23111'/%3E%3Cpath d='M5 7V5a3 3 0 0 1 6 0v2' fill='none' stroke='%23111' stroke-width='1.8'/%3E%3C/svg%3E">
+<style>
+  [hidden] { display: none !important; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: #fbfaf6; color: #1b1b1f; font-family: "Segoe UI", system-ui, -apple-system, Arial, sans-serif; }
+  .wrap { width: min(620px, calc(100vw - 28px)); margin: 0 auto; padding: 40px 0 90px; }
+  h1 { margin: 0; text-align: center; font-size: 34px; font-weight: 800; }
+  .sub { text-align: center; color: #6b6b75; margin: 6px 0 22px; }
+  label { display: block; font-weight: 700; margin-bottom: 6px; }
+  .box { position: relative; }
+  textarea { width: 100%; min-height: 64px; resize: none; padding: 14px 54px 14px 14px; border: 2px solid #1b1b1f; border-radius: 12px; background: #fff;
+    font: 600 20px/1.45 "Segoe UI", "Segoe UI Emoji", system-ui, sans-serif; outline: none; overflow: hidden; word-break: break-all; }
+  textarea:focus { box-shadow: 0 0 0 4px rgba(27,27,31,.08); }
+  .count { position: absolute; right: 12px; top: 14px; font: 700 14px Consolas, monospace; color: #8a8a94; }
+  .emoji { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 8px; }
+  .emoji button { border: 1px solid #ddd; background: #fff; border-radius: 8px; font-size: 18px; padding: 3px 7px; cursor: pointer; }
+  .emoji span { font-size: 12px; color: #888; align-self: center; margin-right: 4px; }
+  .rules { margin-top: 18px; display: grid; gap: 10px; }
+  .rule { border-radius: 10px; overflow: hidden; border: 2px solid #e5484d; background: #fff4f4; animation: in .35s ease; }
+  .rule.ok { border-color: #30a46c; background: #f0fbf4; }
+  @keyframes in { from { opacity: 0; transform: translateY(-8px); } }
+  .rule h4 { margin: 0; padding: 6px 12px; font-size: 13px; color: #fff; background: #e5484d; }
+  .rule.ok h4 { background: #30a46c; }
+  .rule p { margin: 0; padding: 10px 12px; font-size: 15.5px; }
+  .swatch { display: inline-block; width: 70px; height: 34px; border-radius: 6px; vertical-align: middle; margin-right: 8px; border: 1px solid rgba(0,0,0,.15); }
+  .reroll { border: 1px solid #ccc; background: #fff; border-radius: 6px; padding: 4px 8px; cursor: pointer; }
+  .confirm { margin-top: 16px; }
+  .win { margin-top: 22px; padding: 22px; text-align: center; border-radius: 14px; background: #1b1b1f; color: #fff; animation: in .4s ease; }
+  .win h2 { margin: 0 0 6px; font-size: 26px; }
+  .win button { margin: 12px 4px 0; padding: 10px 16px; border-radius: 999px; border: 0; background: #fff; color: #1b1b1f; font-weight: 800; cursor: pointer; }
+</style>
+</head>
+<body data-bp-pos="br">
+<main class="wrap">
+  <h1>Password Panic</h1>
+  <p class="sub">Please choose a password. It has a few… requirements.</p>
+  <label for="pw">Enter a password</label>
+  <div class="box"><textarea id="pw" rows="1" spellcheck="false" autocomplete="off" autocapitalize="off"></textarea><span class="count" id="count">0</span></div>
+  <div class="emoji" id="emoji" hidden><span>insert:</span></div>
+  <div id="confirmBox" class="confirm" hidden><label for="pw2">Confirm your password</label><textarea id="pw2" rows="1" spellcheck="false" autocomplete="off"></textarea></div>
+  <div id="win" class="win" hidden></div>
+  <section class="rules" id="rules"></section>
+</main>
+<script src="../../shared/bp.js"></script>
+<script>
+// PASSWORD PANIC — rules unlock one by one; every revealed rule must stay satisfied.
+const store = Ballpark.store('password');
+const $ = id => document.getElementById(id);
+const MONTHS = ['january','february','march','april','may','june','july','august','september','october','november','december'];
+const PLANETS = ['mercury','venus','earth','mars','jupiter','saturn','uranus','neptune'];
+const OCEANS = ['pacific','atlantic','indian','arctic','southern'];
+const DAYS = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
+const ELEMENTS = 'He Li Be Ne Na Mg Al Si Cl Ar Ca Sc Ti Cr Mn Fe Co Ni Cu Zn Ga Ge As Se Br Kr Rb Sr Zr Nb Mo Tc Ru Rh Pd Ag Cd In Sn Sb Te Xe Cs Ba La Ce Pr Nd Pm Sm Eu Gd Tb Dy Ho Er Tm Yb Lu Hf Ta Re Os Ir Pt Au Hg Tl Pb Bi Po At Rn Fr Ra Ac Th Pa Np Pu Am Cm Bk Cf Es Fm Md No Lr Rf Db Sg Bh Hs Mt Ds Rg Cn Nh Fl Mc Lv Ts Og'.split(' ');
+const MOONS = ['🌑','🌒','🌓','🌔','🌕','🌖','🌗','🌘'];
+const moonNow = () => { const age = ((Date.now() - Date.UTC(2000, 0, 6, 18, 14)) / 86400000) % 29.530589; return MOONS[Math.round(age / 29.530589 * 8) % 8]; };
+const romanValue = s => { const v = { I: 1, V: 5, X: 10, L: 50, C: 100, D: 500, M: 1000 }; let t = 0; for (let i = 0; i < s.length; i++) { const a = v[s[i]], b = v[s[i + 1]] || 0; t += a < b ? -a : a; } return t; };
+const isPrime = n => { if (n < 2) return false; for (let i = 2; i * i <= n; i++) if (n % i === 0) return false; return true; };
+const runs = (s, re) => s.match(re) || [];
+let hex = store.get('hex', null);
+if (!hex) { hex = Array.from({ length: 6 }, () => '0123456789abcdef'[Math.floor(Math.random() * 16)]).join(''); store.set('hex', hex); }
+
+const RULES = [
+  { t: 'Your password must be at least 5 characters.', f: p => [...p].length >= 5 },
+  { t: 'Your password must include a number.', f: p => /\d/.test(p) },
+  { t: 'Your password must include an uppercase letter.', f: p => /[A-Z]/.test(p) },
+  { t: 'Your password must include a special character.', f: p => /[^A-Za-z0-9\s]/.test(p) },
+  { t: 'The digits in your password must add up to 25.', f: p => runs(p, /\d/g).reduce((s, d) => s + +d, 0) === 25 },
+  { t: 'Your password must include a month of the year.', f: p => MONTHS.some(m => p.toLowerCase().includes(m)) },
+  { t: 'Your password must include a Roman numeral.', f: p => /[IVXLCDM]/.test(p) },
+  { t: 'Your password must include the name of a planet in our solar system.', f: p => PLANETS.some(m => p.toLowerCase().includes(m)) },
+  { t: 'The Roman numerals in your password should multiply to 35.', f: p => { const r = runs(p, /[IVXLCDM]+/g); return r.length > 0 && r.reduce((s, x) => s * romanValue(x), 1) === 35; } },
+  { t: () => 'Your password must include today\'s day of the week.', f: p => p.toLowerCase().includes(DAYS[new Date().getDay()]) },
+  { t: 'Your password must include a two-letter symbol from the periodic table.', f: p => ELEMENTS.some(e => p.includes(e)) },
+  { t: 'Your password must include a leap year.', f: p => runs(p, /\d+/g).some(n => n.length === 4 && ((+n % 4 === 0 && +n % 100 !== 0) || +n % 400 === 0)) },
+  { t: 'Your password must include the current phase of the moon as an emoji.', f: p => p.includes(moonNow()), emoji: MOONS },
+  { t: () => `<span class="swatch" style="background:#${hex}"></span>Your password must include the hex code of this colour. <button class="reroll" id="reroll" title="New colour">↻</button>`, f: p => p.toLowerCase().includes('#' + hex) },
+  { t: 'Your password must include the name of an ocean.', f: p => OCEANS.some(m => p.toLowerCase().includes(m)) },
+  { t: 'Your password must include a fish. 🐟 He lives here now.', f: p => p.includes('🐟'), emoji: ['🐟'] },
+  { t: 'Your password must include the answer to 12 × 12.', f: p => p.includes('144') },
+  { t: 'The length of your password must be a prime number.', f: p => isPrime([...p].length) },
+  { t: 'Your password must include its own length.', f: p => runs(p, /\d+/g).includes(String([...p].length)) },
+];
+
+let reached = store.get('reached', 0), startT = null, won = false;
+const pw = $('pw');
+pw.value = store.get('draft', '');
+function grow(t) { t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; }
+function check() {
+  const p = pw.value;
+  $('count').textContent = [...p].length;
+  store.set('draft', p);
+  if (p && startT == null) startT = Date.now();
+  // reveal the next rule once every visible rule passes
+  while (reached < RULES.length && RULES.slice(0, reached + 1).every(r => r.f(p))) reached++;
+  store.set('reached', reached);
+  const shown = Math.min(Math.max(reached + 1, p.length ? 1 : 0), RULES.length);
+  const html = [];
+  for (let i = shown - 1; i >= 0; i--) {
+    const r = RULES[i], ok = r.f(p), text = typeof r.t === 'function' ? r.t() : r.t;
+    html.push(`<div class="rule ${ok ? 'ok' : ''}"><h4>${ok ? '✓' : '✗'} Rule ${i + 1}</h4><p>${text}</p></div>`);
+  }
+  // keep unsatisfied rules on top, like a nagging IT department
+  $('rules').innerHTML = html.sort((a, b) => a.includes('rule ok') - b.includes('rule ok')).join('');
+  const rr = $('reroll'); if (rr) rr.onclick = () => { hex = Array.from({ length: 6 }, () => '0123456789abcdef'[Math.floor(Math.random() * 16)]).join(''); store.set('hex', hex); check(); };
+  const emojis = RULES.slice(0, shown).flatMap(r => r.emoji || []);
+  $('emoji').hidden = !emojis.length;
+  $('emoji').innerHTML = '<span>insert:</span>' + emojis.map(e => `<button type="button">${e}</button>`).join('');
+  $('emoji').querySelectorAll('button').forEach(b => b.onclick = () => insert(b.textContent));
+  const all = RULES.every(r => r.f(p));
+  $('confirmBox').hidden = !(all && shown === RULES.length);
+  grow(pw);
+}
+function insert(s) {
+  const a = pw.selectionStart ?? pw.value.length, b = pw.selectionEnd ?? a;
+  pw.value = pw.value.slice(0, a) + s + pw.value.slice(b);
+  pw.focus(); pw.setSelectionRange(a + s.length, a + s.length); check();
+}
+pw.addEventListener('input', check);
+$('pw2').addEventListener('input', e => {
+  grow(e.target);
+  if (!won && e.target.value === pw.value && RULES.every(r => r.f(pw.value))) {
+    won = true;
+    const secs = Math.round((Date.now() - (startT || Date.now())) / 1000), mmss = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
+    const best = store.get('best', null); if (best == null || secs < best) store.set('best', secs);
+    Ballpark.report('password', { score: secs, label: `cracked in ${mmss}` });
+    $('win').hidden = false;
+    $('win').innerHTML = `<h2>Password accepted. 🎉</h2><div>${[...pw.value].length} characters of pure suffering, done in ${mmss}.</div>
+      <button id="again">New password</button><button id="share">Copy result</button>`;
+    $('again').onclick = () => { store.set('draft', ''); store.set('reached', 0); location.reload(); };
+    $('share').onclick = () => navigator.clipboard?.writeText(`Password Panic: beat all ${RULES.length} rules in ${mmss} 🔐\nBALLPARK`).then(() => { $('share').textContent = 'Copied!'; });
+  }
+});
+check();
+pw.focus();
+</script>
+</body>
+</html>

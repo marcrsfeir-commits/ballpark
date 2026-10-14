@@ -38,6 +38,24 @@ const GAMES = [
       <path d="M8 76 l4-16 q2-8 9-9 l8-1 q5 0 6 5 l2 21z" fill="#6aa8ff"/><circle cx="31" cy="44" r="5" fill="#6aa8ff"/>
       <path d="M52 76 v-10 q0-14 10-22 q8-8 18-9 q12 0 18 10 q4 7 2 14 v17 h-6 v-12 h-28 v12z" fill="#e5212e"/><path d="M96 26 l8-8 M98 18 h6 v6" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>`,
   },
+  {
+    id: 'circle', name: 'CIRCLE UP', path: 'games/circle/', insp: 'inspired by neal.fun',
+    blurb: 'Draw a perfect circle around the dot. Freehand. How round can you go?',
+    bg: 'linear-gradient(160deg,#151922 0%,#0b0d12 100%)', accent: '#34d399', glow: 'rgba(52,211,153,.3)',
+    art: `<svg viewBox="0 0 90 90" aria-hidden="true"><path d="M45 12 C66 12 79 27 78 46 C77 66 62 79 44 78 C25 77 12 63 13 44 C14 26 27 13 47 13" fill="none" stroke="url(#cg1)" stroke-width="6" stroke-linecap="round"/><defs><linearGradient id="cg1" x1="0" x2="1"><stop offset="0" stop-color="#34d399"/><stop offset=".6" stop-color="#fde047"/><stop offset="1" stop-color="#f87171"/></linearGradient></defs><circle cx="45" cy="45" r="3.5" fill="#fff"/></svg>`,
+  },
+  {
+    id: 'spender', name: 'BIG SPENDER', path: 'games/spender/', insp: 'inspired by neal.fun',
+    blurb: 'You just inherited $100 billion. Spend every cent — yachts, tanks, football clubs.',
+    bg: 'linear-gradient(160deg,#22c55e 0%,#15803d 100%)', accent: '#fff', onAccent: '#15803d', glow: 'rgba(255,255,255,.25)',
+    art: `<svg viewBox="0 0 100 80" aria-hidden="true"><rect x="10" y="22" width="70" height="40" rx="6" fill="#d9f99d" transform="rotate(-8 45 42)"/><rect x="18" y="18" width="70" height="40" rx="6" fill="#ecfccb" stroke="#166534" stroke-width="2"/><circle cx="53" cy="38" r="11" fill="none" stroke="#166534" stroke-width="2.5"/><text x="53" y="44" font-size="16" font-weight="800" text-anchor="middle" fill="#166534" font-family="Arial">$</text></svg>`,
+  },
+  {
+    id: 'password', name: 'PASSWORD PANIC', path: 'games/password/', insp: 'inspired by neal.fun',
+    blurb: 'Pick a password. Then a planet. Then a leap year. Then a fish. It never ends.',
+    bg: 'linear-gradient(160deg,#fbfaf6 0%,#ece9df 100%)', fg: '#1b1b1f', accent: '#e5484d', glow: 'rgba(229,72,77,.15)',
+    art: `<svg viewBox="0 0 100 80" aria-hidden="true"><rect x="8" y="26" width="84" height="30" rx="8" fill="#fff" stroke="#1b1b1f" stroke-width="3"/><text x="16" y="47" font-size="15" font-weight="700" fill="#1b1b1f" font-family="Consolas,monospace">May#🐟144</text><rect x="20" y="62" width="60" height="10" rx="3" fill="#e5484d"/><rect x="20" y="10" width="60" height="10" rx="3" fill="#30a46c"/></svg>`,
+  },
 ];
 
 const today = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;

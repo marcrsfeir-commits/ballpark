@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Big Spender · BALLPARK</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%2316a34a'/%3E%3Ctext x='8' y='12.5' font-size='12' text-anchor='middle' fill='white' font-family='Arial' font-weight='bold'%3E$%3C/text%3E%3C/svg%3E">
+<style>
+  [hidden] { display: none !important; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: #f3f4f1; color: #16181d; font-family: "Segoe UI", system-ui, -apple-system, Arial, sans-serif; }
+  header { text-align: center; padding: 28px 16px 8px; }
+  header h1 { margin: 0; font-size: 34px; font-weight: 800; }
+  header p { margin: 6px 0 0; color: #5d6370; }
+  .money { position: sticky; top: 0; z-index: 5; margin: 14px auto 0; padding: 14px 10px; text-align: center; background: linear-gradient(90deg, #16a34a, #22c55e); color: #fff;
+    font: 800 clamp(26px, 6vw, 44px)/1 "Segoe UI", system-ui, sans-serif; letter-spacing: .01em; box-shadow: 0 6px 20px rgba(22,163,74,.3); }
+  .money small { display: block; margin-top: 6px; font-size: 13px; font-weight: 600; opacity: .9; letter-spacing: .04em; }
+  .grid { width: min(1060px, calc(100vw - 24px)); margin: 18px auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+  .item { background: #fff; border-radius: 14px; padding: 16px 14px 14px; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,.05); }
+  .item .e { font-size: 54px; line-height: 1.1; }
+  .item h3 { margin: 6px 0 2px; font-size: 16px; }
+  .item .price { color: #16a34a; font-weight: 800; font-size: 17px; }
+  .item .ctl { display: grid; grid-template-columns: 1fr 70px 1fr; gap: 6px; margin-top: 12px; }
+  .item button { border: 0; border-radius: 8px; padding: 9px 0; font-weight: 800; font-size: 14px; cursor: pointer; }
+  .sell { background: #f1f1f1; color: #333; } .sell:not(:disabled) { background: linear-gradient(#f87171, #ef4444); color: #fff; }
+  .buy { background: linear-gradient(#34d399, #16a34a); color: #fff; }
+  .item button:disabled { opacity: .45; cursor: default; }
+  .item input { width: 100%; border: 1px solid #ddd; border-radius: 8px; text-align: center; font: 700 15px "Segoe UI", sans-serif; }
+  .receipt { width: min(520px, calc(100vw - 24px)); margin: 10px auto 70px; background: #fff; border-radius: 4px; padding: 22px 24px; font-family: Consolas, "Cascadia Mono", monospace; box-shadow: 0 4px 18px rgba(0,0,0,.08); }
+  .receipt h2 { margin: 0 0 12px; text-align: center; font-size: 18px; letter-spacing: .2em; }
+  .receipt .row { display: grid; grid-template-columns: 1fr auto auto; gap: 14px; font-size: 14px; padding: 3px 0; }
+  .receipt .total { border-top: 2px dashed #bbb; margin-top: 10px; padding-top: 10px; font-weight: 800; }
+  .receipt .btns { display: flex; gap: 8px; justify-content: center; margin-top: 16px; }
+  .receipt .btns button { padding: 9px 16px; border-radius: 999px; border: 1px solid #ccc; background: #fafafa; font: 700 13px "Segoe UI", sans-serif; cursor: pointer; }
+  .empty { text-align: center; color: #888; font-size: 14px; }
+</style>
+</head>
+<body data-bp-pos="br">
+<header><h1>Big Spender</h1><p>A distant relative just left you <b>$100 billion</b>. You have to spend it. All of it.</p></header>
+<div class="money" id="money">$100,000,000,000<small id="pct">0% spent</small></div>
+<main class="grid" id="grid"></main>
+<section class="receipt"><h2>RECEIPT</h2><div id="receipt"></div>
+  <div class="btns"><button id="share">Copy receipt</button><button id="reset">Start over</button></div></section>
+<script src="../../shared/bp.js"></script>
+<script>
+// BIG SPENDER — spend a fictional $100B fortune on things with (roughly) real price tags.
+const BUDGET = 100e9;
+const ITEMS = [
+  ['🍔', 'Burger', 4], ['☕', 'Fancy coffee', 6], ['🎟️', 'Movie ticket', 15], ['📚', 'Hardback book', 25], ['🎮', 'New video game', 70],
+  ['👟', 'Limited sneakers', 250], ['🎤', 'Front-row concert seat', 1500], ['📱', 'Top-end smartphone', 1200], ['🖥️', 'Monster gaming PC', 4000],
+  ['👜', 'Designer handbag', 5000], ['🛶', 'Jet ski', 13000], ['🐎', 'Horse', 15000], ['⌚', 'Luxury watch', 30000], ['🏍️', 'Motorcycle', 22000],
+  ['🛻', 'Pickup truck', 60000], ['🚗', 'Electric car', 45000], ['🥇', '1 kg gold bar', 85000], ['💍', 'Huge diamond ring', 250000],
+  ['🏎️', 'Supercar', 350000], ['🏠', 'Family house', 420000], ['🦖', 'Real dinosaur skeleton', 3000000], ['🚁', 'Helicopter', 4000000],
+  ['🍟', 'Burger franchise', 2000000], ['📺', '30-second big-game TV ad', 7000000], ['🪖', 'Battle tank', 9000000], ['🏁', 'Racing team car', 15000000],
+  ['🏝️', 'Private island', 45000000], ['🏰', 'Mega mansion', 60000000], ['🛩️', 'Private jet', 70000000], ['🚀', 'Rocket launch', 70000000],
+  ['🎬', 'Make a blockbuster movie', 200000000], ['✈️', 'Jumbo jet', 400000000], ['🛥️', 'Superyacht', 450000000], ['🏙️', 'Skyscraper', 900000000],
+  ['🚢', 'Cruise ship', 1200000000], ['🏟️', 'Brand-new stadium', 2000000000], ['⚽', 'Famous football club', 4000000000], ['🏀', 'Pro basketball team', 5000000000],
+];
+const store = Ballpark.store('spender');
+let cart = store.get('cart', {});
+const fmt = n => '$' + Math.round(n).toLocaleString('en-US');
+const spent = () => ITEMS.reduce((s, [, name, price]) => s + (cart[name] || 0) * price, 0);
+const grid = document.getElementById('grid');
+grid.innerHTML = ITEMS.map(([e, name, price], i) => `<div class="item"><div class="e">${e}</div><h3>${name}</h3><div class="price">${fmt(price)}</div>
+  <div class="ctl"><button class="sell" data-i="${i}" data-d="-1">Sell</button><input data-i="${i}" inputmode="numeric" value="0" aria-label="${name} quantity"><button class="buy" data-i="${i}" data-d="1">Buy</button></div></div>`).join('');
+let shown = BUDGET - spent();
+function setQty(i, q) {
+  const [, name, price] = ITEMS[i];
+  q = Math.max(0, Math.floor(Number(q) || 0));
+  const other = spent() - (cart[name] || 0) * price;
+  q = Math.min(q, Math.floor((BUDGET - other) / price));                 // can't spend more than you have
+  if (q) cart[name] = q; else delete cart[name];
+  store.set('cart', cart); render();
+}
+grid.addEventListener('click', e => { const b = e.target.closest('button[data-i]'); if (!b) return; const i = +b.dataset.i; setQty(i, (cart[ITEMS[i][1]] || 0) + Number(b.dataset.d)); });
+grid.addEventListener('change', e => { if (e.target.matches('input[data-i]')) setQty(+e.target.dataset.i, e.target.value); });
+function render() {
+  const left = BUDGET - spent();
+  grid.querySelectorAll('.item').forEach((el, i) => {
+    const [, name, price] = ITEMS[i], q = cart[name] || 0;
+    const inp = el.querySelector('input'); if (document.activeElement !== inp) inp.value = q;
+    el.querySelector('.sell').disabled = !q; el.querySelector('.buy').disabled = price > left;
+  });
+  const pct = (100 * (BUDGET - left) / BUDGET);
+  document.getElementById('pct').textContent = left <= 0 ? 'You spent it ALL. Congratulations?' : `${pct < 0.01 && pct > 0 ? '<0.01' : pct.toFixed(pct < 1 ? 2 : 1)}% spent`;
+  const rows = ITEMS.filter(([, n]) => cart[n]).map(([e, n, p]) => `<div class="row"><span>${e} ${n}</span><span>x${cart[n].toLocaleString('en-US')}</span><span>${fmt(cart[n] * p)}</span></div>`);
+  document.getElementById('receipt').innerHTML = rows.length ? rows.join('') + `<div class="row total"><span>TOTAL</span><span></span><span>${fmt(BUDGET - left)}</span></div>` : '<p class="empty">Nothing bought yet. Go on, treat yourself.</p>';
+  if (rows.length) Ballpark.report('spender', { score: Math.round(pct), max: 100, label: `${pct.toFixed(pct < 1 ? 2 : 0)}% of $100B spent` });
+  animateMoney(left);
+}
+let raf = null;
+function animateMoney(target) {
+  cancelAnimationFrame(raf);
+  const step = () => { shown += (target - shown) * 0.25; if (Math.abs(target - shown) < 1) shown = target; document.getElementById('money').firstChild.textContent = fmt(shown); if (shown !== target) raf = requestAnimationFrame(step); };
+  step();
+}
+document.getElementById('share').onclick = () => {
+  const lines = ITEMS.filter(([, n]) => cart[n]).map(([e, n]) => `${e} ${n} x${cart[n]}`);
+  navigator.clipboard?.writeText(`Big Spender — I spent ${fmt(spent())} of $100B:\n${lines.join('\n')}\nBALLPARK`).then(() => { document.getElementById('share').textContent = 'Copied!'; });
+};
+document.getElementById('reset').onclick = () => { cart = {}; store.set('cart', cart); render(); };
+render();
+</script>
+</body>
+</html>
