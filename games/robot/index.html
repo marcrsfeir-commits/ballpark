@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Not a Robot · BALLPARK</title>
+<meta name="description" content="Fifteen increasingly silly verification tests. Prove you're human, fast.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath d='M24 2 41 8v14c0 11-7 19-17 24C14 41 7 33 7 22V8z' fill='%234f46e5'/%3E%3Ccircle cx='24' cy='18' r='6.5' fill='white'/%3E%3Cpath d='M12 36c1.500-7 6.500-10 12-10s10.500 3 12 10c-3 3.500-7.500 6.500-12 8.500-4.500-2-9-5-12-8.500z' fill='white'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body data-bp-pos="bl">
+
+<!-- logo sprite: a shield with a smiling human and a tick (original) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="logo" viewBox="0 0 48 48">
+    <defs>
+      <linearGradient id="lgG" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#4cc9f0"/><stop offset="1" stop-color="#4f46e5"/>
+      </linearGradient>
+    </defs>
+    <path d="M24 2 41 8v14c0 11-7 19-17 24C14 41 7 33 7 22V8z" fill="url(#lgG)"/>
+    <circle cx="24" cy="17.500" r="6.500" fill="#fff"/>
+    <path d="M12 36c1.500-7 6.500-10 12-10s10.500 3 12 10c-3 3.500-7.500 6.500-12 8.500-4.500-2-9-5-12-8.500z" fill="#fff"/>
+    <circle cx="21.700" cy="16.800" r="1" fill="#4f46e5"/><circle cx="26.300" cy="16.800" r="1" fill="#4f46e5"/>
+    <path d="M21.400 20q2.600 2.200 5.200 0" fill="none" stroke="#4f46e5" stroke-width="1.300" stroke-linecap="round"/>
+    <circle cx="37" cy="37" r="7.500" fill="#22c55e" stroke="#fff" stroke-width="2"/>
+    <path d="m33.600 37 2.300 2.300 4.300-4.600" fill="none" stroke="#fff" stroke-width="2.100" stroke-linecap="round" stroke-linejoin="round"/>
+  </symbol>
+</svg>
+
+<main class="page">
+  <header class="top">
+    <h1>NOT A <span>ROBOT</span></h1>
+    <p class="lede">Fifteen increasingly silly verification tests. Pass them all as fast as you can. Fail one and it simply resets &mdash; the clock doesn&rsquo;t.</p>
+  </header>
+
+  <div class="hud" id="hud">
+    <div class="pips" id="pips" aria-hidden="true"></div>
+    <span class="time" id="time" aria-label="Total time">0:00.0</span>
+    <button class="icon-btn" id="mute" type="button" aria-label="Mute sounds" aria-pressed="false">&#128266;</button>
+  </div>
+
+  <section class="card" id="card" aria-label="Verification challenge">
+    <div class="head" id="head">
+      <small id="kicker"></small>
+      <h2 id="title"></h2>
+      <p id="sub"></p>
+    </div>
+    <div class="stage" id="stage"></div>
+    <div class="msg" id="msg" role="status" aria-live="polite"></div>
+    <div class="foot">
+      <div class="brand">
+        <svg viewBox="0 0 48 48" aria-hidden="true"><use href="#logo"/></svg>
+        <div><b>HUMANLY</b>Proof of person &middot; Privacy &middot; Terms</div>
+      </div>
+      <button class="btn" id="verify" type="button" hidden>Verify</button>
+    </div>
+  </section>
+</main>
+
+<script src="../../shared/bp.js"></script>
+<script src="game.js"></script>
+</body>
+</html>

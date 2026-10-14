@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Going Once · BALLPARK</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ctext x='8' y='13' font-size='13' text-anchor='middle'%3E%F0%9F%94%A8%3C/text%3E%3C/svg%3E">
+<style>
+  [hidden] { display: none !important; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; background: #f5efe3; color: #2a2118; font-family: Georgia, "Times New Roman", serif; }
+  .wrap { width: min(640px, calc(100vw - 28px)); margin: 0 auto; padding: 30px 0 80px; text-align: center; }
+  h1 { margin: 0; font-size: 40px; font-weight: 700; letter-spacing: .02em; }
+  .sub { margin: 4px 0 18px; font-style: italic; color: #7a6a55; }
+  .bar { display: flex; justify-content: space-between; font: 600 12px/1 "Segoe UI", system-ui, sans-serif; letter-spacing: .18em; color: #8b7a62; margin-bottom: 10px; }
+  .bar b { color: #2a2118; }
+  .frame { position: relative; margin: 0 auto; padding: 16px; background: linear-gradient(135deg, #c9a24a, #f5d77e 40%, #b8892c 70%, #e6c46b); border-radius: 6px; box-shadow: 0 14px 30px rgba(80,55,20,.25); }
+  .canvas { background: radial-gradient(circle at 50% 40%, #fffdf7, #efe5d0); border-radius: 2px; padding: 26px 18px 22px; box-shadow: inset 0 0 0 1px rgba(0,0,0,.08), inset 0 0 30px rgba(120,90,40,.15); }
+  .canvas .em { font-size: clamp(76px, 18vw, 120px); line-height: 1.1; filter: drop-shadow(0 6px 10px rgba(0,0,0,.18)); animation: rise .5s ease; }
+  @keyframes rise { from { opacity: 0; transform: translateY(14px) scale(.9); } }
+  .lot { margin-top: 18px; }
+  .lot .no { font: 700 11px "Segoe UI", system-ui, sans-serif; letter-spacing: .24em; color: #a08a66; }
+  .lot h2 { margin: 6px 0 4px; font-size: clamp(20px, 4.6vw, 26px); }
+  .lot p { margin: 0; color: #6b5c48; font-style: italic; }
+  .bid { margin-top: 20px; display: flex; gap: 8px; align-items: stretch; justify-content: center; }
+  .bid .field { display: flex; align-items: center; background: #fff; border: 2px solid #2a2118; border-radius: 10px; padding: 0 12px; flex: 1; max-width: 360px; }
+  .bid .field span { font: 700 24px Georgia, serif; color: #8b7a62; }
+  .bid input { flex: 1; min-width: 0; border: 0; outline: none; padding: 12px 6px; font: 700 24px Georgia, serif; background: none; color: #2a2118; }
+  .bid button, .next { padding: 0 20px; border: 0; border-radius: 10px; background: #2a2118; color: #f5d77e; font: 800 14px "Segoe UI", system-ui, sans-serif; letter-spacing: .12em; cursor: pointer; }
+  .preview { min-height: 18px; margin-top: 6px; font: 13px "Segoe UI", sans-serif; color: #8b7a62; }
+  .sold { margin-top: 18px; padding: 18px; border-radius: 12px; background: #2a2118; color: #f5efe3; animation: rise .35s ease; }
+  .sold .stamp { display: inline-block; padding: 4px 14px; border: 3px solid #e2483d; color: #e2483d; font: 800 22px "Segoe UI", sans-serif; letter-spacing: .2em; transform: rotate(-6deg); }
+  .sold .price { margin-top: 10px; font-size: 34px; font-weight: 700; color: #f5d77e; }
+  .sold .you { margin-top: 4px; font: 15px "Segoe UI", sans-serif; color: #d9cdb8; }
+  .sold .pts { margin-top: 8px; font: 800 20px "Segoe UI", sans-serif; }
+  .next { margin-top: 14px; padding: 12px 22px; background: #f5d77e; color: #2a2118; }
+  .gavel { position: fixed; left: 50%; top: 40%; font-size: 90px; transform-origin: 80% 80%; pointer-events: none; animation: bang .5s ease forwards; }
+  @keyframes bang { 0% { transform: translate(-50%, -50%) rotate(-50deg); opacity: 0; } 40% { opacity: 1; } 60% { transform: translate(-50%, -50%) rotate(12deg); } 100% { transform: translate(-50%, -50%) rotate(0); opacity: 0; } }
+  .end table { margin: 14px auto 0; border-collapse: collapse; font: 14px "Segoe UI", sans-serif; text-align: left; }
+  .end td { padding: 5px 8px; border-bottom: 1px solid rgba(255,255,255,.12); } .end td:last-child { text-align: right; color: #f5d77e; font-weight: 700; }
+  @media (max-width: 480px) { .bid { flex-direction: column; } .bid button { padding: 12px; } }
+</style>
+</head>
+<body data-bp-pos="br">
+<main class="wrap">
+  <h1>Going Once</h1>
+  <p class="sub">Real lots. Real hammer prices. What did it sell for?</p>
+  <div class="bar"><span>LOT <b id="lotNo">1</b> / 10</span><span>SCORE <b id="score">0</b></span></div>
+  <div class="frame"><div class="canvas"><div class="em" id="em"></div></div></div>
+  <div class="lot"><div class="no" id="house"></div><h2 id="name"></h2><p id="desc"></p></div>
+  <form class="bid" id="bidForm" autocomplete="off"><label class="field"><span>$</span><input id="guess" inputmode="decimal" placeholder="your bid (e.g. 2.5m)" aria-label="Your price guess"></label><button>🔨 BID</button></form>
+  <div class="preview" id="preview"></div>
+  <section id="sold" class="sold" hidden></section>
+</main>
+<script src="../../shared/bp.js"></script>
+<script type="module">
+import { LOTS } from './lots.js';
+const BP = window.Ballpark, store = BP.store('auction');
+const $ = id => document.getElementById(id);
+const fmt = n => '$' + Math.round(n).toLocaleString('en-US');
+const W = { k: 1e3, thousand: 1e3, m: 1e6, mil: 1e6, million: 1e6, b: 1e9, bn: 1e9, billion: 1e9 };
+function parse(s) {
+  s = String(s).toLowerCase().replace(/[$,\s]/g, '');
+  const m = s.match(/^([\d.]+)([a-z]*)$/); if (!m) return NaN;
+  const mult = m[2] ? W[m[2]] : 1; return mult ? parseFloat(m[1]) * mult : NaN;
+}
+// pick 10 lots this device has seen least recently
+const seen = store.get('seen', {}); let tick = store.get('tick', 0);
+const order = LOTS.map((_, i) => i);
+for (let i = order.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
+order.sort((a, b) => (seen[a] || 0) - (seen[b] || 0));
+const game = order.slice(0, 10);
+let r = 0, total = 0; const results = [];
+function show() {
+  const L = LOTS[game[r]];
+  seen[game[r]] = ++tick; store.set('seen', seen); store.set('tick', tick);
+  $('lotNo').textContent = r + 1; $('em').textContent = L.e; $('em').style.animation = 'none'; void $('em').offsetWidth; $('em').style.animation = '';
+  const [what, where] = L.d.split(' · ');
+  $('house').textContent = (where || '').toUpperCase(); $('name').textContent = L.n; $('desc').textContent = what;
+  $('sold').hidden = true; $('bidForm').hidden = false; $('guess').value = ''; $('preview').textContent = ''; $('guess').focus();
+}
+$('guess').addEventListener('input', () => { const v = parse($('guess').value); $('preview').textContent = isFinite(v) && v > 0 ? '= ' + fmt(v) : ''; });
+$('bidForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const g = parse($('guess').value); if (!isFinite(g) || g <= 0) { $('preview').textContent = 'Type a price, like 25000 or 3.2m'; return; }
+  const L = LOTS[game[r]], ratio = g / L.p, pts = Math.round(100 * Math.exp(-1.2 * Math.abs(Math.log(ratio))));
+  total += pts; results.push({ L, g, pts }); $('score').textContent = total;
+  const gv = document.createElement('div'); gv.className = 'gavel'; gv.textContent = '🔨'; document.body.append(gv); setTimeout(() => gv.remove(), 600);
+  knock();
+  const off = Math.round((ratio - 1) * 100);
+  $('bidForm').hidden = true; $('preview').textContent = '';
+  $('sold').hidden = false;
+  $('sold').innerHTML = `<div class="stamp">SOLD</div><div class="price">${fmt(L.p)}</div>
+    <div class="you">You bid ${fmt(g)} — ${Math.abs(off) <= 5 ? 'practically spot on!' : `${Math.abs(off).toLocaleString('en-US')}% too ${off > 0 ? 'high' : 'low'}`}</div>
+    <div class="pts">+${pts} points</div><button class="next" id="next">${r < 9 ? 'NEXT LOT →' : 'FINAL TALLY →'}</button>`;
+  $('next').onclick = () => { r++; r < 10 ? show() : end(); };
+  $('next').focus();
+});
+function end() {
+  const best = Math.max(store.get('best', 0), total); store.set('best', best);
+  BP.report('auction', { score: total, max: 1000, label: `${total}/1000` });
+  $('bidForm').hidden = true; $('em').textContent = total >= 750 ? '🏆' : total >= 500 ? '🧐' : '💸';
+  $('house').textContent = 'AUCTION CLOSED'; $('name').textContent = `${total} / 1000`; $('desc').textContent = total >= 750 ? 'You could run an auction house.' : total >= 500 ? 'A seasoned collector.' : 'Maybe leave the paddle at home.';
+  $('sold').hidden = false; $('sold').className = 'sold end';
+  $('sold').innerHTML = `<table>${results.map(x => `<tr><td>${x.L.e} ${x.L.n}</td><td>${fmt(x.L.p)}</td><td>${x.pts}</td></tr>`).join('')}</table>
+    <div class="you" style="margin-top:12px">Best ever: ${best}</div><button class="next" id="again">NEW AUCTION</button> <button class="next" id="share">COPY SCORE</button>`;
+  $('again').onclick = () => location.reload();
+  $('share').onclick = () => navigator.clipboard?.writeText(`Going Once: ${total}/1000 🔨\n${results.map(x => x.pts >= 80 ? '🟩' : x.pts >= 50 ? '🟨' : '🟥').join('')}\nBALLPARK`).then(() => { $('share').textContent = 'COPIED'; });
+}
+let ac = null;
+function knock() { try { ac = ac || new AudioContext(); for (const [d, f] of [[0, 180], [0.12, 150]]) { const o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime + d; o.type = 'triangle'; o.frequency.value = f; g.gain.setValueAtTime(0.25, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12); o.connect(g).connect(ac.destination); o.start(t); o.stop(t + 0.13); } } catch { /* no audio */ } }
+show();
+</script>
+</body>
+</html>

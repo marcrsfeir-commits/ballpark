@@ -56,6 +56,38 @@ const GAMES = [
     bg: 'linear-gradient(160deg,#fbfaf6 0%,#ece9df 100%)', fg: '#1b1b1f', accent: '#e5484d', glow: 'rgba(229,72,77,.15)',
     art: `<svg viewBox="0 0 100 80" aria-hidden="true"><rect x="8" y="26" width="84" height="30" rx="8" fill="#fff" stroke="#1b1b1f" stroke-width="3"/><text x="16" y="47" font-size="15" font-weight="700" fill="#1b1b1f" font-family="Consolas,monospace">May#🐟144</text><rect x="20" y="62" width="60" height="10" rx="3" fill="#e5484d"/><rect x="20" y="10" width="60" height="10" rx="3" fill="#30a46c"/></svg>`,
   },
+  {
+    id: 'fuse', name: 'FUSE', path: 'games/fuse/', insp: 'inspired by Infinite Craft',
+    blurb: 'Water + Fire = Steam. Start with four elements and fuse your way to thousands of things.',
+    bg: 'linear-gradient(160deg,#ffffff 0%,#eef0ff 100%)', fg: '#1d1d22', accent: '#6366f1', glow: 'rgba(99,102,241,.18)',
+    art: `<svg viewBox="0 0 110 80" aria-hidden="true"><rect x="4" y="12" width="44" height="22" rx="6" fill="#fff" stroke="#c9c9d3"/><text x="10" y="28" font-size="12" font-family="Segoe UI Emoji,sans-serif">💧</text><text x="24" y="28" font-size="10" font-weight="700" font-family="Segoe UI,sans-serif" fill="#1d1d22">Water</text>
+      <rect x="60" y="12" width="40" height="22" rx="6" fill="#fff" stroke="#c9c9d3"/><text x="65" y="28" font-size="12" font-family="Segoe UI Emoji,sans-serif">🔥</text><text x="79" y="28" font-size="10" font-weight="700" font-family="Segoe UI,sans-serif" fill="#1d1d22">Fire</text>
+      <rect x="28" y="48" width="52" height="24" rx="6" fill="#eef0ff" stroke="#6366f1" stroke-width="2"/><text x="34" y="65" font-size="12" font-family="Segoe UI Emoji,sans-serif">💨</text><text x="49" y="65" font-size="10" font-weight="700" font-family="Segoe UI,sans-serif" fill="#1d1d22">Steam</text></svg>`,
+  },
+  {
+    id: 'auction', name: 'GOING ONCE', path: 'games/auction/', insp: 'inspired by neal.fun',
+    blurb: 'Ruby slippers, a T. rex, Lennon\'s tooth. Guess what famous lots really sold for.',
+    bg: 'linear-gradient(160deg,#f5efe3 0%,#e7dcc4 100%)', fg: '#2a2118', accent: '#2a2118', onAccent: '#f5d77e', glow: 'rgba(201,162,74,.3)',
+    art: `<svg viewBox="0 0 100 80" aria-hidden="true"><rect x="22" y="6" width="56" height="56" rx="3" fill="url(#gf)"/><rect x="29" y="13" width="42" height="42" fill="#fffdf7"/><text x="50" y="44" font-size="24" text-anchor="middle" font-family="Segoe UI Emoji,sans-serif">👠</text><defs><linearGradient id="gf" x1="0" x2="1"><stop offset="0" stop-color="#c9a24a"/><stop offset=".5" stop-color="#f5d77e"/><stop offset="1" stop-color="#b8892c"/></linearGradient></defs><text x="82" y="76" font-size="20" font-family="Segoe UI Emoji,sans-serif">🔨</text></svg>`,
+  },
+  {
+    id: 'lifelist', name: 'BEEN THERE', path: 'games/lifelist/', insp: 'inspired by neal.fun',
+    blurb: '200 things to do in a lifetime. Tick off the ones you\'ve done and see what you\'re missing.',
+    bg: 'linear-gradient(160deg,#fff7ed 0%,#ffedd5 100%)', fg: '#3b2a1a', accent: '#f97316', glow: 'rgba(249,115,22,.2)',
+    art: `<svg viewBox="0 0 90 80" aria-hidden="true">${[0, 1, 2].map(i => `<rect x="10" y="${10 + i * 22}" width="16" height="16" rx="4" fill="${i < 2 ? '#f97316' : '#fff'}" stroke="#f97316" stroke-width="2"/>${i < 2 ? `<path d="M13 ${18 + i * 22} l4 4 l7 -8" stroke="#fff" stroke-width="2.5" fill="none"/>` : ''}<rect x="34" y="${14 + i * 22}" width="${44 - i * 8}" height="8" rx="4" fill="#fdba74"/>`).join('')}</svg>`,
+  },
+  {
+    id: 'trolley', name: 'TROLLEY TROUBLE', path: 'games/trolley/', insp: 'inspired by neal.fun',
+    blurb: 'Pull the lever or don\'t. 28 ridiculous dilemmas, one questionable conscience.',
+    bg: 'linear-gradient(160deg,#fefce8 0%,#fde68a 100%)', fg: '#292524', accent: '#292524', onAccent: '#fde68a', glow: 'rgba(250,204,21,.3)',
+    art: `<svg viewBox="0 0 110 80" aria-hidden="true"><path d="M2 60 H50 L100 30 M50 60 H108" stroke="#292524" stroke-width="3" fill="none"/><rect x="10" y="44" width="26" height="14" rx="3" fill="#ef4444"/><circle cx="16" cy="60" r="3" fill="#292524"/><circle cx="30" cy="60" r="3" fill="#292524"/><line x1="50" y1="60" x2="58" y2="44" stroke="#292524" stroke-width="3"/><circle cx="58" cy="43" r="3.5" fill="#ef4444"/><text x="86" y="27" font-size="14" font-family="Segoe UI Emoji,sans-serif">🦆</text><text x="94" y="56" font-size="14" font-family="Segoe UI Emoji,sans-serif">🧦</text></svg>`,
+  },
+  {
+    id: 'robot', name: 'NOT A ROBOT', path: 'games/robot/', insp: 'inspired by neal.fun',
+    blurb: 'Prove you\'re human. Then prove it again. And again. The captcha is getting suspicious.',
+    bg: 'linear-gradient(160deg,#f8fafc 0%,#e2e8f0 100%)', fg: '#0f172a', accent: '#2563eb', glow: 'rgba(37,99,235,.18)',
+    art: `<svg viewBox="0 0 110 80" aria-hidden="true"><rect x="6" y="20" width="98" height="40" rx="4" fill="#fff" stroke="#cbd5e1" stroke-width="2"/><rect x="16" y="30" width="20" height="20" rx="3" fill="#fff" stroke="#94a3b8" stroke-width="2"/><path d="M19 40 l5 5 l9 -11" stroke="#22c55e" stroke-width="3" fill="none"/><text x="44" y="45" font-size="10" font-weight="700" font-family="Segoe UI,sans-serif" fill="#0f172a">I'm not a robot</text><text x="86" y="16" font-size="16" font-family="Segoe UI Emoji,sans-serif">🤖</text></svg>`,
+  },
 ];
 
 const today = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;

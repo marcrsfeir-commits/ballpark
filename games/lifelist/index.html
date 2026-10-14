@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Been There · BALLPARK</title>
+<meta name="theme-color" content="#fff6e8">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect x='1' y='1' width='14' height='14' rx='4' fill='%23ff6b4a'/%3E%3Cpath d='M4.2 8.3l2.5 2.5 5-5.3' fill='none' stroke='white' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="top" id="top">
+  <div class="inner">
+    <div class="count-row">
+      <p class="count" id="countLine" aria-live="polite">You've done <b id="num">0</b> of <span id="max">200</span> things</p>
+      <button type="button" id="muteBtn" class="icon-btn" aria-pressed="false" aria-label="Sound on" title="Sound on/off">🔊</button>
+    </div>
+    <div class="bar" id="bar" role="progressbar" aria-label="Things done" aria-valuemin="0" aria-valuemax="200" aria-valuenow="0"><i id="barFill"></i></div>
+    <p class="rank-line" id="rankLine"><span class="rank-emoji" id="rankEmoji" aria-hidden="true">🥔</span><b id="rankName">Couch Potato</b><span class="rank-next" id="rankNext"></span></p>
+  </div>
+</div>
+
+<main class="wrap">
+  <section class="hero">
+    <h1><span>BEEN</span> <span class="there">THERE</span><span class="stamp" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5.5 12.6l4.2 4.2L18.6 7.6"/></svg></span></h1>
+    <p class="lede">Tick off everything you've really done. No judging, no cheating, just one very long list of a life well lived.</p>
+    <div class="filters" role="group" aria-label="Show">
+      <button type="button" class="chip" data-f="all" aria-pressed="true">All <i id="fAll">200</i></button>
+      <button type="button" class="chip" data-f="todo" aria-pressed="false">To do <i id="fTodo">200</i></button>
+      <button type="button" class="chip" data-f="done" aria-pressed="false">Done <i id="fDone">0</i></button>
+    </div>
+  </section>
+
+  <div id="list"></div>
+  <p class="empty" id="empty" hidden>Nothing to show here yet. Go and do something wonderful!</p>
+  <p class="foot">That's the whole list. Now go and add to it.</p>
+</main>
+
+<div class="actions" id="actions">
+  <div class="actions-inner">
+    <button type="button" class="btn primary" id="shareBtn">📋 Share my list</button>
+    <button type="button" class="btn ghost" id="resetBtn">Reset</button>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<div class="modal" id="modal" hidden>
+  <div class="modal-card" role="alertdialog" aria-modal="true" aria-labelledby="mTitle" aria-describedby="mText">
+    <div class="modal-emoji" aria-hidden="true">🧽</div>
+    <h2 id="mTitle">Start from scratch?</h2>
+    <p id="mText">This wipes all your ticks. It cannot be undone.</p>
+    <div class="modal-actions">
+      <button type="button" class="btn ghost" id="mCancel">Keep my list</button>
+      <button type="button" class="btn danger" id="mOk">Yes, reset it</button>
+    </div>
+  </div>
+</div>
+
+<canvas id="fx" aria-hidden="true"></canvas>
+
+<script src="../../shared/bp.js"></script>
+<script src="items.js"></script>
+<script src="game.js"></script>
+</body>
+</html>

@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="28 absurd trolley problems. Pull the lever or do nothing, then see how everyone else voted.">
+<title>Trolley Trouble · BALLPARK</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23ffd23f'/%3E%3Crect x='7' y='9' width='18' height='13' rx='4' fill='%23f2542d'/%3E%3Crect x='10' y='11' width='12' height='6' rx='2' fill='%23e9f7ff'/%3E%3Ccircle cx='13.5' cy='14' r='1.6' fill='%23222'/%3E%3Ccircle cx='18.5' cy='14' r='1.6' fill='%23222'/%3E%3Cpath d='M16 9V5' stroke='%23222' stroke-width='2'/%3E%3Cpath d='M9 26l7-4 7 4' stroke='%23222' stroke-width='2' fill='none'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body data-bp-pos="tr">
+
+<header class="top">
+  <button class="icon-btn" id="muteBtn" type="button" aria-pressed="false" aria-label="Mute sound" title="Mute / unmute (M)">🔊</button>
+  <div class="progress" id="progress" hidden>
+    <span class="lvlno" id="lvlNo">LEVEL 1 / 28</span>
+    <div class="bar" aria-hidden="true"><i id="barFill"></i></div>
+  </div>
+</header>
+
+<main>
+  <noscript><p style="text-align:center;font-weight:700;padding:24px">Trolley Trouble needs JavaScript. Please enable it and reload.</p></noscript>
+  <!-- TITLE -->
+  <section id="title" class="screen title">
+    <div class="logo" aria-hidden="true"><svg id="logoArt" viewBox="0 0 220 130" width="220" height="130"></svg></div>
+    <h1>TROLLEY<br>TROUBLE</h1>
+    <p class="tagline">28 absurd trolley problems. One lever. Zero right answers.</p>
+    <p class="how">A runaway trolley is about to bonk something. <b>Pull the lever</b> to switch tracks, or <b>do nothing</b>. Then see how everyone else voted. Nobody is hurt: it is all cartoon bonks and dizzy stars.</p>
+    <div class="cta">
+      <button class="btn big pull" id="btnStart" type="button">Start</button>
+      <button class="linkbtn" id="btnRestart" type="button" hidden>Start over</button>
+    </div>
+    <p class="keys"><kbd>←</kbd> do nothing &nbsp; <kbd>→</kbd> pull the lever &nbsp; <kbd>Enter</kbd> next &nbsp; <kbd>M</kbd> mute</p>
+    <p class="fine">Crowd percentages are simulated.</p>
+  </section>
+
+  <!-- PLAY -->
+  <section id="play" class="screen play" hidden>
+    <div class="card enter" id="levelCard">
+      <p class="eyebrow" id="lvlEyebrow"></p>
+      <h2 id="lvlTitle"></h2>
+      <p class="dilemma" id="lvlText"></p>
+      <div class="scene" id="sceneWrap"></div>
+
+      <div class="sides" id="sides">
+        <div class="side stay" id="sideStay">
+          <p class="lbl"><small>STAYS ON COURSE</small><b id="lblStay"></b></p>
+          <button class="btn stay" id="btnStay" type="button"><span>Do nothing</span><kbd>←</kbd></button>
+          <div class="res" id="resStay" hidden>
+            <div class="pctnum"><b id="pctStay">0</b><span>%</span></div>
+            <div class="meter"><i id="meterStay"></i></div>
+            <small>did nothing</small>
+            <span class="you" id="youStay" hidden>YOU</span>
+          </div>
+        </div>
+        <div class="side pull" id="sidePull">
+          <p class="lbl"><small id="smallPull">IF YOU PULL</small><b id="lblPull"></b></p>
+          <button class="btn pull" id="btnPull" type="button"><span>Pull the lever</span><kbd>→</kbd></button>
+          <div class="res" id="resPull" hidden>
+            <div class="pctnum"><b id="pctPull">0</b><span>%</span></div>
+            <div class="meter"><i id="meterPull"></i></div>
+            <small>pulled the lever</small>
+            <span class="you" id="youPull" hidden>YOU</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="result" id="result" hidden aria-live="polite">
+        <p class="outcome" id="outcome"></p>
+        <p class="agree"><b id="agreeTxt"></b> <small>(simulated)</small></p>
+        <p class="flavor" id="flavor"></p>
+        <button class="btn big next" id="btnNext" type="button">Next level ▸</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- END -->
+  <section id="end" class="screen end" hidden>
+    <p class="eyebrow center">YOUR ETHICS PROFILE</p>
+    <div class="pemoji" id="pEmoji" aria-hidden="true"></div>
+    <h2 class="pname" id="pName"></h2>
+    <p class="pblurb" id="pBlurb"></p>
+
+    <div class="stats">
+      <div class="stat"><b id="stPull">0</b><span>levers pulled</span></div>
+      <div class="stat"><b id="stCrowd">0%</b><span>sided with the crowd</span></div>
+      <div class="stat"><b id="stLogic">-</b><span>bigger-good picks</span></div>
+    </div>
+
+    <div class="grid28" id="grid" role="list" aria-label="Your 28 choices"></div>
+    <p class="legend"><i class="sq p"></i> pulled &nbsp; <i class="sq s"></i> did nothing &nbsp; <i class="sq dot"></i> sided with the crowd</p>
+
+    <ul class="notes">
+      <li id="nLonely"></li>
+      <li id="nSlow"></li>
+    </ul>
+
+    <div class="btns">
+      <button class="btn big pull" id="btnShare" type="button">Copy my result</button>
+      <button class="btn big stay" id="btnAgain" type="button">Play again</button>
+    </div>
+    <p class="fine">Crowd percentages are simulated. No ducks, socks or philosophers were harmed.</p>
+  </section>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script src="../../shared/bp.js"></script>
+<script src="levels.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
