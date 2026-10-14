@@ -169,6 +169,7 @@ function renderHome() {
   refreshLibrary();
 }
 function renderHomeText() {
+  $('#beginBtn').disabled = !lib;
   const n = diveNumberFor();
   const done = homeMode === 'daily' && store.result(`daily-${n}`);
   if (homeMode === 'daily') {
