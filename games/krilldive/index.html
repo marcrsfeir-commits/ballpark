@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a1626">
+<title>KRILLDIVE · the daily dive</title>
+<link rel="icon" href="assets/icon-256.png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body data-bp-pos="br">
+<canvas id="ocean" aria-hidden="true"></canvas>
+<div id="crt" aria-hidden="true"></div>
+
+<button id="menuBtn" class="iconbtn corner-tl" aria-label="Open menu">
+  <svg viewBox="0 0 12 12" shape-rendering="crispEdges"><rect x="2" y="3" width="8" height="1"/><rect x="2" y="6" width="8" height="1"/><rect x="2" y="9" width="8" height="1"/></svg>
+</button>
+<div id="sideBtns" class="corner-tr">
+  <button id="soundBtn" class="iconbtn" aria-label="Turn sound off">
+    <svg viewBox="0 0 12 12" shape-rendering="crispEdges"><rect x="1" y="5" width="2" height="3"/><rect x="3" y="4" width="1" height="5"/><rect x="4" y="3" width="1" height="7"/><rect x="5" y="2" width="1" height="9"/><g class="waves"><rect x="7" y="5" width="1" height="3"/><rect x="9" y="3" width="1" height="7"/></g><g class="mute"><rect x="7" y="4" width="1" height="1"/><rect x="8" y="5" width="1" height="1"/><rect x="9" y="6" width="1" height="1"/><rect x="10" y="7" width="1" height="1"/><rect x="10" y="4" width="1" height="1"/><rect x="9" y="5" width="1" height="1"/><rect x="8" y="6" width="1" height="1"/><rect x="7" y="7" width="1" height="1"/></g></svg>
+  </button>
+  <button id="settingsBtn" class="iconbtn home-only" aria-label="Open settings">
+    <svg viewBox="0 0 12 12" shape-rendering="crispEdges"><rect x="5" y="1" width="2" height="2"/><rect x="5" y="9" width="2" height="2"/><rect x="1" y="5" width="2" height="2"/><rect x="9" y="5" width="2" height="2"/><rect x="2" y="2" width="2" height="2"/><rect x="8" y="2" width="2" height="2"/><rect x="2" y="8" width="2" height="2"/><rect x="8" y="8" width="2" height="2"/><rect x="3" y="3" width="6" height="6"/><rect x="5" y="5" width="2" height="2" class="hole"/></svg>
+  </button>
+  <button id="wardrobeBtn" class="iconbtn home-only" aria-label="Open wardrobe">
+    <svg viewBox="0 0 12 12" shape-rendering="crispEdges"><rect x="1" y="2" width="3" height="4"/><rect x="8" y="2" width="3" height="4"/><rect x="3" y="2" width="6" height="9"/><rect x="5" y="2" width="2" height="1" class="hole"/></svg>
+  </button>
+</div>
+
+<!-- HOME -->
+<main id="home" class="screen">
+  <div class="hero">
+    <h1 id="logo" aria-label="KRILLDIVE"></h1>
+    <div id="tagline" class="tagline">THE DAILY DIVE</div>
+    <p id="homeSub" class="sub">7 prompts · 25 seconds each · rarer answers sink deeper</p>
+  </div>
+  <div class="below">
+    <button id="howBtn" class="howto-toggle" aria-expanded="false">▸ HOW TO PLAY</button>
+    <ol id="howto" hidden>
+      <li>7 prompts a day. The same 7 for every diver.</li>
+      <li>25 seconds to name one thing.</li>
+      <li>Obvious answers float. Rare ones sink deep.</li>
+      <li>The pick that feels clever? The school thought of it too.</li>
+      <li>Every point sinks you 10 metres. 700 reaches the trench.</li>
+      <li>One daily dive — but endless dives &amp; packs are free.</li>
+    </ol>
+    <div id="loadMsg" class="loadmsg" hidden></div>
+    <div id="todayDone" class="today-done" hidden></div>
+    <button id="beginBtn" class="big-btn">▼ BEGIN DESCENT ▼</button>
+    <div class="home-row">
+      <span id="diveNo" class="dive-no">DIVE #1</span>
+      <div class="chips">
+        <button class="chip" data-go="archive">ARCHIVE ⟲</button>
+        <button class="chip" data-go="packs">THEMED PACKS</button>
+        <button class="chip" id="modeBtn" data-go="endless">UNLIMITED ∞</button>
+      </div>
+    </div>
+    <div id="streakLine" class="streak-line"></div>
+  </div>
+</main>
+
+<!-- GAME -->
+<section id="game" class="screen" hidden>
+  <div id="hud">
+    <div class="hud-panel"><label>DEPTH</label><b id="hudDepth" class="cyan">0m</b></div>
+    <div class="hud-prog"><div id="pips"></div><small id="progLabel">PROMPT 1 OF 7</small></div>
+    <div class="hud-panel right"><label>SCORE</label><b id="hudScore" class="pink">0</b></div>
+  </div>
+  <div id="promptCard" class="card prompt-card">
+    <div id="pcKicker" class="kicker">PROMPT 1 OF 7</div>
+    <h2 id="pcText"></h2>
+    <div class="pc-hint">▼ rarer answers sink deeper ▼</div>
+  </div>
+  <div id="countdown" class="pill" hidden>descending · the clock starts in <b>3</b></div>
+  <form id="answerBar" autocomplete="off" hidden>
+    <div id="echo" aria-live="polite"></div>
+    <div class="timer" aria-hidden="true">
+      <svg viewBox="0 0 44 44"><circle class="trk" cx="22" cy="22" r="19"/><circle id="timerArc" class="arc" cx="22" cy="22" r="19"/></svg>
+      <span id="timerNum">25</span>
+    </div>
+    <input id="answer" type="text" maxlength="60" spellcheck="false" autocapitalize="off" placeholder="type one answer…" aria-label="Your answer">
+    <button id="diveBtn" type="submit">DIVE</button>
+    <div class="tbar"><i id="tbarFill"></i></div>
+  </form>
+  <div id="stone" class="stone" hidden></div>
+  <div id="resultCard" class="result-card" hidden>
+    <div id="rcIcon" class="rc-icon"></div>
+    <div id="rcTier" class="rc-tier"></div>
+    <div id="rcAnswer" class="rc-answer"></div>
+    <div id="rcPts" class="rc-pts"></div>
+    <p id="rcQuip" class="rc-quip"></p>
+    <small id="rcNote" class="rc-note"></small>
+  </div>
+  <button id="nextBtn" class="mid-btn" hidden>DESCEND ▼</button>
+</section>
+
+<!-- RESULTS / PACKS / ARCHIVE pages -->
+<section id="results" class="page" hidden></section>
+<section id="packs" class="page" hidden></section>
+<section id="archive" class="page" hidden></section>
+
+<div id="modal" class="modal" hidden>
+  <div class="modal-box card" role="dialog" aria-modal="true">
+    <button class="modal-x" aria-label="Close">X</button>
+    <div id="modalBody"></div>
+  </div>
+</div>
+
+<nav id="drawer" class="drawer" hidden>
+  <div class="drawer-box">
+    <div id="drawerLogo"></div>
+    <button data-go="home">TODAY'S DIVE</button>
+    <button data-go="endless">ENDLESS DIVE ∞</button>
+    <button data-go="packs">THEMED PACKS</button>
+    <button data-go="archive">ARCHIVE ⟲</button>
+    <hr>
+    <button data-go="stats">STATS</button>
+    <button data-go="howto">HOW TO PLAY</button>
+    <button data-go="settings">SETTINGS</button>
+    <button data-go="wardrobe">WARDROBE</button>
+    <p class="drawer-foot">free · offline · no ads · no unlocks</p>
+  </div>
+</nav>
+
+<div id="blub" class="blub" hidden>blub!</div>
+<div id="toast" class="toast" hidden></div>
+
+<script>window.KD_STATIC = true;</script>
+<script src="../../shared/bp.js"></script>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

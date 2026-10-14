@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Odd Hue · BALLPARK</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect x='1' y='1' width='6' height='6' rx='1' fill='%235b5bd6'/%3E%3Crect x='9' y='1' width='6' height='6' rx='1' fill='%235b5bd6'/%3E%3Crect x='1' y='9' width='6' height='6' rx='1' fill='%235b5bd6'/%3E%3Crect x='9' y='9' width='6' height='6' rx='1' fill='%237a7af0'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main class="wrap">
+  <header>
+    <h1>Odd Hue</h1>
+    <p class="sub">Find the block with a different shade or brightness.</p>
+    <nav class="modes" role="tablist">
+      <button data-mode="classic" class="on" role="tab">Classic</button>
+      <button data-mode="rush" role="tab">Rush · 60s</button>
+      <button data-mode="daily" role="tab">Daily</button>
+    </nav>
+  </header>
+
+  <section class="board-card">
+    <div class="hud">
+      <span id="hudLeft">Score <b id="score">0</b></span>
+      <span id="hudMid" class="timer" hidden>60.0</span>
+      <span id="hudRight">Best <b id="best">0</b></span>
+    </div>
+    <div id="grid" class="grid" aria-label="Color blocks"></div>
+    <p id="msg" class="msg">Tap the block that's different.</p>
+    <div id="over" class="over" hidden>
+      <p id="overTitle" class="over-title"></p>
+      <p id="overText" class="over-text"></p>
+      <div class="over-btns">
+        <button id="again" class="btn primary">Try again</button>
+        <button id="share" class="btn">Copy score</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="how">
+    <p><b>Classic</b> — one wrong tap ends the run. Blocks get closer in colour as you go.</p>
+    <p><b>Rush</b> — 60 seconds, the grid grows, a wrong tap costs 3 seconds.</p>
+    <p><b>Daily</b> — the same colours for everyone today. Only your first run counts.</p>
+  </section>
+</main>
+<div id="toast" class="toast" hidden></div>
+<script src="../../shared/bp.js"></script>
+<script type="module" src="game.js"></script>
+</body>
+</html>

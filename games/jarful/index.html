@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Jarful · BALLPARK</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3 3h10l-1 11H4z' fill='none' stroke='%23d9ccff'/%3E%3Ccircle cx='6' cy='11' r='1.6' fill='%23a78bfa'/%3E%3Ccircle cx='9.5' cy='11.5' r='1.6' fill='%23fff'/%3E%3Ccircle cx='8' cy='8.5' r='1.6' fill='%23c4b5fd'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+<script type="importmap">{"imports":{"three":"../../vendor/three/three.module.min.js","three/addons/":"../../vendor/three/addons/","cannon-es":"../../vendor/cannon/cannon-es.js"}}</script>
+</head>
+<body data-bp-pos="tl">
+<main class="card">
+  <header>
+    <span class="brand">≋ JARFUL</span>
+    <nav id="modes"><button data-mode="daily" class="on">Daily</button><button data-mode="overunder">Over/Under</button><button data-mode="fill">Fill To</button><button data-mode="practice">Practice</button></nav>
+    <span id="dots" class="dots"></span>
+  </header>
+  <div class="line"><i id="lineFill"></i></div>
+  <div id="view" class="view">
+    <div id="overlay" class="overlay" hidden></div>
+    <span class="spin">⟲ drag to spin</span>
+    <button id="mute" class="mute" aria-label="Toggle sound">🔊</button>
+  </div>
+  <footer id="panel">
+    <div class="labels"><span id="ask">HOW MANY?</span><span id="timer">:15</span></div>
+    <div id="controls"></div>
+    <div id="hint" class="hint">enter to submit</div>
+  </footer>
+</main>
+<div id="help" class="help" hidden>
+  <div class="box">
+    <h2>How to play</h2>
+    <p>Things pour into a jar. Watch them fall, spin the jar to get a better look, then guess how many there are before the clock runs out.</p>
+    <p><b>Daily</b> — 5 jars, the same for everyone, up to 100 points each. <b>Over/Under</b> — more or fewer than the number shown? Keep the streak alive. <b>Fill To</b> — hold to pour until you think you've hit the target. <b>Practice</b> — endless jars.</p>
+    <button id="helpOk" class="go">Let's pour</button>
+  </div>
+</div>
+<script src="../../shared/bp.js"></script>
+<script type="module" src="game.js"></script>
+</body>
+</html>

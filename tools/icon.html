@@ -1,0 +1,26 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>icon</title>
+<style>html,body{margin:0;background:#0b2719;overflow:hidden}canvas{display:block}</style></head>
+<body><canvas id="c"></canvas>
+<script type="module">
+// Renders the BALLPARK app icon (screenshot this page with headless Chrome at the wanted size).
+import { drawText, measure } from '../games/krilldive/js/font.js';
+const S = 512;
+const c = document.getElementById('c'); c.width = S; c.height = S;
+c.style.width = '100vw'; c.style.height = '100vh';
+const g = c.getContext('2d');
+const grd = g.createRadialGradient(S / 2, S * 0.2, S * 0.05, S / 2, S / 2, S * 0.75);
+grd.addColorStop(0, '#1f6a43'); grd.addColorStop(1, '#0b2719');
+g.fillStyle = grd; g.fillRect(0, 0, S, S);
+for (let x = 0; x < S; x += S / 8) { g.fillStyle = 'rgba(255,255,255,0.035)'; g.fillRect(x, 0, S / 16, S); }
+g.save(); g.translate(S / 2, S * 0.6); g.rotate(Math.PI / 4);
+g.strokeStyle = 'rgba(243,241,231,0.5)'; g.lineWidth = S * 0.025; g.strokeRect(-S * 0.24, -S * 0.24, S * 0.48, S * 0.48); g.restore();
+const px = Math.floor(S / 22);
+const w = measure('BP') * px;
+drawText(g, 'BP', Math.round((S - w) / 2) + px * 0.6, Math.round(S * 0.16) + px * 0.6, px, '#7a4b00');
+drawText(g, 'BP', Math.round((S - w) / 2), Math.round(S * 0.16), px, '#ffc94a');
+g.fillStyle = '#f3f1e7'; g.beginPath(); g.arc(S / 2, S * 0.62, S * 0.075, 0, Math.PI * 2); g.fill();
+g.strokeStyle = '#e5212e'; g.lineWidth = S * 0.012;
+g.beginPath(); g.arc(S / 2 - S * 0.1, S * 0.62, S * 0.07, -0.9, 0.9); g.stroke();
+g.beginPath(); g.arc(S / 2 + S * 0.1, S * 0.62, S * 0.07, Math.PI - 0.9, Math.PI + 0.9); g.stroke();
+</script></body></html>
