@@ -61,8 +61,8 @@ function start(m) {
   $('#over').hidden = true;
   const daily = store.get('daily', null);
   if (m === 'daily') {
-    rand = BP ? BP.rng('oddhue:' + BP.today()) : Math.random;
-    $('#msg').textContent = daily && daily.date === today() ? `Today's official score: ${daily.score}. This run is practice.` : "Today's colours are the same for everyone. Good luck.";
+    rand = BP ? BP.rng('oddhue:' + BP.today() + ':' + BP.deviceSeed()) : Math.random;
+    $('#msg').textContent = daily && daily.date === today() ? `Today's official score: ${daily.score}. This run is practice.` : "Today's daily colours. Only your first run counts.";
   } else {
     rand = Math.random;
     $('#msg').textContent = m === 'rush' ? '60 seconds. Go!' : "Tap the block that's different.";

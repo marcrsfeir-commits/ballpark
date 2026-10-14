@@ -75,9 +75,9 @@ function dims(o, size) {
 
 // ---------- rounds ----------
 function roundsFor(n) {
-  const r = BP.rng('toscale:' + n);
+  const r = BP.rng('toscale:' + n + ':' + BP.deviceSeed());
   const curated = PAIRS.slice();
-  const cyc = BP.rng('toscale-pairs:' + Math.floor((n - 1) / 15));
+  const cyc = BP.rng('toscale-pairs:' + Math.floor((n - 1) / 15) + ':' + BP.deviceSeed());
   for (let i = curated.length - 1; i > 0; i--) { const j = Math.floor(cyc() * (i + 1)); [curated[i], curated[j]] = [curated[j], curated[i]]; }
   const out = curated.slice(((n - 1) % 15) * 2, ((n - 1) % 15) * 2 + 2);
   while (out.length < 5) {
@@ -87,7 +87,7 @@ function roundsFor(n) {
     out.push([a.id, b.id]);
   }
   return out.map(([ref, tgt], i) => {
-    const k = BP.rng(`start:${n}:${i}`)();
+    const k = BP.rng(`start:${n}:${i}:${BP.deviceSeed()}`)();
     const f = k < 0.5 ? 0.25 + k * 0.7 : 1.6 + (k - 0.5) * 4;   // start clearly wrong
     return { ref, tgt, start: byId[tgt].size * f };
   });

@@ -10,11 +10,20 @@ const today = BP.dayNumber(EPOCH);
 let day = today, qi = 0, state = null, calcOpen = false;
 
 // ---------- data ----------
+// Day n's 3 questions are picked on this device from the ones it has seen least, then kept for that day.
 function questionsFor(n) {
-  const per = Math.floor(QUESTIONS.length / 3), cycle = Math.floor((n - 1) / per), slot = (n - 1) % per;
-  const idx = QUESTIONS.map((_, i) => i), r = BP.rng('napkin:' + cycle);
-  for (let i = idx.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [idx[i], idx[j]] = [idx[j], idx[i]]; }
-  return idx.slice(slot * 3, slot * 3 + 3).map(i => ({ ...QUESTIONS[i], id: i }));
+  let set = store.get('set:' + n, null);
+  if (!Array.isArray(set) || set.length !== 3 || set.some(i => !QUESTIONS[i])) {
+    const seen = store.get('qseen', {});
+    let tick = store.get('qtick', 0);
+    const idx = QUESTIONS.map((_, i) => i);
+    for (let i = idx.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [idx[i], idx[j]] = [idx[j], idx[i]]; }
+    idx.sort((a, b) => (seen[a] || 0) - (seen[b] || 0));
+    set = idx.slice(0, 3);
+    for (const i of set) seen[i] = ++tick;
+    store.set('qseen', seen); store.set('qtick', tick); store.set('set:' + n, set);
+  }
+  return set.map(i => ({ ...QUESTIONS[i], id: i }));
 }
 const load = n => store.get('day:' + n, { answers: [] });
 const save = () => store.set('day:' + day, state);

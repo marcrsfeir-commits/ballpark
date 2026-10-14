@@ -72,5 +72,12 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', injectPill);
   else injectPill();
 
-  window.Ballpark = { report, today, dayNumber, dateForDay, rng, store, status: () => safeGet(STATUS, {}) };
+  // Random per-device salt so daily puzzles differ between devices (kept stable on this device).
+  function deviceSeed() {
+    let s = safeGet('ballpark.seed', null);
+    if (!s) { s = Math.random().toString(36).slice(2, 10); safeSet('ballpark.seed', s); }
+    return s;
+  }
+
+  window.Ballpark = { report, today, dayNumber, dateForDay, rng, store, deviceSeed, status: () => safeGet(STATUS, {}) };
 })();

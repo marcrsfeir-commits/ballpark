@@ -196,7 +196,7 @@ function setMode(m) {
 function nextRound() {
   const n = mode === 'daily' ? 5 : mode === 'fill' ? 5 : 0;
   drawDots(n);
-  const rand = mode === 'daily' ? BP.rng(`jarful:${today}:${round}`) : Math.random;
+  const rand = mode === 'daily' ? BP.rng(`jarful:${today}:${round}:${BP.deviceSeed()}`) : Math.random;
   const cfg = cfgFor(rand, mode === 'practice' || mode === 'overunder' ? Math.floor(Math.random() * 5) : round, mode === 'fill');
   if (mode === 'fill') { cfg.target = cfg.count; cfg.count = 0; }
   newJar(cfg);
@@ -313,7 +313,7 @@ function finish() {
 }
 function showDailySummary() {
   drawDots(0);
-  newJar({ ...cfgFor(BP.rng(`jarful:${today}:4`), 4), timed: false });
+  newJar({ ...cfgFor(BP.rng(`jarful:${today}:4:${BP.deviceSeed()}`), 4), timed: false });
   phase = 'done-drop';
   toSpawn = spec.count;
   phase = 'dropping';

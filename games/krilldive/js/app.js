@@ -220,7 +220,7 @@ $('#beginBtn').addEventListener('click', () => {
   if (homeMode === 'daily') {
     const n = diveNumberFor(), done = store.result(`daily-${n}`);
     if (done) return showStoredResults(`daily-${n}`);
-    startRun({ mode: 'daily', n, key: `daily-${n}`, prompts: lib.daily(n) });
+    startRun({ mode: 'daily', n, key: `daily-${n}`, prompts: dailyPrompts(n) });
   } else {
     startEndless();
   }
@@ -232,6 +232,17 @@ function startEndless() {
   store.data.endlessNext = n + 1;
   store.save();
   startRun({ mode: 'endless', n, key: `endless-${n}`, prompts: lib.fresh(store.data.seen) });
+}
+
+// Daily dive n: 7 prompts this device hasn't seen yet, picked once and then kept for that day.
+function dailyPrompts(n) {
+  const sets = store.data.dailySets || (store.data.dailySets = {});
+  const kept = (sets[n] || []).map(id => lib.byId.get(id));
+  if (kept.length === ROUNDS && kept.every(Boolean)) return kept;
+  const fresh = lib.fresh(store.data.seen);
+  sets[n] = fresh.map(q => q.id);
+  store.save();
+  return fresh;
 }
 
 // ---------------------------------------------------------------- run
@@ -732,7 +743,7 @@ function showArchive() {
     b.onclick = () => {
       A.sfx.click();
       if (res) showStoredResults(`daily-${n}`);
-      else startRun({ mode: 'daily', n, key: `daily-${n}`, prompts: lib.daily(n) });
+      else startRun({ mode: 'daily', n, key: `daily-${n}`, prompts: dailyPrompts(n) });
     };
     grid.append(b);
   }
