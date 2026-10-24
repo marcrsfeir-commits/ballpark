@@ -11,6 +11,30 @@ export const TIERS = {
 export const TIER_ORDER = ['plankton', 'tooclever', 'schooler', 'rare', 'deepcut', 'krillion'];
 export const ROUNDS = 7;
 export const M_PER_POINT = 10;
+
+// THE ASCENT: the mirror mode — start in the trench, the MOST common answers lift you to the surface.
+export const game = { ascent: false };
+export const ASCENT = {
+  scores: { plankton: 100, tooclever: 85, schooler: 60, rare: 30, deepcut: 15, krillion: 10 },
+  blurbs: {
+    plankton: 'Exactly what everyone said. Up you go!',
+    tooclever: 'Popular pick — the whole school had it too. Nice.',
+    schooler: 'Common enough. A decent lift.',
+    rare: 'Too rare! Hardly anyone said that.',
+    deepcut: 'Way too obscure — you barely moved.',
+    krillion: 'The rarest answer of all. Exactly what you didn\'t want.',
+  },
+  bearing: [
+    { min: 0, max: 250, text: 'Still in the dark. Think like the crowd.' },
+    { min: 251, max: 400, text: 'Climbing. You know what people say.' },
+    { min: 401, max: 550, text: 'Sunlight! You think like the crowd.' },
+    { min: 551, max: 649, text: 'Nearly surfaced. Mind of the masses.' },
+    { min: 650, max: 700, text: 'Breached the surface. You ARE the crowd.' },
+  ],
+};
+export const pts = tier => (game.ascent ? ASCENT.scores[tier] : TIERS[tier].score);
+export const dir = () => (game.ascent ? -1 : 1);                 // depth change per point
+export const startDepth = () => (game.ascent ? MAX_SCORE * M_PER_POINT : 0);
 export const MAX_SCORE = 700;
 export const DAILY_EPOCH = Date.UTC(2026, 8, 15); // Dive #1 = 15 Sep 2026
 

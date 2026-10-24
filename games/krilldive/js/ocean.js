@@ -1,6 +1,6 @@
 // The ocean: one tall world (sky -> surface -> 7,000 m trench) drawn on a full-screen canvas.
 import * as S from './sprites.js';
-import { TIERS, TIER_ORDER, rng, M_PER_POINT } from './engine.js';
+import { TIERS, TIER_ORDER, rng, M_PER_POINT, pts, dir } from './engine.js';
 
 export const PPM = 1.6;               // screen pixels per metre
 const SPRITE = 3;                      // pixel-art scale
@@ -370,13 +370,13 @@ export class Ocean {
     g.font = '11px "Cascadia Mono", Consolas, monospace';
     g.textBaseline = 'middle'; g.textAlign = 'right';
     for (const key of TIER_ORDER) {
-      const tier = TIERS[key], m = T.base + tier.score * M_PER_POINT, yy = Math.round(this.y(m));
+      const tier = TIERS[key], m = T.base + dir() * pts(key) * M_PER_POINT, yy = Math.round(this.y(m));
       if (yy < -20 || yy > this.H + 20) continue;
       const lit = T.lit === key, passed = T.passed.has(key);
       g.fillStyle = lit ? tier.color : passed ? 'rgba(200,225,245,0.55)' : 'rgba(150,185,215,0.35)';
       for (let x = x0; x < x1 - 150; x += 8) g.fillRect(x, yy, 4, lit ? 2 : 1);
       if (lit) this._glow(g, x1 - 160, yy, 60, tier.color + '33');
-      const label = `${tier.name} · ${tier.score}`;
+      const label = `${tier.name} · ${pts(key)}`;
       g.fillStyle = lit ? tier.color : passed ? 'rgba(220,235,250,0.85)' : 'rgba(170,200,225,0.6)';
       g.fillText(label, x1, yy);
       const icon = S.tierIcon(key);
