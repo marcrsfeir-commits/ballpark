@@ -4,7 +4,7 @@ import * as S from './sprites.js';
 import { pixelText, setPixelText } from './font.js';
 import * as A from './audio.js';
 import {
-  TIERS, TIER_ORDER, ROUNDS, M_PER_POINT, MAX_SCORE, BEARING, bearingFor, Library, matchAnswer, revealList, norm, game, ASCENT, pts, dir, startDepth,
+  TIERS, TIER_ORDER, ROUNDS, M_PER_POINT, MAX_SCORE, BEARING, bearingFor, Library, matchAnswer, revealList, norm, game, ASCENT, pts, dir, startDepth, tierInfo, iconKey, BOARD_ORDER,
   store, todayKey, diveNumberFor, dateForDive, judgeStatus, warmJudge, askJudge,
 } from './engine.js';
 
@@ -14,7 +14,7 @@ const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;'
 const fmtM = m => `${Math.round(m).toLocaleString('en-US')}m`;
 const ease = t => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 const MISS_COLOR = '#5f7894';
-const SHARE_EMOJI = { plankton: '🫧', tooclever: '🐠', schooler: '🐟', rare: '🦑', deepcut: '🐡', krillion: '🦐', miss: '⬛' };
+const SHARE_EMOJI = { plankton: '🫧', tooclever: '🐠', schooler: '🐟', rare: '🦑', deepcut: '🐡', krillion: '🦐', miss: '⬛', r1: '🥇', r2: '🥈', r3: '🥉', r4: '🟩', r5: '🟩', r6: '🟩', r7: '🟩', r8: '🟩', also: '🟨' };
 
 store.load();
 const settings = store.settings;
@@ -25,7 +25,7 @@ ocean.showRuler = true;
 A.setSfx(settings.sound);
 A.setMusic(settings.music);
 
-let lib = null;
+let lib = null, ascentLib = null;      // ascentLib = survey-board prompts for THE ASCENT
 let homeMode = 'daily';
 let phase = 'home';           // home | intro | answer | judging | sinking | result | final | page
 let run = null;
@@ -47,6 +47,10 @@ async function loadLibrary() {
     : await fetch('api/packs').then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }).catch(fromFile);
   const next = new Library(d.packs || []);
   if (next.all.length >= ROUNDS) lib = next;
+  if (!ascentLib) {
+    const a = await fetch('data/ascent.json', { cache: 'no-cache' }).then(r => (r.ok ? r.json() : null)).catch(() => null);
+    if (a?.prompts?.length >= ROUNDS) ascentLib = new Library([{ id: 'ascent', chapters: [a.prompts] }]);
+  }
   libLoadedAt = Date.now();
   return lib;
 }
@@ -130,7 +134,7 @@ function tick(dt) {
     if (s.mode === 'down') {
       const p = Math.min(1, s.t / s.dur);
       s.depth = s.from + (s.to - s.from) * ease(p);
-      for (const key of TIER_ORDER) {
+      for (const key of ocean.tiers.order || TIER_ORDER) {
         const m = run.depth + dir() * pts(key) * M_PER_POINT;
         if ((s.depth - m) * dir() >= -0.5 && !ocean.tiers.passed.has(key) && key !== s.tier) { ocean.tiers.passed.add(key); A.sfx.pass(); }
       }
@@ -176,7 +180,7 @@ function renderHomeText() {
   $('#ascentBtn').classList.toggle('on', homeMode === 'ascent');
   if (homeMode === 'ascent') {
     $('#tagline').textContent = 'THE ASCENT';
-    $('#homeSub').textContent = 'you start in the trench · the most COMMON answers lift you up';
+    $('#homeSub').textContent = ascentLib ? 'survey says! only the #1 most common answer scores 100 · start in the trench' : 'you start in the trench · the most COMMON answers lift you up';
     $('#diveNo').textContent = `ASCENT #${store.data.ascentNext || 1}`;
     $('#modeBtn').textContent = "TODAY'S DIVE"; $('#modeBtn').dataset.go = 'home'; $('#modeBtn').classList.add('on');
     $('#todayDone').hidden = true;
@@ -245,7 +249,7 @@ function startAscent() {
   const n = store.data.ascentNext || 1;
   store.data.ascentNext = n + 1;
   store.save();
-  startRun({ mode: 'ascent', n, key: `ascent-${n}`, prompts: lib.fresh(store.data.seen) });
+  startRun({ mode: 'ascent', n, key: `ascent-${n}`, prompts: (ascentLib || lib).fresh(store.data.seen) });
 }
 
 // Each endless dive gets 7 prompts you haven't seen yet (least-recently-seen once you've seen them all).
@@ -401,7 +405,7 @@ function land(hit, raw) {
   ocean.cam.depth = camHalf; ocean.cam.frac = 0.5;
   ocean.camTarget.depth = camHalf; ocean.camTarget.frac = 0.5;
   ocean.follow = 7;
-  ocean.tiers = { base: run.depth, passed: new Set(), lit: null };
+  ocean.tiers = { base: run.depth, passed: new Set(), lit: null, order: q.board ? BOARD_ORDER : TIER_ORDER };
   const score = pts(hit.tier);
   const from = ocean.depthAt(startY), to = run.depth + dir() * score * M_PER_POINT;
   run.sink = { mode: 'down', from, to, depth: from, t: 0, dur: 1.2 + 2.1 * Math.sqrt(score / 100), camStart: camHalf, tier: hit.tier };
@@ -412,12 +416,12 @@ function land(hit, raw) {
 }
 
 function landed() {
-  const s = run.sink, a = run.answers[run.i], tier = TIERS[a.tier];
+  const s = run.sink, a = run.answers[run.i], tier = tierInfo(a.tier);
   ocean.tiers.lit = a.tier;
   const st = $('#stone');
   st.classList.add('landed');
   st.style.color = tier.color;
-  A.sfx.land(a.tier);
+  A.sfx.land(a.tier === 'r1' ? 'krillion' : a.tier === 'r2' ? 'deepcut' : a.tier);
   ocean.spawnBubbles(innerWidth / 2, s.to, a.tier === 'krillion' ? 40 : 18, 140);
   run.depth = s.to;
   run.score += a.score;
@@ -437,15 +441,17 @@ function showRoundResult() {
   const icon = $('#rcIcon'), tierEl = $('#rcTier');
   icon.replaceChildren();
   if (a.tier) {
-    const t = TIERS[a.tier];
+    const t = tierInfo(a.tier);
     icon.style.color = t.color;
-    icon.append(S.spriteImg(S.tierIcon(a.tier), a.tier === 'plankton' ? 4 : 3));
-    setPixelText(tierEl, t.name, { px: innerWidth < 520 ? 3 : 4, color: t.color, chroma: a.tier === 'krillion' ? ['#ff3f86', '#2fd6ff'] : null });
+    icon.append(S.spriteImg(S.tierIcon(iconKey(a.tier)), iconKey(a.tier) === 'plankton' ? 4 : 3));
+    setPixelText(tierEl, t.name, { px: innerWidth < 520 ? 3 : 4, color: t.color, chroma: a.tier === 'krillion' || a.tier === 'r1' ? ['#ff3f86', '#2fd6ff'] : null });
     $('#rcAnswer').textContent = `“${a.answer}”`;
     $('#rcPts').innerHTML = `<span class="pts" style="color:${t.color}">+${a.score} PTS</span> · ${game.ascent ? 'rise' : 'sink'} ${a.score * M_PER_POINT}m`;
     $('#rcQuip').textContent = game.ascent ? ASCENT.blurbs[a.tier] + (a.quip ? ` (${a.quip})` : '') : a.quip || t.blurb;
     const notes = [];
     if (a.tier === 'krillion') notes.push(game.ascent ? 'the rarest answer on the reef — the opposite of what you want here' : 'the single rarest answer on the reef');
+    const qb = run.prompts[run.i];
+    if (qb.board && a.tier !== 'r1') notes.push(`survey says #1 was “${qb.board[0].a}” (${qb.board[0].pct}%)`);
     if (a.judged) notes.push('judged by your local AI');
     if (a.fuzzy && norm(a.input) !== norm(a.answer)) notes.push(`read “${a.input}” as “${a.answer}”`);
     $('#rcNote').textContent = notes.join(' · ');
@@ -477,7 +483,7 @@ function renderPips() {
   for (let i = 0; i < ROUNDS; i++) {
     const pip = h('i');
     const a = run.answers[i];
-    if (a) { pip.className = 'done'; pip.style.background = a.tier ? TIERS[a.tier].color : '#2a3b4f'; }
+    if (a) { pip.className = 'done'; pip.style.background = a.tier ? tierInfo(a.tier).color : '#2a3b4f'; }
     else if (i === run.i) pip.className = 'cur';
     p.append(pip);
   }
@@ -533,7 +539,7 @@ function showResults(r) {
   ocean.playerDepth = finalDepth;
   ocean.follow = 1.6;
   ocean.setCamera(finalDepth, 0.4);
-  const prompts = r.promptIds.map(id => lib.byId.get(id));
+  const prompts = r.promptIds.map(id => lib.byId.get(id) || ascentLib?.byId.get(id));
   const page = $('#results');
   page.hidden = false;
   page.scrollTop = 0;
@@ -587,9 +593,9 @@ function showResults(r) {
     const x = colX(i);
     svg += `<text x="${x}" y="${LH - 8}" text-anchor="middle">${i + 1}</text>`;
     if (!a || !a.tier) { svg += `<circle cx="${x}" cy="${top + 2}" r="6" fill="none" stroke="#3d5a78" stroke-dasharray="2 2"/>`; return; }
-    const y = game.ascent ? bottom - (a.score / 100) * (bottom - top) : top + (a.score / 100) * (bottom - top), col = TIERS[a.tier].color;
+    const y = game.ascent ? bottom - (a.score / 100) * (bottom - top) : top + (a.score / 100) * (bottom - top), col = tierInfo(a.tier).color;
     svg += `<line x1="${x}" x2="${x}" y1="${game.ascent ? bottom : top}" y2="${y}" stroke="${col}" stroke-opacity=".45" stroke-width="1.5"/>`;
-    const ic = S.tierIcon(a.tier);
+    const ic = S.tierIcon(iconKey(a.tier));
     const sc = 1.4;
     svg += `<image href="${ic.toDataURL()}" x="${x - ic.width * sc / 2}" y="${y - ic.height * sc / 2}" width="${ic.width * sc}" height="${ic.height * sc}" style="image-rendering:pixelated"/>`;
   });
@@ -643,9 +649,9 @@ function showResults(r) {
 function catchRow(q, a, i) {
   const row = h('div', 'catch-row');
   const btn = h('button');
-  const tier = a?.tier ? TIERS[a.tier] : null;
+  const tier = a?.tier ? tierInfo(a.tier) : null;
   const ic = h('span', 'ic');
-  if (a?.tier) ic.append(S.spriteImg(S.tierIcon(a.tier), 2));
+  if (a?.tier) ic.append(S.spriteImg(S.tierIcon(iconKey(a.tier)), 2));
   btn.append(h('span', 'n', String(i + 1)), ic);
   const mid = h('span');
   mid.append(h('div', 'q', esc(q?.text || 'missing prompt')));
@@ -669,13 +675,13 @@ function catchRow(q, a, i) {
       for (const e of all) {
         if (f && !norm(e.answer).includes(f)) continue;
         if (++shown > 400) break;
-        const t = TIERS[e.tier];
+        const t = tierInfo(e.tier);
         const d = h('div', norm(e.answer) === mineKey ? 'you' : '');
-        d.append(h('span', '', esc(e.answer)), h('i', '', `<span style="color:${t.color}">+${pts(e.tier)}</span>`));
+        d.append(h('span', '', esc(e.pct ? `#${e.tier.slice(1)} · ${e.answer}` : e.answer)), h('i', '', `<span style="color:${t.color}">${e.pct ? e.pct + '% · ' : ''}+${pts(e.tier)}</span>`));
         if (e.quip && (e.tier === 'krillion' || !f)) d.append(h('em', '', esc(e.quip)));
         list.append(d);
       }
-      count.textContent = `${all.length} answers on the reef${f ? ` · ${shown} match` : ''}${a?.judged ? ' · yours was judged by your local AI' : ''}`;
+      count.textContent = (q.board ? 'estimated survey of 100 people · ' : '') + `${all.length} answers on the reef${f ? ` · ${shown} match` : ''}${a?.judged ? ' · yours was judged by your local AI' : ''}`;
     };
     const count = h('div', 'reveal-count');
     search.oninput = draw;

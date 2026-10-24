@@ -1,6 +1,6 @@
 // The ocean: one tall world (sky -> surface -> 7,000 m trench) drawn on a full-screen canvas.
 import * as S from './sprites.js';
-import { TIERS, TIER_ORDER, rng, M_PER_POINT, pts, dir } from './engine.js';
+import { TIERS, TIER_ORDER, rng, M_PER_POINT, pts, dir, tierInfo, iconKey } from './engine.js';
 
 export const PPM = 1.6;               // screen pixels per metre
 const SPRITE = 3;                      // pixel-art scale
@@ -369,8 +369,8 @@ export class Ocean {
     const W = this.W, x0 = Math.round(W * 0.08), x1 = Math.round(W * 0.88);
     g.font = '11px "Cascadia Mono", Consolas, monospace';
     g.textBaseline = 'middle'; g.textAlign = 'right';
-    for (const key of TIER_ORDER) {
-      const tier = TIERS[key], m = T.base + dir() * pts(key) * M_PER_POINT, yy = Math.round(this.y(m));
+    for (const key of T.order || TIER_ORDER) {
+      const tier = tierInfo(key), m = T.base + dir() * pts(key) * M_PER_POINT, yy = Math.round(this.y(m));
       if (yy < -20 || yy > this.H + 20) continue;
       const lit = T.lit === key, passed = T.passed.has(key);
       g.fillStyle = lit ? tier.color : passed ? 'rgba(200,225,245,0.55)' : 'rgba(150,185,215,0.35)';
@@ -379,7 +379,7 @@ export class Ocean {
       const label = `${tier.name} · ${pts(key)}`;
       g.fillStyle = lit ? tier.color : passed ? 'rgba(220,235,250,0.85)' : 'rgba(170,200,225,0.6)';
       g.fillText(label, x1, yy);
-      const icon = S.tierIcon(key);
+      const icon = S.tierIcon(iconKey(key));
       if (icon) { g.globalAlpha = lit || passed ? 1 : 0.55; g.drawImage(icon, x1 - g.measureText(label).width - icon.width * 1 - 8, yy - icon.height / 2, icon.width, icon.height); g.globalAlpha = 1; }
     }
     g.textAlign = 'left';

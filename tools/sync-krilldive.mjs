@@ -47,5 +47,6 @@ for (const id of fs.readdirSync(packsDir)) {
 }
 packs.sort((a, b) => ((ORDER.indexOf(a.id) + 1) || 99) - ((ORDER.indexOf(b.id) + 1) || 99));
 fs.writeFileSync(path.join(out, 'data', 'packs.json'), JSON.stringify({ packs }));
+if (fs.existsSync(path.join(src, 'data', 'ascent.json'))) fs.copyFileSync(path.join(src, 'data', 'ascent.json'), path.join(out, 'data', 'ascent.json'));
 const kb = Math.round(fs.statSync(path.join(out, 'data', 'packs.json')).size / 1024);
 console.log(`KRILLDIVE synced: ${packs.length} packs, ${prompts} prompts, ${answers} answers, packs.json ${kb} KB`);

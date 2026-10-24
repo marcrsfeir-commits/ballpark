@@ -32,7 +32,29 @@ export const ASCENT = {
     { min: 650, max: 700, text: 'Breached the surface. You ARE the crowd.' },
   ],
 };
-export const pts = tier => (game.ascent ? ASCENT.scores[tier] : TIERS[tier].score);
+// Survey-board tiers used by Ascent prompts: only the #1 answer scores full points.
+export const BOARD_TIERS = {
+  r1: { name: '#1 ANSWER', score: 100, color: '#ffd23f', icon: 'krillion' },
+  r2: { name: '#2 ANSWER', score: 70, color: '#4fd1ff', icon: 'schooler' },
+  r3: { name: '#3 ANSWER', score: 50, color: '#7bd88f', icon: 'schooler' },
+  r4: { name: '#4 ANSWER', score: 35, color: '#b38cff', icon: 'tooclever' },
+  r5: { name: '#5 ANSWER', score: 25, color: '#ff9f43', icon: 'tooclever' },
+  r6: { name: '#6 ANSWER', score: 18, color: '#ff9f43', icon: 'plankton' },
+  r7: { name: '#7 ANSWER', score: 12, color: '#cfe3f2', icon: 'plankton' },
+  r8: { name: '#8 ANSWER', score: 8, color: '#cfe3f2', icon: 'plankton' },
+  also: { name: 'NOT ON THE BOARD', score: 3, color: '#7f9cbb', icon: 'plankton' },
+};
+export const BOARD_ORDER = ['also', 'r5', 'r3', 'r2', 'r1'];       // lines drawn while the answer rises
+Object.assign(ASCENT.blurbs, {
+  r1: 'Survey says… #1! You think exactly like the crowd.',
+  r2: 'So close — that\'s the #2 answer.',
+  r3: '#3 on the board. A decent climb.',
+  r4: 'On the board at #4.', r5: 'On the board at #5.', r6: 'Low on the board (#6).', r7: 'Low on the board (#7).', r8: 'Scraped onto the board at #8.',
+  also: 'Valid — but barely anyone said it.',
+});
+export const tierInfo = t => TIERS[t] || BOARD_TIERS[t];
+export const iconKey = t => BOARD_TIERS[t]?.icon || t;
+export const pts = tier => (BOARD_TIERS[tier] ? BOARD_TIERS[tier].score : game.ascent ? ASCENT.scores[tier] : TIERS[tier].score);
 export const dir = () => (game.ascent ? -1 : 1);                 // depth change per point
 export const startDepth = () => (game.ascent ? MAX_SCORE * M_PER_POINT : 0);
 export const MAX_SCORE = 700;
@@ -171,14 +193,18 @@ export function indexPrompt(q) {
     const s = strip(k);
     if (s.length >= 3 && s !== k) { put(s, i, false); put(compact(s), i, false); }
   };
-  const add = (answer, tier, quip) => {
+  const add = (answer, tier, quip, pct) => {
     const k = norm(answer);
     if (!k) return;
     if (slots.get(k)?.exact) return; // first (most common) tier wins
     const i = entries.length;
-    entries.push({ answer, tier, score: TIERS[tier].score, quip: quip || quips[answer] || null });
+    entries.push({ answer, tier, score: (TIERS[tier] || BOARD_TIERS[tier]).score, quip: quip || quips[answer] || null, pct });
     putAll(k, i);
   };
+  if (q.board) {                     // Ascent survey-board prompt
+    q.board.forEach((b, r) => add(b.a, 'r' + (r + 1), null, b.pct));
+    for (const a of q.also || []) add(a, 'also');
+  }
   if (q.krillion?.a) add(q.krillion.a, 'krillion', q.krillion.quip);
   for (const t of ['plankton', 'tooclever', 'schooler', 'rare', 'deepcut']) for (const a of q[t] || []) add(a, t);
   for (const [canon, alts] of Object.entries(q.aliases || {})) {
