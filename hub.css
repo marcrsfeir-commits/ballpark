@@ -32,6 +32,8 @@ a { color: inherit; }
 .tag { margin: 12px 0 14px; font: 600 12px/1.4 var(--mono); letter-spacing: .2em; text-transform: uppercase; color: #c9c3a8; }
 .scoreline { display: inline-flex; gap: 10px; align-items: center; padding: 8px 14px; border-radius: 8px; background: #05080b;
   font: 700 12px/1 var(--mono); letter-spacing: .18em; color: #8a8f99; flex-wrap: wrap; justify-content: center; }
+.offline { color: #7bd88f; }
+[hidden] { display: none !important; }
 .scoreline b { color: var(--amber); font-size: 15px; margin-right: 8px; }
 
 /* game cards */

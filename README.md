@@ -31,6 +31,10 @@ node serve.js        # http://localhost:8813
 No build step. three.js (r170) and cannon-es are vendored in `vendor/` (MIT), so it works fully offline.
 Running locally also unlocks two extras that use a local [Ollama](https://ollama.com) model: FUSE invents combinations that aren't in the pre-made recipe book (`/api/fuse`), and the standalone KRILLDIVE can judge answers missing from its lists.
 
+## Offline
+
+After one visit the whole site works with no internet (PC, iPad, phone — also as an installed home-screen app). `sw.js` precaches every file; regenerate it before each push with `node tools/build-sw.mjs` (the cache version is a content hash).
+
 ## Layout
 
 - `index.html` / `hub.js` — the hub (today's results, streak, scorecard)

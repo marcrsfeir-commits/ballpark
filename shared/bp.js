@@ -72,6 +72,10 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', injectPill);
   else injectPill();
 
+  // Offline support: the hub's service worker (sw.js at the site root) caches every game.
+  // Registering here too means opening any game directly also makes the whole site available offline.
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('../../sw.js', { scope: '../../' }).catch(() => {});
+
   // Random per-device salt so daily puzzles differ between devices (kept stable on this device).
   function deviceSeed() {
     let s = safeGet('ballpark.seed', null);

@@ -146,3 +146,19 @@ function render() {
 render();
 addEventListener('pageshow', render);
 addEventListener('storage', render);
+
+// Offline: sw.js precaches every game; show a badge once this device has the full copy.
+async function offlineBadge() {
+  const el = document.getElementById('offline');
+  if (!el || !('serviceWorker' in navigator)) return;
+  try {
+    await navigator.serviceWorker.register('sw.js');
+    await navigator.serviceWorker.ready;
+    for (let i = 0; i < 40; i++) {                       // wait for the install to finish caching
+      const keys = await caches.keys();
+      if (keys.some(k => k.startsWith('ballpark-'))) { el.textContent = '✓ PLAYABLE OFFLINE'; el.hidden = false; return; }
+      await new Promise(r => setTimeout(r, 500));
+    }
+  } catch { /* storage blocked (private mode) — the site still works online */ }
+}
+offlineBadge();
