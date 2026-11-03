@@ -5,7 +5,7 @@ import { pixelText, setPixelText } from './font.js';
 import * as A from './audio.js';
 import {
   TIERS, TIER_ORDER, ROUNDS, M_PER_POINT, MAX_SCORE, BEARING, bearingFor, Library, matchAnswer, suggestAnswer, revealList, norm, game, ASCENT, pts, dir, startDepth, tierInfo, iconKey, BOARD_ORDER,
-  store, todayKey, diveNumberFor, dateForDive, judgeStatus, warmJudge, askJudge,
+  store, todayKey, diveNumberFor, dateForDive, judgeStatus, warmJudge, askJudge, indexPrompt,
 } from './engine.js';
 
 const $ = s => document.querySelector(s);
@@ -254,12 +254,12 @@ function startAscent() {
   startRun({ mode: 'ascent', n, key: `ascent-${n}`, prompts: (ascentLib || lib).fresh(store.data.seen) });
 }
 
-// Each endless dive gets 7 prompts you haven't seen yet (least-recently-seen once you've seen them all).
+// Each endless dive is a fresh random mix: no recent repeats, max 2 per pack, no pack twice in a row (see Library.endlessPick).
 function startEndless() {
   const n = store.data.endlessNext;
   store.data.endlessNext = n + 1;
   store.save();
-  startRun({ mode: 'endless', n, key: `endless-${n}`, prompts: lib.fresh(store.data.seen) });
+  startRun({ mode: 'endless', n, key: `endless-${n}`, prompts: lib.endlessPick(store.data.seen, store.data.seenTick) });
 }
 
 // Daily dive n: 7 prompts this device hasn't seen yet, picked once and then kept for that day.
@@ -295,6 +295,7 @@ function startRound() {
   phase = 'intro';
   const q = run.prompts[run.i];
   store.markSeen(q.id);
+  setTimeout(() => indexPrompt(q), 0); // build the answer index while the prompt card animates in
   ocean.tiers = null;
   $('#resultCard').hidden = true; $('#nextBtn').hidden = true; $('#stone').hidden = true;
   $('#answerBar').hidden = true;
