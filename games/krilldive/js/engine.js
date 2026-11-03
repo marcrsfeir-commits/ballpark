@@ -238,6 +238,14 @@ export function matchAnswer(q, input) {
   for (const v of [k, compact(k), singular(k), singular(compact(k)), s, compact(s)]) {
     if (v && v.length >= (v === k ? 1 : 3) && keys.has(v)) return { ...entries[keys.get(v)], exact: true };
   }
+  // the answer inside a longer phrase ("a golden retriever puppy"), or a longer listed name typed short ("hawking" for "Stephen Hawking")
+  const words = ` ${k} `;
+  let part = null;
+  for (const [key, i] of keys) {
+    if (key.length < 4) continue;
+    if (words.includes(` ${key} `) || (k.length >= 4 && ` ${key} `.endsWith(` ${k} `))) if (!part || key.length > part.len) part = { i, len: key.length };
+  }
+  if (part) return { ...entries[part.i], exact: false };
   if (k.length < 5) return null;
   const max = k.length >= 9 ? 2 : 1;
   let best = null, bestD = max + 1, tie = false;

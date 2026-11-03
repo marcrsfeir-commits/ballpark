@@ -27,6 +27,7 @@ A.setMusic(settings.music);
 
 let lib = null, ascentLib = null;      // ascentLib = survey-board prompts for THE ASCENT
 let homeMode = 'daily';
+const CLAIM_TIER = 'schooler';   // honour-system score for a valid answer missing from the lists
 let phase = 'home';           // home | intro | answer | judging | sinking | result | final | page
 let run = null;
 const judge = { online: false, models: [], model: null, checked: false };
@@ -365,7 +366,11 @@ async function submit(final) {
   if (!hit) {
     if (final || (run.total > 0 && run.left <= 0)) return land(null, raw);
     run.locked = false;
-    $('#echo').textContent = `“${raw}”: no echo. try again`;
+    $('#echo').textContent = `“${raw}”: not on our list. try again, or `;
+    const ok = h('button', 'claim', 'IT COUNTS ✓');
+    ok.type = 'button';
+    ok.onclick = () => { if (run && run.prompts[run.i] === q && !run.locked) { run.locked = true; land({ answer: raw, tier: CLAIM_TIER, claimed: true }, raw); } };
+    $('#echo').append(ok);
     inp.classList.remove('shake'); void inp.offsetWidth; inp.classList.add('shake');
     A.sfx.nope();
     inp.select(); inp.focus();
@@ -379,7 +384,7 @@ function land(hit, raw) {
   phase = 'sinking';
   const q = run.prompts[run.i];
   run.answers[run.i] = hit
-    ? { id: q.id, input: raw, answer: hit.answer, tier: hit.tier, score: pts(hit.tier), quip: hit.quip || null, judged: !!hit.judged, fuzzy: hit.exact === false }
+    ? { id: q.id, input: raw, answer: hit.answer, tier: hit.tier, score: pts(hit.tier), quip: hit.quip || null, judged: !!hit.judged, claimed: !!hit.claimed, fuzzy: hit.exact === false }
     : { id: q.id, input: raw, answer: raw, tier: null, score: 0 };
   $('#answerBar').hidden = true;
   $('#promptCard').classList.add('away');
@@ -453,6 +458,7 @@ function showRoundResult() {
     const qb = run.prompts[run.i];
     if (qb.board && a.tier !== 'r1') notes.push(`survey says #1 was “${qb.board[0].a}” (${qb.board[0].pct}%)`);
     if (a.judged) notes.push('judged by your local AI');
+    if (a.claimed) notes.push('not on our list: you said it counts');
     if (a.fuzzy && norm(a.input) !== norm(a.answer)) notes.push(`read “${a.input}” as “${a.answer}”`);
     $('#rcNote').textContent = notes.join(' · ');
   } else {

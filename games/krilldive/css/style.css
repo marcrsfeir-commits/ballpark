@@ -111,6 +111,8 @@ body.in-game .home-only { display: none; }
 #answerBar { position: absolute; left: 50%; bottom: 9vh; transform: translateX(-50%); width: min(480px, calc(100vw - 32px)); display: grid; grid-template-columns: 52px 1fr auto; gap: 8px; align-items: center; }
 #echo { grid-column: 1 / -1; text-align: center; font-size: 11px; letter-spacing: .08em; color: #ffb35c; min-height: 14px; }
 #echo.judging { color: var(--cyan); }
+#echo .claim { margin-left: 6px; padding: 3px 8px; font: inherit; letter-spacing: inherit; color: #04121f; background: #7bd88f; border: 0; border-radius: 4px; cursor: pointer; }
+#echo .claim:hover, #echo .claim:focus-visible { background: #a6f0b4; outline: 2px solid #f6f3ff; }
 .timer { position: relative; width: 52px; height: 52px; }
 .timer svg { width: 52px; height: 52px; transform: rotate(-90deg); }
 .timer circle { fill: rgba(9,18,33,.9); stroke-width: 3; }
