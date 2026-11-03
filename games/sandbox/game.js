@@ -9,7 +9,7 @@
   const ctx = cvs.getContext('2d', { alpha: false });
   const stage = $('#stage');
   const store = window.Ballpark ? Ballpark.store('sandbox') : { get: (k, f) => f, set() {} };
-  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let reduceMotion = store.get('calm', false) || matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   // ---------- fast RNG ----------
   let rs = (Math.random() * 0xffffffff) >>> 0 || 1;
@@ -954,7 +954,8 @@
         else b.vy += G * (1 - frac / b.dens);
         if (frac > 0) { b.vx *= 1 - .08 * frac; b.vy *= 1 - .08 * frac; }
         if (b.kind === 'car') {
-          if (b.gr) b.vx = clamp(b.vx + b.dir * .04, -1.15, 1.15);
+          if (b.emp > 0) b.emp--; // stalled by an EMP
+          else if (b.gr) b.vx = clamp(b.vx + b.dir * .04, -1.15, 1.15);
           b.stuck = Math.abs(b.vx) < .1 ? (b.stuck || 0) + 1 : 0;
           if (b.stuck > 30) { b.dir = -b.dir; b.stuck = 0; b.vx = b.dir * .4; }
         } else if (b.kind === 'rocket') {
@@ -1521,6 +1522,7 @@
   }
   function stepFans() {
     for (const f of fans) {
+      if (f.off > 0) { f.off--; continue; } // knocked out by an EMP
       const dx = FDX[f.dir], dy = FDY[f.dir], ox = f.x, oy = f.y - 1;
       let L = 0;
       for (; L < 36; L++) { const x = Math.floor(ox + dx * (3 + L)), y = Math.floor(oy + dy * (3 + L)); if (x < 0 || y < 0 || x >= W || y >= H) break; const t = g[y * W + x]; if (t && KIND[t] === K_SOLID) break; }
@@ -1853,6 +1855,707 @@
     if (t) selectTool(t.id); else showTip(`<b>${NAME[m]}</b> is a reaction product with no tool of its own.`);
   }
 
+  // ---------- weapons ----------
+  // ~120 weapons share a handful of engines: shells (anything that flies), traps (things you place),
+  // timed strikes (airstrikes, storms), gas clouds and instant beams. Each weapon is just data on top of them.
+  const shells = [], traps = [], strikes = [], clouds = [], arcs = [];
+  const SHELL_MAX = 600;
+  const C = pack;
+  function later(n, fn) { if (strikes.length < 500) strikes.push({ t: n, fn }); }
+  function groundBelow(x, y) { x = clamp(x | 0, 0, W - 1); for (let yy = clamp(y | 0, 0, H - 1); yy < H; yy++) if (solidAt(x, yy)) return yy - 1; return H - 1; }
+  function nearestCreature(x, y, R, pred) {
+    let best = null, bd = R;
+    for (const c of creatures) { if (c.st !== 'ok' || (pred && !pred(c))) continue; const d = Math.hypot(c.x - x, c.y - c.h / 2 - y); if (d < bd) { bd = d; best = c; } }
+    return best;
+  }
+  // shell template: speed, gravity scale, drag, life, pierce energy, bounces, blast radius/power/effect, colour, size...
+  const B = o => Object.assign({ sp: 4, gr: 0, dr: 1, life: 160, pier: 0, bnc: 0, r: 0, pow: 1, fx: 'he', col: C(255, 240, 170), sz: 1 }, o);
+  function addShell(x, y, vx, vy, P) {
+    if (shells.length >= SHELL_MAX) return null;
+    const s = { x, y, vx, vy, P, life: P.life, pier: P.pier, bnc: P.bnc, fuse: P.fuse || 0, stuck: false, digT: -1, age: 0, tx: null, ty: 0 };
+    shells.push(s);
+    return s;
+  }
+  const hasPayload = P => P.r > 0 || P.split || (P.fx !== 'he' && P.fx !== 'none');
+  function detonate(s) {
+    const P = s.P;
+    blast(s.x, s.y, P);
+    if (P.split) for (let k = 0; k < P.split.n; k++) {
+      const a = P.split.up ? -Math.PI / 2 + (rnd() - .5) * 2.4 : rnd() * 6.283, sp = P.split.sp * (.5 + rnd() * .7);
+      addShell(s.x, s.y - 1, Math.cos(a) * sp, Math.sin(a) * sp, P.split.P);
+    }
+  }
+  function stopShell(s) { // shell ran out of steam or hit something it cannot get through
+    if (hasPayload(s.P)) { detonate(s); return; }
+    const m = s.P.leave; if (!m) return;
+    const rr = s.P.leaveR || 0;
+    if (rr) disc(s.x, s.y, rr, i => { if (!g[i] && !mask[i]) set(i, m, 0); });
+    else { const x = clamp(s.x | 0, 0, W - 1), y = clamp(s.y | 0, 0, H - 1), i = y * W + x; if (!g[i] && !mask[i]) set(i, m, 0); }
+  }
+  function ringFx(x, y, max) { fx.push({ kind: 'ring', x, y, r: 1, max }); }
+  function pushAll(x, y, R, k, killR, cause) { // radial shove for creatures, bodies, ragdolls and loose cells
+    for (const c of creatures) { const dx = c.x - x, dy = c.y - c.h / 2 - y, d = Math.hypot(dx, dy) + .5; if (d > R) continue; const f = (1 - d / R) * k; c.vx += dx / d * f; c.vy += dy / d * f - f * .4; if (killR && d < killR) kill(c, cause || 'blown away', true); }
+    for (const b of bodies) { const dx = b.x - x, dy = b.y - y, d = Math.hypot(dx, dy) + .5; if (d > R) continue; const f = (1 - d / R) * k; b.vx += dx / d * f; b.vy += dy / d * f - f * .3; }
+    for (const rg of ragdolls) for (const p of rg.p) { const dx = p.x - x, dy = p.y - y, d = Math.hypot(dx, dy) + .5; if (d > R) continue; const f = (1 - d / R) * k; p.ox -= dx / d * f; p.oy -= dy / d * f; }
+  }
+  function fillAir(x, y, r, m, p, d) { disc(x, y, r, i => { if (!g[i] && !mask[i] && rnd() < p) set(i, m, d); }); }
+  const CONF = [C(255, 80, 120), C(255, 210, 60), C(90, 230, 140), C(80, 170, 255), C(200, 120, 255), C(255, 255, 255), C(255, 150, 60)];
+  function blast(x, y, P) {
+    const r = P.r || 0;
+    x = clamp(x, 0, W - 1); y = clamp(y, 0, H - 1);
+    if (r > 0) for (let k = traps.length - 1; k >= 0; k--) { // traps caught in a blast go off too
+      const t = traps[k]; if (Math.hypot(t.x - x, t.y - y) > r + 3) continue;
+      traps.splice(k, 1);
+      if (t.P && (t.k === 'mine' || t.k === 'betty' || t.k === 'claymore')) later(3 + rndi(8), () => blast(t.x, t.y - 1, t.P));
+    }
+    switch (P.fx) {
+      case 'none': break;
+      case 'he': if (r) explode(x, y, r, P.pow); break;
+      case 'fire':
+        explode(x, y, Math.max(2, r * .4), .5);
+        disc(x, y, r, i => { const t = g[i]; if (!t && !mask[i] && rnd() < .4) set(i, FIRE, 20 + rndi(40)); else if (FLAM[t] > 0) ignite(i); else if (t === ICE || t === SNOW) set(i, WATER, 0); });
+        for (const c of creatures) if (c.st === 'ok' && Math.hypot(c.x - x, c.y - y) < r + 2) c.burn = c.burn || 1;
+        break;
+      case 'napalm':
+        explode(x, y, Math.max(2, r * .35), .4, true); sfx('boom');
+        disc(x, y, r, i => { if (!g[i] && !mask[i] && rnd() < .45) { set(i, NAPALM); ignite(i); } });
+        for (const c of creatures) if (c.st === 'ok' && Math.hypot(c.x - x, c.y - y) < r + 3) c.burn = c.burn || 1;
+        break;
+      case 'cryo': case 'ln2':
+        disc(x, y, r, i => {
+          const t = g[i];
+          if (t === WATER || t === SLIME || t === ACID || t === MUD) set(i, ICE, 0);
+          else if (t === LAVA) set(i, STONE, 0);
+          else if (t === FIRE || t === PLASMA) { g[i] = 0; dat[i] = 0; }
+          else if (t === BURN) set(i, WOOD, 0);
+          else if (!t && !mask[i] && rnd() < (P.fx === 'ln2' ? .45 : .2)) set(i, P.fx === 'ln2' ? LN2 : SNOW, 0);
+        });
+        for (const c of creatures) if (Math.hypot(c.x - x, c.y - c.h / 2 - y) < r + 3) { c.frozen = 480; c.burn = 0; }
+        for (const b of bodies) if (Math.hypot(b.x - x, b.y - y) < r + 3) { b.burn = 0; if (isBomb(b)) b.fuse = Math.max(b.fuse, 200); }
+        for (let k = 0; k < 40; k++) { const a = rnd() * 6.283, s = rnd() * 2; addP(x, y, Math.cos(a) * s, Math.sin(a) * s, 0, 14 + rndi(16), C(190, 240, 255)); }
+        ringFx(x, y, r * 1.6); flash = Math.max(flash, .15); sfx('fizz');
+        break;
+      case 'acid': fillAir(x, y, r, ACID, .5); sfx('fizz'); break;
+      case 'oil': fillAir(x, y, r, OIL, .55); sfx('pop'); break;
+      case 'slime': fillAir(x, y, r, SLIME, .5); sfx('pop'); break;
+      case 'lava': explode(x, y, Math.max(2, r * .3), .4, true); fillAir(x, y, r, LAVA, .55); sfx('boom'); break;
+      case 'water': fillAir(x, y, r, WATER, .7); pushAll(x, y, r * 2, 1.5); sfx('pop'); break;
+      case 'steam': explode(x, y, Math.max(2, r * .3), .3, true); fillAir(x, y, r, STEAM, .55); pushAll(x, y, r * 2, 2); sfx('fizz'); break;
+      case 'plasma': explode(x, y, Math.max(2, r), .7, true); fillAir(x, y, r + 2, PLASMA, .35); sfx('zap'); break;
+      case 'thermite': explode(x, y, 2, .3, true); disc(x, y, r, i => { if (!mask[i] && (!g[i] || KIND[g[i]] === K_GAS) && rnd() < .55) set(i, THERMITE, 120); }); sfx('fizz'); break;
+      case 'virus':
+        disc(x, y, r, i => { const t = g[i]; if (t && t !== CLONE && t !== VOID && t !== VIRUS && rnd() < .55) set(i, VIRUS); else if (!t && !mask[i] && rnd() < .06) set(i, VIRUS); });
+        for (const c of creatures) if (Math.hypot(c.x - x, c.y - c.h / 2 - y) < r + 4) infect(c);
+        for (const b of [...bodies]) if (Math.hypot(b.x - x, b.y - y) < r + b.w / 2) shatterBody(b, VIRUS, true);
+        for (let k = 0; k < 30; k++) { const a = rnd() * 6.283, s = rnd() * 1.4; addP(x, y, Math.cos(a) * s, Math.sin(a) * s, 0, 20 + rndi(20), C(190, 70, 230)); }
+        sfx('pop');
+        break;
+      case 'gas': clouds.push({ x, y, r: 2, R: r, t: 300, col: C(140, 230, 90), inf: false }); sfx('fizz'); break;
+      case 'spores': clouds.push({ x, y, r: 2, R: r, t: 360, col: C(200, 120, 240), inf: true }); sfx('fizz'); break;
+      case 'smoke': disc(x, y, r, i => { if (!g[i] && !mask[i] && rnd() < .65) set(i, SMOKE, 160 + rndi(120)); }); sfx('fizz'); break;
+      case 'flash':
+        flash = 1;
+        for (const c of creatures) if (c.st === 'ok' && Math.hypot(c.x - x, c.y - y) < r) { c.frozen = Math.max(c.frozen, 90); c.vx = 0; }
+        ringFx(x, y, r); sfx('zap');
+        break;
+      case 'emp':
+        for (const c of creatures) if (c.kind === 'robot' && c.st === 'ok' && Math.hypot(c.x - x, c.y - y) < r) kill(c, 'fried', true);
+        for (const b of bodies) if (Math.hypot(b.x - x, b.y - y) < r) { if (b.kind === 'car') { b.emp = 600; b.vx *= .2; } if (b.kind === 'rocket') b.fuel = 0; }
+        for (const f of fans) if (Math.hypot(f.x - x, f.y - y) < r) f.off = 600;
+        for (const t of traps) if (Math.hypot(t.x - x, t.y - y) < r) t.off = 600;
+        disc(x, y, r, i => { if (CLS[g[i]] === 1 && rnd() < .01) electrify(i, g[i]); });
+        ringFx(x, y, r); flash = Math.max(flash, .35); sfx('zap');
+        for (let k = 0; k < 40; k++) { const a = rnd() * 6.283; addP(x + Math.cos(a) * r * .5, y + Math.sin(a) * r * .5, Math.cos(a), Math.sin(a), 0, 10 + rndi(10), C(140, 200, 255)); }
+        break;
+      case 'grav': if (wells.length >= 3) wells.shift(); wells.push({ x, y, t: 480, ate: 0 }); sfx('hole'); break;
+      case 'bh': if (wells.length >= 3) wells.shift(); wells.push({ x, y, t: 300, ate: 0 }); sfx('hole'); break;
+      case 'sing':
+        if (wells.length >= 3) wells.shift(); wells.push({ x, y, t: 0, ate: 0 });
+        flash = Math.max(flash, .5); shake = Math.max(shake, 8); ringFx(x, y, 60); sfx('hole');
+        later(640, () => { explode(x, y, 22, 1.6); ringFx(x, y, 90); });
+        break;
+      case 'implode':
+        disc(x, y, r, (i, cx, cy) => { const t = g[i]; if (!t || t === CLONE || t === VOID || rnd() > .6) return; const dx = x - cx, dy = y - cy, d = Math.hypot(dx, dy) + .5; launch(i, dx / d * 2.2, dy / d * 2.2); });
+        pushAll(x, y, r * 1.8, -3);
+        ringFx(x, y, r); sfx('hole');
+        later(26, () => explode(x, y, Math.max(4, r * .5), 1.2));
+        break;
+      case 'shock':
+        disc(x, y, r, (i, cx, cy) => { const t = g[i]; if (!t || !movable(t) || rnd() > .5) return; const dx = cx - x, dy = cy - y, d = Math.hypot(dx, dy) + .5; launch(i, dx / d * 3, dy / d * 3 - .5); });
+        pushAll(x, y, r * 2, 4, r * .35, 'blasted');
+        ringFx(x, y, r * 1.5); shake = Math.max(shake, Math.min(8, r * .3)); sfx('boom');
+        break;
+      case 'void': case 'anti': {
+        const anti = P.fx === 'anti';
+        disc(x, y, r, (i, cx, cy) => { const t = g[i]; if (!t || t === CLONE) return; if (rnd() < .12) addP(cx + .5, cy + .5, (rnd() - .5) * .8, (rnd() - .5) * .8, 0, 16 + rndi(20), anti ? C(255, 120, 230) : C(140, 80, 220)); g[i] = 0; dat[i] = 0; });
+        for (const c of [...creatures]) if (Math.hypot(c.x - x, c.y - c.h / 2 - y) < r + 1) { if (c.st === 'ok') stats.lost++; crumble(c, true); }
+        for (const b of [...bodies]) if (Math.hypot(b.x - x, b.y - y) < r + b.w / 2) removeBody(b);
+        ringFx(x, y, r * (anti ? 2.4 : 1.4));
+        if (anti) { flash = 1; shake = Math.max(shake, 16); pushAll(x, y, r * 3, 5); sfx('nuke'); } else sfx('hole');
+        break;
+      }
+      case 'tsar':
+        nuke(x, y); explode(x, y, 46, 2.2, true);
+        pushAll(x, y, 200, 6);
+        ringFx(x, y, 220); later(12, () => ringFx(x, y, 160)); flash = 1; shake = 26;
+        break;
+      case 'chain':
+        nuke(x, y);
+        for (let k = 1; k <= 4; k++) later(28 * k, () => nuke(clamp(x + (rnd() - .5) * 140, 4, W - 5), clamp(y + (rnd() - .5) * 30, 4, H - 5)));
+        break;
+      case 'quake': if (r) explode(x, y, r, P.pow); quakeT = Math.max(quakeT, 150); break;
+      case 'shaped': { // drives a narrow cone down through the ground
+        explode(x, y, Math.max(3, r * .3), 1);
+        const sgn = gdir < 0 ? -1 : 1;
+        for (let d = 0; d < r * 2.6; d++) {
+          const yy = (y + d * sgn) | 0; if (yy < 0 || yy >= H) break;
+          const half = 1 + d * .22;
+          for (let dx = -half; dx <= half; dx++) { const xx = (x + dx) | 0; if (xx < 0 || xx >= W) continue; const i = yy * W + xx; if (g[i] && g[i] !== CLONE && rnd() < .8) { if (!launch(i, (rnd() - .5) * 2, -sgn * (1 + rnd() * 2))) { g[i] = 0; dat[i] = 0; } } }
+        }
+        break;
+      }
+      case 'sink':
+        disc(x, y + r * .6, r, i => { if (g[i] && g[i] !== CLONE) { g[i] = 0; dat[i] = 0; } });
+        disc(x, y + r * 1.6, r * .8, i => { if (g[i] && g[i] !== CLONE) { g[i] = 0; dat[i] = 0; } });
+        shake = Math.max(shake, 5); sfx('bigboom');
+        break;
+      case 'paint':
+        disc(x, y, r, i => { if (g[i]) tint[i] = 1 + rndi(TINTS.length - 1); }); anyTint = true;
+        for (let k = 0; k < 24; k++) { const a = rnd() * 6.283, s = rnd() * 1.6; addP(x, y, Math.cos(a) * s, Math.sin(a) * s, 0, 16 + rndi(16), CONF[rndi(CONF.length)]); }
+        sfx('pop');
+        break;
+      case 'confetti':
+        for (let k = 0; k < 120; k++) { const a = rnd() * 6.283, s = .3 + rnd() * 2.4; addP(x, y, Math.cos(a) * s, Math.sin(a) * s - .6, 0, 30 + rndi(40), CONF[rndi(CONF.length)]); }
+        pushAll(x, y, r, 1.4); sfx('pop');
+        break;
+      case 'firework': burstFirework(x, y); burstFirework(x + 3, y - 2); sfx('pop'); break;
+      case 'melon':
+        for (let k = 0; k < 40; k++) { const a = rnd() * 6.283, s = rnd() * 2.2; addP(x, y, Math.cos(a) * s, Math.sin(a) * s - .5, 0, 18 + rndi(18), rnd() < .7 ? C(240, 60, 80) : C(60, 170, 70)); }
+        fillAir(x, y, r, WATER, .35); pushAll(x, y, r * 2, 1.8); sfx('pop');
+        break;
+      case 'piano':
+        pushAll(x, y, 16, 3, 7, 'flattened'); explode(x, y, 4, .6, true);
+        for (let k = 0; k < 40; k++) { const a = -Math.PI / 2 + (rnd() - .5) * 2.6, s = rnd() * 2.6; addP(x, y - 1, Math.cos(a) * s, Math.sin(a) * s, rnd() < .25 ? METAL : WOOD, -1, 0); }
+        for (let k = 0; k < 12; k++) addP(x, y - 2, (rnd() - .5) * 2, -rnd() * 2, 0, 20 + rndi(14), rnd() < .5 ? WHITE : C(20, 20, 24));
+        shake = Math.max(shake, 6); sfx('bigboom'); sfx('tink');
+        break;
+      case 'anvil':
+        pushAll(x, y, 12, 2.5, 4, 'flattened'); shake = Math.max(shake, 5); sfx('tink'); sfx('boom');
+        for (let dy = 0; dy < 3; dy++) for (let dx = -2; dx <= 2; dx++) { const xx = (x + dx) | 0, yy = (y - dy) | 0; if (xx >= 0 && yy >= 0 && xx < W && yy < H && !g[yy * W + xx] && !(dy === 1 && Math.abs(dx) === 2)) set(yy * W + xx, METAL, 0); }
+        break;
+      case 'kinetic': explode(x, y, r, P.pow); pushAll(x, y, r * 3, 4); ringFx(x, y, r * 2.5); flash = Math.max(flash, .6); break;
+      default: if (r) explode(x, y, r, P.pow);
+    }
+    if (r >= 14 && P.fx === 'he') { ringFx(x, y, r * 1.8); if (r >= 24) { flash = Math.max(flash, .7); pushAll(x, y, r * 3, 3); } }
+  }
+  function stepShells() {
+    const sg = gdir < 0 ? -1 : 1;
+    for (let n = shells.length - 1; n >= 0; n--) {
+      const s = shells[n], P = s.P;
+      s.age++;
+      if (s.stuck) { if (s.fuse && --s.fuse <= 0) { detonate(s); shells.splice(n, 1); } continue; }
+      if (--s.life <= 0) { stopShell(s); shells.splice(n, 1); continue; }
+      if (s.fuse && --s.fuse <= 0) { detonate(s); shells.splice(n, 1); continue; }
+      if ((P.home || s.tx !== null) && s.age > 6) { // steer toward a creature, a body, or the tapped point
+        let tx = s.tx, ty = s.ty;
+        if (tx === null) {
+          const c = nearestCreature(s.x, s.y, 180);
+          if (c) { tx = c.x; ty = c.y - c.h / 2; }
+          else { let bd = 180; for (const b of bodies) { const d = Math.hypot(b.x - s.x, b.y - s.y); if (d < bd) { bd = d; tx = b.x; ty = b.y; } } }
+        }
+        if (tx !== null) { const dx = tx - s.x, dy = ty - s.y, d = Math.hypot(dx, dy) || 1, sp = Math.max(P.sp, Math.hypot(s.vx, s.vy)); s.vx += (dx / d * sp - s.vx) * .1; s.vy += (dy / d * sp - s.vy) * .1; }
+      }
+      if (P.acc) { const sp = Math.hypot(s.vx, s.vy); if (sp < P.max) { s.vx *= P.acc; s.vy *= P.acc; } }
+      const here = s.x >= 0 && s.y >= 0 && s.x < W && s.y < H ? g[(s.y | 0) * W + (s.x | 0)] : 0;
+      const inLiq = here && KIND[here] === K_LIQ;
+      if (P.tw && inLiq) { s.vy *= .85; s.vx = (s.vx >= 0 ? 1 : -1) * P.sp; }
+      else s.vy += .11 * gdir * P.gr;
+      s.vx *= P.dr; s.vy *= P.dr;
+      const spd = Math.max(Math.abs(s.vx), Math.abs(s.vy)), steps = Math.min(12, Math.ceil(spd)) || 1;
+      let dead = false;
+      for (let k = 0; k < steps && !dead; k++) {
+        const px = s.x, py = s.y;
+        s.x += s.vx / steps; s.y += s.vy / steps;
+        if (wrap) { if (s.x < 0) s.x += W; else if (s.x >= W) s.x -= W; }
+        if (s.y < 0 || s.y >= H || s.x < 0 || s.x >= W) {
+          if (s.y < 0 && s.y > -400 && s.x >= 0 && s.x < W) continue; // flying above the screen is fine
+          s.x = clamp(px, 0, W - 1); s.y = clamp(py, 0, H - 1);
+          if (s.bnc > 0 && (s.y >= H - 2 || s.y < 1)) { s.vy = -s.vy * (P.rest || .5); s.bnc--; break; }
+          if (s.bnc > 0) { s.vx = -s.vx * (P.rest || .5); s.bnc--; break; }
+          stopShell(s); dead = true; break;
+        }
+        const ix = s.x | 0, iy = s.y | 0, i = iy * W + ix, t = g[i];
+        let hitStop = false;
+        if (P.kill !== false) for (const c of creatures) {
+          if (c.st !== 'ok' || Math.abs(c.x - s.x) > 1.2 + P.sz * .5) continue;
+          if ((s.y - c.y) * sg > 1 + P.sz * .5 || (c.y - s.y) * sg > c.h + P.sz * .5) continue;
+          kill(c, P.cause || 'shot', true); c.vx += s.vx * .3; c.vy += s.vy * .3 - .3;
+          if (!s.pier && !P.smash && !P.cut) hitStop = true;
+          break;
+        }
+        if (!hitStop) for (const o of bodies) {
+          if (Math.abs(o.x - s.x) > o.w / 2 + P.sz * .5 || Math.abs(o.y - s.y) > o.h / 2 + P.sz * .5) continue;
+          const k2 = P.heavy ? .6 : .2;
+          o.vx += s.vx * k2; o.vy += s.vy * k2; hurtBody(o, P.dmg || 18);
+          if (P.smash || P.cut) { s.vx *= .75; s.vy *= .75; }
+          else if (s.pier > 3) s.pier -= 3;
+          else hitStop = true;
+          break;
+        }
+        if (hitStop) { s.x = px; s.y = py; stopShell(s); dead = true; break; }
+        if (!t || mask[i] || KIND[t] === K_GAS || KIND[t] === K_FIRE || t === BOLT || t === FWORK) { if (s.digT === 0) { detonate(s); dead = true; } continue; }
+        if (KIND[t] === K_LIQ) {
+          if (P.tw) continue;
+          if (P.imp) { s.x = px; s.y = py; detonate(s); dead = true; break; }
+          s.vx *= .9; s.vy *= .9; if (rnd() < .3) launch(i, s.vx * .3 + (rnd() - .5), -Math.abs(s.vy) * .3 - rnd() * .8);
+          continue;
+        }
+        if (t === POWDER || t === C4 || t === NITRO) boom(i, 4, .6);
+        if (P.dig) {
+          if (s.digT < 0) s.digT = P.dig;
+          if (s.digT > 0) { if (t !== CLONE && !launch(i, (rnd() - .5) * 1.5, -sg * rnd() * 1.5)) { g[i] = 0; dat[i] = 0; } s.digT--; s.vx *= .97; s.vy *= .97; if (s.digT === 0) { detonate(s); dead = true; } continue; }
+        }
+        if (P.roll && (iy | 0) !== (py | 0) && solidAt(px | 0, iy)) { // rollers ride on the floor instead of cutting into it
+          s.y = py; if (solidAt(ix, py | 0)) s.x = px; // keep the sideways progress
+          s.vy = Math.abs(s.vy) > .8 ? -s.vy * (P.rest || .3) : 0; s.vx *= .997;
+          continue;
+        }
+        if (P.cut || (P.smash && HARD[t] <= P.smash)) {
+          if (t === CLONE || t === VOID) { s.x = px; s.y = py; stopShell(s); dead = true; break; }
+          if (!launch(i, s.vx * .4 + (rnd() - .5), s.vy * .4 - rnd() * .8)) { g[i] = 0; dat[i] = 0; }
+          if (FLAM[t] > 0 && P.ign) ignite(i);
+          const drag = P.cut ? .99 : P.heavy ? .97 : .9; s.vx *= drag; s.vy *= drag;
+          continue;
+        }
+        if (s.pier > 0) {
+          if (t === CLONE || t === VOID) s.pier = 0;
+          else {
+            s.pier -= HARD[t];
+            if (!launch(i, s.vx * .35 + (rnd() - .5), s.vy * .35 + (rnd() - .5) - .3)) { g[i] = 0; dat[i] = 0; }
+            if (P.ign && FLAM[t] > 0) ignite(i);
+            if (s.pier > 0) continue;
+          }
+        }
+        s.x = px; s.y = py;
+        if (P.stick) { if (s.fuse) { s.stuck = true; s.vx = s.vy = 0; } else { stopShell(s); dead = true; } break; }
+        if (s.bnc > 0) {
+          const bx = solidAt(ix, py | 0), by = solidAt(px | 0, iy);
+          if (bx && !by) s.vx = -s.vx; else if (by && !bx) s.vy = -s.vy; else { s.vx = -s.vx; s.vy = -s.vy; }
+          const rest = P.rest || .55; s.vx *= P.roll ? .97 : rest; s.vy *= rest; s.bnc--;
+          if (P.roll && Math.abs(s.vy) < .35) s.vy = 0;
+          if (!P.roll && P.r === 0 && !P.split) sfx('tink');
+          break;
+        }
+        if (P.ign && FLAM[t] > 0) ignite(i);
+        stopShell(s); dead = true;
+      }
+      if (dead) { shells.splice(n, 1); continue; }
+      if (P.tr && s.y >= 0) {
+        if (P.tr === 'smoke') { if (rnd() < .7) addP(s.x - s.vx * .5, s.y - s.vy * .5, (rnd() - .5) * .3, (rnd() - .5) * .3, 0, 22 + rndi(16), C(150, 150, 162)); }
+        else if (P.tr === 'fire') addP(s.x - s.vx * .5, s.y - s.vy * .5, (rnd() - .5) * .4, (rnd() - .5) * .4, 0, 10 + rndi(10), firePal[30 + rndi(34)]);
+        else if (rnd() < .6) addP(s.x - s.vx * .5, s.y - s.vy * .5, 0, 0, 0, 8 + rndi(6), P.tr);
+      }
+      if (P.fuse && !s.stuck && (s.fuse & 15) === 0 && s.y >= 0) addP(s.x, s.y - 1, (rnd() - .5) * .4, -.4, 0, 6, C(255, 200, 90)); // lit fuse sparks
+    }
+  }
+  function lob(x0, y0, x1, y1, T, P) { const gv = .11 * gdir * P.gr; return addShell(x0, y0, (x1 - x0) / T, (y1 - y0 - .5 * gv * T * T) / T, P); }
+  // ---------- traps ----------
+  const SHRAP = B({ sp: 3.6, pier: 2, life: 22, col: C(220, 220, 200), fx: 'none' });
+  const BOMBLET = B({ gr: 1, bnc: 1, fuse: 26, r: 4, col: C(90, 96, 80), tr: C(255, 170, 60) });
+  const CANNONBALL = B({ sp: 3, gr: 1, r: 6, col: C(50, 52, 58), sz: 2 });
+  const MORTAR_SH = B({ gr: 1, r: 8, col: C(120, 130, 100), tr: 'smoke' });
+  const BETTY_SH = B({ gr: .3, fuse: 14, r: 5, split: { n: 18, sp: 3.4, P: SHRAP }, col: C(110, 120, 96) });
+  function placeTrap(wp, x, y) {
+    const xs = wp.trap === 'field' ? [-26, -16, -6, 4, 14, 24].map(d => x + d) : [x];
+    for (const tx of xs) {
+      if (tx < 1 || tx >= W - 1) continue;
+      if (traps.length >= 120) traps.shift();
+      const ty = groundBelow(tx, y);
+      traps.push({ k: wp.trap === 'field' ? 'mine' : wp.trap, x: (tx | 0) + .5, y: ty, t: 0, dir: tx < W / 2 ? 1 : -1, a: -Math.PI / 2, off: 0, P: wp.P });
+      if (wp.trap === 'spikes') for (let dx = -4; dx <= 4; dx += 2) { const xx = (tx | 0) + dx; if (xx >= 0 && xx < W && !g[ty * W + xx]) set(ty * W + xx, METAL, 0); }
+    }
+    sfx('pop');
+  }
+  function stepTraps() {
+    for (let n = traps.length - 1; n >= 0; n--) {
+      const t = traps[n]; t.t++;
+      if (t.y < H - 1 && !solidAt(t.x | 0, (t.y | 0) + 1) && t.k !== 'spikes') t.y++;
+      if (t.off > 0) { t.off--; continue; }
+      const ex = t.x, ey = t.y - 4;
+      switch (t.k) {
+        case 'mine': case 'betty': {
+          if (t.t < 40) break; // arming
+          let near = false;
+          for (const c of creatures) if (c.st === 'ok' && Math.abs(c.x - t.x) < 3.5 && Math.abs(c.y - t.y) < 4) { near = true; break; }
+          if (!near) for (const b of bodies) if (Math.abs(b.x - t.x) < b.w / 2 + 2 && Math.abs(b.y - t.y) < b.h / 2 + 3) { near = true; break; }
+          if (!near) break;
+          traps.splice(n, 1); sfx('tink');
+          if (t.k === 'mine') blast(t.x, t.y - 1, t.P); else addShell(t.x, t.y - 2, 0, -2.2 * (gdir < 0 ? -1 : 1), BETTY_SH);
+          break;
+        }
+        case 'claymore': {
+          if (t.t < 40) break;
+          const c = nearestCreature(t.x, t.y - 2, 24, c => (c.x - t.x) * t.dir > 0);
+          if (!c) break;
+          traps.splice(n, 1);
+          for (let k = 0; k < 32; k++) { const a = (t.dir > 0 ? 0 : Math.PI) + (rnd() - .5) * .9 - t.dir * .12; addShell(t.x + t.dir * 2, t.y - 2, Math.cos(a) * 4, Math.sin(a) * 4, SHRAP); }
+          explode(t.x, t.y - 1, 3, .5);
+          break;
+        }
+        case 'spikes': for (const c of creatures) if (c.st === 'ok' && Math.abs(c.x - t.x) < 5 && c.y >= t.y - 3 && c.y <= t.y + 1) kill(c, 'impaled', false); break;
+        case 'banana':
+          for (const c of creatures) if (c.st === 'ok' && Math.abs(c.x - t.x) < 2.5 && Math.abs(c.y - t.y) < 3 && !(c.slipT > t.t)) { c.vx = (c.dir || 1) * 2.2; c.vy = -2.8; c.slipT = t.t + 50; sfx('blip'); }
+          for (const b of bodies) if (Math.abs(b.x - t.x) < b.w / 2 + 1 && Math.abs(b.y - t.y) < b.h / 2 + 2 && Math.abs(b.vx) > .1) b.vx *= 1.15;
+          break;
+        case 'tesla':
+          if (t.t % 24 === 0) {
+            const c = nearestCreature(t.x, t.y - 7, 52);
+            if (c) { kill(c, 'zapped', true); arcs.push({ x0: t.x, y0: t.y - 7, x1: c.x, y1: c.y - c.h / 2, t: 10, col: ELEC }); sfx('zap'); }
+            disc(t.x, t.y - 7, 6, i => { if (FLAM[g[i]] > 0 && rnd() < .02) ignite(i); });
+          }
+          break;
+        case 'cannon': if (t.t % 70 === 0) { const c = nearestCreature(ex, ey, 170); if (c) { const s = lob(ex, ey, c.x, c.y - 2, 40, CANNONBALL); if (s) t.a = Math.atan2(s.vy, s.vx); sfx('boom'); } } break;
+        case 'mortar': if (t.t % 95 === 0) { const c = nearestCreature(ex, ey, 220); if (c) { const s = lob(ex, ey, c.x, c.y - 1, 90, MORTAR_SH); if (s) t.a = Math.atan2(s.vy, s.vx); sfx('pop'); } } break;
+        case 'lturret':
+          if (t.t % 30 === 0) {
+            const c = nearestCreature(ex, ey, 150);
+            if (c) { kill(c, 'lasered', true); t.a = Math.atan2(c.y - c.h / 2 - ey, c.x - ex); arcs.push({ x0: ex, y0: ey, x1: c.x, y1: c.y - c.h / 2, t: 8, col: C(255, 60, 60), straight: true }); sfx('pew'); }
+          }
+          break;
+        case 'flamet': {
+          const c = nearestCreature(ex, ey, 38);
+          if (c && t.t % 2 === 0) {
+            const dx = c.x - ex, dy = c.y - c.h / 2 - ey, d = Math.hypot(dx, dy) || 1; t.a = Math.atan2(dy, dx);
+            for (let k = 0; k < 3; k++) addP(ex + dx / d * 3, ey + dy / d * 3, dx / d * 2.4 + (rnd() - .5) * .6, dy / d * 2.4 + (rnd() - .5) * .6, FIRE, -1, 0);
+          }
+          break;
+        }
+      }
+    }
+  }
+  function stepClouds() {
+    for (let n = clouds.length - 1; n >= 0; n--) {
+      const q = clouds[n]; q.t--; q.r = Math.min(q.R, q.r + .5); q.y -= .03;
+      for (let k = 0; k < 7; k++) { const a = rnd() * 6.283, d = Math.sqrt(rnd()) * q.r; addP(q.x + Math.cos(a) * d, q.y + Math.sin(a) * d * .7, (rnd() - .5) * .2, -.05, 0, 18 + rndi(18), q.col); }
+      for (const c of creatures) if (c.st === 'ok' && c.kind !== 'robot' && Math.hypot(c.x - q.x, c.y - c.h / 2 - q.y) < q.r) { if (q.inf) infect(c); else if (rnd() < .08) kill(c, 'gassed', false); }
+      if (q.t <= 0) clouds.splice(n, 1);
+    }
+    for (let n = strikes.length - 1; n >= 0; n--) { const s = strikes[n]; if (--s.t <= 0) { strikes.splice(n, 1); s.fn(); } }
+    for (let n = arcs.length - 1; n >= 0; n--) if (--arcs[n].t <= 0) arcs.splice(n, 1);
+  }
+  // ---------- beams and strikes ----------
+  function column(x, half, col) { // vertical death beam from the sky down through everything
+    for (let y = 0; y < H; y++) for (let dx = -half; dx <= half; dx++) {
+      const xx = (x + dx) | 0; if (xx < 0 || xx >= W) continue; const i = y * W + xx, t = g[i];
+      if (t && t !== CLONE) { if (rnd() < .06) addP(xx + .5, y + .5, (rnd() - .5) * 1.4, -rnd() * 1.4, 0, 12 + rndi(10), col); g[i] = 0; dat[i] = 0; }
+    }
+    for (const c of [...creatures]) if (Math.abs(c.x - x) < half + 1.5) { if (c.st === 'ok') stats.lost++; crumble(c, true); }
+    for (const b of [...bodies]) if (Math.abs(b.x - x) < half + b.w / 2) removeBody(b);
+    beam = { x0: x, y0: 0, x1: x, y1: H, col, until: performance.now() + 70 };
+  }
+  function railBeam(dx, dy) {
+    const len = march(ptr.ax, ptr.ay, dx, dy, 600, (i, ix, iy) => {
+      for (let k = 0; k < 5; k++) { const j = k ? nbr(ix, iy, k - 1) : i; if (j < 0 || !g[j] || g[j] === CLONE || g[j] === VOID) continue; if (!launch(j, dx * 2 + (rnd() - .5), dy * 2 + (rnd() - .5))) { g[j] = 0; dat[j] = 0; } }
+      return true;
+    });
+    setBeam(dx, dy, len, C(120, 230, 255)); beam.until = performance.now() + 160;
+    beamHits(2.2, c => { if (c.st === 'ok') kill(c, 'railed', true); c.vx += dx * 2; c.vy += dy * 2; }, b => { b.vx += dx * 3; b.vy += dy * 3; hurtBody(b, 80); });
+    flash = Math.max(flash, .25); shake = Math.max(shake, 4); sfx('zap');
+  }
+  function deathRay(dx, dy) {
+    const len = march(ptr.ax, ptr.ay, dx, dy, 320, (i, ix, iy) => {
+      disc(ix, iy, 1.5, j => { const t = g[j]; if (t && t !== CLONE) { if (rnd() < .15) addP((j % W) + .5, ((j / W) | 0) + .5, (rnd() - .5), (rnd() - .5), 0, 12 + rndi(10), C(120, 255, 140)); g[j] = 0; dat[j] = 0; } });
+      return true;
+    });
+    setBeam(dx, dy, len, C(110, 255, 130));
+    beamHits(2.6, c => { if (c.st === 'ok') stats.lost++; crumble(c, true); }, b => removeBody(b));
+  }
+  function gammaRay(dx, dy) {
+    const len = march(ptr.ax, ptr.ay, dx, dy, 300, i => { if (g[i] && g[i] !== CLONE && rnd() < .07) set(i, MUT[rndi(MUT.length)], 0); return true; });
+    setBeam(dx, dy, len, C(200, 255, 80));
+    beamHits(2.4, c => { if (c.st === 'ok') { if (rnd() < .5) infect(c); else kill(c, 'irradiated', false); } }, () => {});
+  }
+  function arcGun(dx, dy) {
+    let x = ptr.ax, y = ptr.ay;
+    const hit = new Set();
+    for (let hop = 0; hop < 5; hop++) {
+      const c = nearestCreature(x, y, hop ? 34 : 70, c => !hit.has(c));
+      if (!c) break;
+      hit.add(c); kill(c, 'zapped', true);
+      arcs.push({ x0: x, y0: y, x1: c.x, y1: c.y - c.h / 2, t: 9, col: ELEC });
+      x = c.x; y = c.y - c.h / 2;
+    }
+    if (!hit.size) { const tx = ptr.ax + dx * 24, ty = ptr.ay + dy * 24; arcs.push({ x0: ptr.ax, y0: ptr.ay, x1: tx, y1: ty, t: 6, col: ELEC }); spark(tx, ty); }
+    sfx('zap');
+  }
+  function boltGun(dx, dy) {
+    let hx = ptr.ax + dx * 160, hy = ptr.ay + dy * 160;
+    march(ptr.ax, ptr.ay, dx, dy, 160, (i, ix, iy) => { const t = g[i]; if (t && KIND[t] !== K_GAS && KIND[t] !== K_FIRE && t !== BOLT) { hx = ix; hy = iy; return false; } return true; });
+    arcs.push({ x0: ptr.ax, y0: ptr.ay, x1: hx, y1: hy, t: 10, col: C(235, 244, 255) });
+    const i = clamp(hy | 0, 0, H - 1) * W + clamp(hx | 0, 0, W - 1);
+    if (CLS[g[i]]) electrify(i, g[i]); else { explode(hx, hy, 3, .5, true); disc(hx, hy, 4, j => { if (g[j] === SAND && rnd() < .7) set(j, GLASS, 0); else if (FLAM[g[j]] > 0 && rnd() < .5) ignite(j); }); }
+    for (const c of creatures) if (c.st === 'ok' && segDist(ptr.ax, ptr.ay, hx, hy, c.x, c.y - c.h / 2) < 2.5) kill(c, 'zapped', true);
+    flash = Math.max(flash, .3); sfx('zap');
+  }
+  function microwave() {
+    const r = brush + 7;
+    disc(ptr.x, ptr.y, r, i => {
+      const t = g[i];
+      if ((t === WATER || t === SLIME || t === HONEY) && rnd() < .08) set(i, STEAM);
+      else if ((t === ICE || t === SNOW) && rnd() < .2) set(i, WATER, 0);
+      else if (t === METAL || t === GOLD || t === COPPER) { dat[i] = Math.min(255, dat[i] + 9); if (rnd() < .004) electrify(i, t); }
+      else if (FLAM[t] > 0 && rnd() < .01) ignite(i);
+      else if (t === POWDER && rnd() < .02) ignite(i);
+    });
+    for (const c of creatures) if (c.st === 'ok' && Math.hypot(c.x - ptr.x, c.y - c.h / 2 - ptr.y) < r) { if (c.frozen) c.frozen = 0; else if (rnd() < .03) c.burn = c.burn || 1; }
+    if (ptr.held % 4 === 0) for (let k = 0; k < 4; k++) { const a = rnd() * 6.283, d = rnd() * r; addP(ptr.x + Math.cos(a) * d, ptr.y + Math.sin(a) * d, 0, 0, 0, 8, C(255, 230, 120)); }
+  }
+  const AIRBOMB = B({ sp: 1.4, gr: 1, r: 8, col: C(80, 86, 70), tr: 'smoke', sz: 2 });
+  const NAPBOMB = B({ sp: 1.4, gr: 1, r: 10, fx: 'napalm', col: C(200, 120, 50), sz: 2 });
+  const ARTY = B({ gr: 1, r: 9, col: C(140, 140, 120), tr: 'smoke' });
+  const HAIL = B({ sp: 2.2, gr: 1, pier: 1.5, fx: 'none', leave: ICE, col: C(200, 236, 255), cause: 'hailed' });
+  const ROCK = B({ gr: 1, r: 3, col: C(90, 60, 50), tr: 'fire', sz: 2 });
+  function airstrike(x, n, span, gap, P) { for (let k = 0; k < n; k++) later(gap * k + 1, () => { const tx = x - span / 2 + span * (n > 1 ? k / (n - 1) : .5); addShell(tx - 6, -4, .4, P.sp, P); }); sfx('hole'); }
+  function volcano(x, y) {
+    const base = groundBelow(x, y);
+    shake = Math.max(shake, 8); sfx('bigboom');
+    for (let f = 0; f < 260; f += 2) later(f, () => {
+      for (let k = 0; k < 4; k++) addP(x + (rnd() - .5) * 4, base - 1, (rnd() - .5) * 1.8, -2.4 - rnd() * 2.6, LAVA, -1, 0);
+      if (rnd() < .12) addShell(x, base - 3, (rnd() - .5) * 3, -3 - rnd() * 2, ROCK);
+      if (rnd() < .3) addP(x + (rnd() - .5) * 6, base - 4, (rnd() - .5) * .4, -.6, SMOKE, -1, 0);
+      if (f % 40 === 0) shake = Math.max(shake, 3);
+    });
+  }
+  function tsunami(x) {
+    const fromRight = x < W / 2, ex = fromRight ? W - 2 : 1, v = fromRight ? -1 : 1; // the wave rolls in from the far edge
+    for (let f = 0; f < 70; f += 2) later(f, () => {
+      for (let y = (H * .3) | 0; y < H - 1; y++) if (rnd() < .35 && !g[y * W + ex]) addP(ex, y, v * (2.4 + rnd() * 1.6), -rnd() * .6, WATER, -1, 0);
+    });
+    for (let f = 10; f < 130; f += 10) later(f, () => { for (const c of creatures) if ((c.x - ex) * v < f * 3) c.vx += v * .35; });
+    sfx('hole');
+  }
+  function fireTornado(x, y) {
+    if (twisters.length >= 3) twisters.shift();
+    const tw = { x, base: groundBelow(x, y), h: Math.min(H * .75, 90), t: 0, dir: rnd() < .5 ? -1 : 1 };
+    twisters.push(tw); sfx('hole');
+    for (let f = 0; f < 420; f += 3) later(f, () => {
+      if (!twisters.includes(tw)) return;
+      for (let k = 0; k < 3; k++) { const yy = tw.base - rnd() * tw.h * .8, w = 2 + (tw.base - yy) * .15; addP(tw.x + (rnd() - .5) * w * 2, yy, (rnd() - .5) * 1.2, -.3 - rnd(), FIRE, -1, 0); }
+      for (const c of creatures) if (c.st === 'ok' && Math.abs(c.x - tw.x) < 8) c.burn = c.burn || 1;
+    });
+  }
+  function storm(x, y) { for (let k = 0; k < 14; k++) later(rndi(260), () => lightning(clamp(x + (rnd() - .5) * 90, 0, W - 1) | 0, clamp(y, 0, H - 1) | 0)); }
+  function hail(x) { for (let k = 0; k < 80; k++) later(rndi(200), () => addShell(clamp(x + (rnd() - .5) * 70, 0, W - 1), -2, (rnd() - .5) * .3, 2.2, HAIL)); }
+  function artillery(x, y) { for (let k = 0; k < 16; k++) later(rndi(200), () => lob(x < W / 2 ? W - 2 : 1, Math.max(2, y - 70), clamp(x + (rnd() - .5) * 80, 0, W - 1), groundBelow(clamp(x + (rnd() - .5) * 80, 0, W - 1), y), 70, ARTY)); sfx('boom'); }
+  function ion(x) { flash = Math.max(flash, .3); for (let f = 0; f < 40; f++) later(f, () => column(x, 3, C(140, 200, 255))); later(42, () => { explode(x, groundBelow(x, 0), 12, 1.4); flash = Math.max(flash, .6); }); sfx('zap'); }
+  function orbital(x) { for (let f = 0; f < 70; f++) later(f, () => column(x - 18 + f * .55, 1, C(255, 90, 90))); later(72, () => explode(x + 20, groundBelow(x + 20, 0), 8, 1)); sfx('zap'); }
+  const WEAPONS = [];
+  const WEP = (id, name, sub, wp, tip, glyph, col) => WEAPONS.push({ id: 'w_' + id, name, tab: 'weapon', sub, wp, tip, glyph, gcol: col, icon: true, dot: true, beam: wp.m === 'gun' || wp.m === 'beam' });
+  const Y = C(255, 236, 150), RED = C(255, 80, 70), GRN = C(120, 255, 120);
+  // guns: press to set the muzzle, drag to aim, hold to fire
+  WEP('pistol', 'Pistol', 'Guns', { m: 'gun', rate: 10, P: B({ pier: 3, col: Y }) }, 'Single shots. Press for the muzzle, drag to aim, hold to fire.', 'gun', '#e5e7eb');
+  WEP('revolver', 'Hand cannon', 'Guns', { m: 'gun', rate: 18, P: B({ sp: 5, pier: 7, col: Y, sz: 1.5 }) }, 'Big slow rounds that punch through a few walls.', 'gun', '#fcd34d');
+  WEP('smg', 'SMG', 'Guns', { m: 'gun', rate: 3, spread: .08, P: B({ sp: 4.2, pier: 2, col: Y }) }, 'Fast spray of light bullets.', 'rifle', '#cbd5e1');
+  WEP('minigun', 'Minigun', 'Guns', { m: 'gun', rate: 1, count: 2, spread: .14, P: B({ sp: 4.6, pier: 2.4, col: Y }) }, 'A wall of lead. Shreds anything soft.', 'rifle', '#f87171');
+  WEP('shotgun', 'Shotgun', 'Guns', { m: 'gun', rate: 24, count: 9, spread: .4, P: B({ sp: 3.6, life: 26, pier: 2, col: Y }) }, 'Wide close-range blast of pellets.', 'rifle', '#d6a77a');
+  WEP('sniper', 'Sniper', 'Guns', { m: 'gun', rate: 34, P: B({ sp: 9, pier: 40, life: 120, col: WHITE }) }, 'One slow, very fast round that goes through almost everything.', 'rifle', '#93c5fd');
+  WEP('nailgun', 'Nail gun', 'Guns', { m: 'gun', rate: 5, spread: .04, P: B({ sp: 3.4, pier: 1, leave: METAL, col: C(200, 205, 215), cause: 'nailed' }) }, 'Fires nails that stick where they land.', 'gun', '#94a3b8');
+  WEP('crossbow', 'Crossbow', 'Guns', { m: 'gun', rate: 18, P: B({ sp: 3.8, gr: .35, pier: 5, leave: WOOD, col: C(180, 130, 70) }) }, 'Arcing bolts that pin into walls.', 'gun', '#d4a373');
+  WEP('harpoon', 'Harpoon', 'Guns', { m: 'gun', rate: 28, P: B({ sp: 3.4, gr: .45, pier: 10, heavy: true, leave: METAL, col: C(170, 180, 190), sz: 2 }) }, 'Heavy spear that drives deep and shoves things hard.', 'gun', '#a5f3fc');
+  WEP('ricochet', 'Ricochet gun', 'Guns', { m: 'gun', rate: 6, P: B({ bnc: 9, rest: .9, life: 220, col: C(255, 200, 120) }) }, 'Bullets that bounce off every surface.', 'gun', '#fdba74');
+  WEP('dragon', 'Dragon rounds', 'Guns', { m: 'gun', rate: 4, spread: .05, P: B({ pier: 1, r: 2, fx: 'fire', col: C(255, 140, 40), tr: 'fire', ign: true }) }, 'Incendiary bullets that set what they hit on fire.', 'rifle', '#fb923c');
+  WEP('hexrounds', 'Explosive rounds', 'Guns', { m: 'gun', rate: 7, P: B({ r: 3, col: C(255, 120, 60) }) }, 'Each bullet pops in a small blast.', 'rifle', '#fca5a5');
+  WEP('flak', 'Flak cannon', 'Guns', { m: 'gun', rate: 12, spread: .06, P: B({ sp: 3.6, fuse: 22, r: 4, col: C(200, 200, 160) }) }, 'Shells that burst in mid-air.', 'rifle', '#e2e8f0');
+  WEP('dart', 'Poison darts', 'Guns', { m: 'gun', rate: 10, P: B({ sp: 5, fx: 'none', col: GRN, cause: 'poisoned' }) }, 'Silent darts. Deadly to creatures, harmless to the world.', 'gun', '#86efac');
+  // launchers
+  WEP('bazooka', 'Bazooka', 'Launchers', { m: 'gun', rate: 40, snd: 'thump', P: B({ sp: 3, gr: .03, r: 9, tr: 'smoke', col: C(110, 120, 90), sz: 2 }) }, 'Straight rocket with a big bang.', 'launcher', '#a3e635');
+  WEP('rpg', 'RPG', 'Launchers', { m: 'gun', rate: 36, snd: 'thump', P: B({ sp: 1.6, acc: 1.06, max: 6, r: 8, tr: 'fire', col: C(130, 110, 80), sz: 2 }) }, 'Starts slow, then the motor kicks in.', 'launcher', '#fb923c');
+  WEP('glauncher', 'Grenade launcher', 'Launchers', { m: 'gun', rate: 22, snd: 'thump', P: B({ sp: 3, gr: 1, bnc: 3, fuse: 80, r: 6, col: C(90, 140, 80), sz: 2 }) }, 'Lobs bouncing grenades on a timer.', 'launcher', '#86efac');
+  WEP('homing', 'Homing missile', 'Launchers', { m: 'gun', rate: 45, snd: 'thump', P: B({ sp: 2.6, home: true, life: 300, r: 8, tr: 'smoke', col: C(220, 220, 220), sz: 2 }) }, 'Seeks out the nearest creature or object.', 'missile', '#f472b6');
+  WEP('clusterm', 'Cluster missile', 'Launchers', { m: 'gun', rate: 50, snd: 'thump', P: B({ sp: 3, gr: .1, r: 4, tr: 'smoke', split: { n: 10, sp: 2, P: BOMBLET }, col: C(180, 180, 150), sz: 2 }) }, 'Breaks into ten bomblets on impact.', 'missile', '#fde047');
+  WEP('mirv', 'MIRV', 'Launchers', { m: 'gun', rate: 70, snd: 'thump', P: B({ sp: 3, fuse: 40, r: 2, tr: 'fire', split: { n: 5, sp: 2.4, P: B({ sp: 2.6, home: true, life: 260, r: 7, tr: 'smoke', col: WHITE }) }, col: WHITE, sz: 2 }) }, 'Flies a moment, then splits into five homing warheads.', 'missile', '#c084fc');
+  WEP('mortar', 'Mortar', 'Launchers', { m: 'gun', rate: 40, snd: 'thump', P: B({ sp: 3.2, gr: 1.1, r: 9, tr: 'smoke', col: C(120, 130, 100), sz: 2 }) }, 'High arcing shells. Aim up.', 'launcher', '#bef264');
+  WEP('buster', 'Bunker buster', 'Launchers', { m: 'gun', rate: 60, snd: 'thump', P: B({ sp: 3.5, gr: .3, dig: 40, r: 14, pow: 1.6, tr: 'smoke', col: C(90, 90, 100), sz: 2 }) }, 'Burrows deep into the ground before it blows.', 'missile', '#94a3b8');
+  WEP('torpedo', 'Torpedo', 'Launchers', { m: 'gun', rate: 40, snd: 'thump', P: B({ sp: 2.4, gr: 1, tw: true, life: 400, r: 9, col: C(80, 90, 110), sz: 2 }) }, 'Runs fast and straight through water. Sinks in air.', 'missile', '#60a5fa');
+  WEP('rocketpod', 'Rocket pod', 'Launchers', { m: 'gun', rate: 50, count: 6, spread: .3, snd: 'thump', P: B({ sp: 3, r: 5, tr: 'smoke', col: C(200, 200, 180) }) }, 'Six small rockets at once.', 'launcher', '#fcd34d');
+  WEP('thermobaric', 'Thermobaric', 'Launchers', { m: 'gun', rate: 60, snd: 'thump', P: B({ sp: 2.8, gr: .05, r: 14, fx: 'fire', tr: 'fire', col: C(255, 160, 60), sz: 2 }) }, 'A huge fireball instead of a blast.', 'missile', '#fb923c');
+  WEP('napalmrocket', 'Napalm rocket', 'Launchers', { m: 'gun', rate: 45, snd: 'thump', P: B({ sp: 3, gr: .05, r: 9, fx: 'napalm', tr: 'fire', col: C(220, 110, 40), sz: 2 }) }, 'Splashes burning napalm everywhere.', 'missile', '#f97316');
+  WEP('sticky', 'Sticky launcher', 'Launchers', { m: 'gun', rate: 20, snd: 'thump', P: B({ sp: 3, gr: .8, stick: true, fuse: 120, r: 7, col: C(255, 90, 160), sz: 2 }) }, 'Bombs that glue to walls, then go off.', 'launcher', '#f472b6');
+  WEP('flare', 'Flare gun', 'Launchers', { m: 'gun', rate: 20, snd: 'pop', P: B({ sp: 3, gr: .25, r: 3, fx: 'fire', tr: 'fire', life: 240, col: C(255, 80, 60), ign: true }) }, 'Bright burning flares. Lights fires where they land.', 'gun', '#ef4444');
+  // bombs: tap to drop one where you point
+  const FRAG = B({ gr: 1, bnc: 4, fuse: 100, r: 6, split: { n: 18, sp: 3.6, P: SHRAP }, col: C(90, 110, 70), sz: 2 });
+  WEP('frag', 'Frag grenade', 'Bombs', { m: 'throw', P: FRAG }, 'Bounces, then bursts into shrapnel.', 'grenade', '#86efac');
+  WEP('stickybomb', 'Sticky bomb', 'Bombs', { m: 'throw', P: B({ gr: 1, stick: true, fuse: 120, r: 8, col: C(255, 90, 160), sz: 2 }) }, 'Sticks to the first thing it touches.', 'bomb', '#f472b6');
+  WEP('pipebomb', 'Pipe bomb', 'Bombs', { m: 'throw', P: B({ gr: 1, bnc: 2, fuse: 60, r: 7, split: { n: 14, sp: 3.4, P: SHRAP }, col: C(150, 150, 160), sz: 2 }) }, 'Short fuse, nasty shrapnel.', 'dyn', '#cbd5e1');
+  WEP('molotov', 'Molotov', 'Bombs', { m: 'throw', P: B({ gr: 1, imp: true, r: 7, fx: 'napalm', col: C(120, 200, 120), tr: 'fire' }) }, 'Shatters on impact into burning fuel.', 'flame', '#fb923c');
+  WEP('smokebomb', 'Smoke bomb', 'Bombs', { m: 'throw', P: B({ gr: 1, bnc: 2, fuse: 60, r: 16, fx: 'smoke', col: C(160, 160, 170), sz: 2 }) }, 'Fills the area with thick smoke.', 'cloud', '#cbd5e1');
+  WEP('flashbang', 'Flashbang', 'Bombs', { m: 'throw', P: B({ gr: 1, bnc: 2, fuse: 50, r: 40, fx: 'flash', col: WHITE, sz: 2 }) }, 'Blinding flash that stuns creatures.', 'grenade', '#fef9c3');
+  WEP('incgren', 'Incendiary', 'Bombs', { m: 'throw', P: B({ gr: 1, bnc: 2, fuse: 70, r: 10, fx: 'fire', col: C(255, 120, 40), sz: 2 }) }, 'Bursts into a ball of fire.', 'grenade', '#f97316');
+  WEP('cryogren', 'Cryo grenade', 'Bombs', { m: 'throw', P: B({ gr: 1, bnc: 2, fuse: 70, r: 12, fx: 'cryo', col: C(150, 220, 255), sz: 2 }) }, 'Freezes water, lava and creatures solid.', 'snow', '#7dd3fc');
+  WEP('emp', 'EMP', 'Bombs', { m: 'throw', P: B({ gr: 1, bnc: 2, fuse: 70, r: 44, fx: 'emp', col: C(120, 180, 255), sz: 2 }) }, 'Fries robots, stalls cars, stops fans and turrets.', 'bolt', '#60a5fa');
+  WEP('gravbomb', 'Gravity bomb', 'Bombs', { m: 'throw', P: B({ gr: 1, bnc: 2, fuse: 80, fx: 'grav', col: C(170, 130, 255), sz: 2 }) }, 'Opens a short-lived gravity well.', 'hole', '#a78bfa');
+  WEP('implosion', 'Implosion', 'Bombs', { m: 'throw', P: B({ gr: 1, bnc: 2, fuse: 70, r: 18, fx: 'implode', col: C(200, 160, 255), sz: 2 }) }, 'Sucks everything in, then pops.', 'hole', '#c4b5fd');
+  WEP('bhgren', 'Black hole grenade', 'Bombs', { m: 'throw', P: B({ gr: 1, bnc: 2, fuse: 80, fx: 'bh', col: C(40, 20, 60), sz: 2 }) }, 'A pocket black hole for a few seconds.', 'hole', '#8b5cf6');
+  WEP('sonic', 'Sonic grenade', 'Bombs', { m: 'throw', P: B({ gr: 1, bnc: 2, fuse: 60, r: 30, fx: 'shock', col: C(200, 240, 255), sz: 2 }) }, 'Pure shockwave. Throws everything outward.', 'wave', '#a5f3fc');
+  WEP('clusterbomb', 'Cluster bomb', 'Bombs', { m: 'throw', P: B({ gr: 1, fuse: 60, r: 4, split: { n: 12, sp: 2.4, up: true, P: BOMBLET }, col: C(100, 110, 90), sz: 2 }) }, 'Throws out a dozen bomblets.', 'bomb', '#fde047');
+  // explosives
+  WEP('dynamite', 'Dynamite', 'Explosives', { m: 'throw', P: B({ gr: 1, fuse: 150, r: 11, col: C(220, 60, 50), sz: 2 }) }, 'Classic stick. Long fuse, solid bang.', 'dyn', '#ef4444');
+  WEP('bundle', 'Dynamite bundle', 'Explosives', { m: 'throw', P: B({ gr: 1, fuse: 150, r: 17, pow: 1.4, col: C(220, 60, 50), sz: 3 }) }, 'Several sticks taped together.', 'dyn', '#dc2626');
+  WEP('tntblock', 'TNT block', 'Explosives', { m: 'throw', P: B({ gr: 1, fuse: 90, r: 21, pow: 1.6, col: C(230, 70, 60), sz: 3 }) }, 'Clears a big crater.', 'bomb', '#f87171');
+  WEP('c4charge', 'C4 charge', 'Explosives', { m: 'throw', P: B({ gr: 0, stick: true, fuse: 120, r: 15, pow: 1.7, col: C(224, 216, 190), sz: 2 }) }, 'Placed exactly where you tap. Blows after two seconds.', 'dyn', '#e7e5e4');
+  WEP('nitroflask', 'Nitro flask', 'Explosives', { m: 'throw', P: B({ gr: 1, imp: true, r: 11, col: C(120, 232, 150) }) }, 'Goes off the instant it lands.', 'drip', '#4ade80');
+  WEP('shaped', 'Shaped charge', 'Explosives', { m: 'throw', P: B({ gr: 1, fuse: 60, r: 16, fx: 'shaped', col: C(200, 190, 160), sz: 2 }) }, 'Drives a narrow cone straight down through the ground.', 'drop', '#fbbf24');
+  WEP('demo', 'Demolition charge', 'Explosives', { m: 'throw', P: B({ gr: 1, fuse: 100, r: 26, pow: 2, col: C(250, 200, 60), sz: 3 }) }, 'Brings down whole buildings.', 'boom', '#fbbf24');
+  WEP('daisy', 'Daisy cutter', 'Explosives', { m: 'sky', P: B({ sp: 1.6, gr: 1, r: 30, pow: 1.8, col: C(90, 96, 80), sz: 3, tr: 'smoke' }) }, 'Dropped from above. Flattens a wide area.', 'drop', '#a3e635');
+  WEP('megabomb', 'Mega bomb', 'Explosives', { m: 'throw', P: B({ gr: 1, fuse: 90, r: 36, pow: 2.2, col: C(40, 40, 46), sz: 4 }) }, 'Absurdly large conventional bomb.', 'bomb', '#f59e0b');
+  WEP('tsar', 'Tsar bomba', 'Explosives', { m: 'sky', P: B({ sp: 1.4, gr: 1, fx: 'tsar', col: C(210, 210, 200), sz: 4 }) }, 'The biggest bomb there is. Flash, shockwave, mushroom cloud.', 'nuke', '#facc15');
+  WEP('antibomb', 'Antimatter bomb', 'Explosives', { m: 'throw', P: B({ gr: 1, fuse: 60, r: 30, fx: 'anti', col: C(255, 70, 210), sz: 2 }) }, 'Erases everything in a sphere. Nothing is left.', 'boom', '#e879f9');
+  WEP('chainnuke', 'Chain nuke', 'Explosives', { m: 'now', P: B({ fx: 'chain' }) }, 'One nuke sets off four more around it.', 'nuke', '#fb923c');
+  WEP('singularity', 'Singularity', 'Explosives', { m: 'throw', P: B({ gr: 1, fuse: 40, fx: 'sing', col: C(20, 10, 30), sz: 2 }) }, 'A black hole that lasts, then collapses in a blast.', 'hole', '#7c3aed');
+  WEP('thermcharge', 'Thermite charge', 'Explosives', { m: 'throw', P: B({ gr: 1, fuse: 30, r: 8, fx: 'thermite', col: C(150, 84, 62), sz: 2 }) }, 'Burns white hot through metal and stone.', 'flame', '#fdba74');
+  // energy
+  WEP('laserrifle', 'Laser rifle', 'Energy', { m: 'gun', rate: 3, snd: 'pew', P: B({ sp: 8, pier: 6, ign: true, col: C(255, 60, 60), tr: C(255, 90, 90), cause: 'lasered' }) }, 'Red bolts that cut and ignite.', 'beam', '#f87171');
+  WEP('plasmarifle', 'Plasma rifle', 'Energy', { m: 'gun', rate: 8, P: B({ sp: 5, r: 3, fx: 'plasma', col: C(226, 96, 255), tr: C(200, 100, 255) }) }, 'Balls of searing plasma.', 'rifle', '#d946ef');
+  WEP('deathray', 'Death ray', 'Energy', { m: 'beam', rate: 1, fn: deathRay }, 'A green beam that deletes whatever it touches.', 'beam', '#4ade80');
+  WEP('railgun', 'Railgun', 'Energy', { m: 'beam', rate: 40, fn: railBeam }, 'Instant slug through the entire map.', 'beam', '#67e8f9');
+  WEP('gamma', 'Gamma ray', 'Energy', { m: 'beam', rate: 2, fn: gammaRay }, 'Passes through walls, mutating matter and creatures.', 'beam', '#bef264');
+  WEP('arcgun', 'Arc gun', 'Energy', { m: 'beam', rate: 10, fn: arcGun }, 'Lightning that jumps between creatures.', 'bolt', '#93c5fd');
+  WEP('boltgun', 'Lightning gun', 'Energy', { m: 'beam', rate: 14, fn: boltGun }, 'Throws a bolt to wherever you aim.', 'bolt', '#fde047');
+  WEP('pulse', 'Pulse cannon', 'Energy', { m: 'gun', rate: 18, P: B({ sp: 4, r: 14, fx: 'shock', col: C(180, 230, 255), tr: C(160, 220, 255) }) }, 'Shockwave rounds that knock everything away.', 'wave', '#7dd3fc');
+  WEP('disruptor', 'Disruptor', 'Energy', { m: 'gun', rate: 20, P: B({ sp: 4, r: 5, fx: 'void', col: C(150, 90, 230), tr: C(120, 70, 200) }) }, 'Each shot deletes a ball of matter.', 'target', '#a78bfa');
+  WEP('microwave', 'Microwave', 'Energy', { m: 'hold', fn: microwave }, 'Hold to cook an area. Water boils, metal sparks.', 'wave', '#fcd34d');
+  WEP('ion', 'Ion cannon', 'Energy', { m: 'strike', fn: x => ion(x) }, 'A beam from orbit carves a shaft straight down.', 'drop', '#60a5fa');
+  WEP('orbital', 'Orbital laser', 'Energy', { m: 'strike', fn: x => orbital(x) }, 'A red beam sweeps across the ground.', 'drop', '#ef4444');
+  // chemical and bio
+  WEP('acidspray', 'Acid sprayer', 'Chemical', { m: 'gun', rate: 1, spray: { mat: ACID, n: 4, sp: 2.4, spread: .25 } }, 'Sprays a stream of acid.', 'drip', '#a3e635');
+  WEP('napalmspray', 'Napalm sprayer', 'Chemical', { m: 'gun', rate: 1, spray: { mat: NAPALM, n: 4, sp: 2.4, spread: .2, lit: true } }, 'Sprays burning, sticky fuel.', 'flame', '#f97316');
+  WEP('biobomb', 'Bio bomb', 'Chemical', { m: 'throw', P: B({ gr: 1, bnc: 2, fuse: 60, r: 12, fx: 'virus', col: C(186, 52, 226), sz: 2 }) }, 'Releases the virus in a burst.', 'skull', '#c084fc');
+  WEP('nervegas', 'Nerve gas', 'Chemical', { m: 'throw', P: B({ gr: 1, bnc: 2, fuse: 40, r: 24, fx: 'gas', col: C(140, 230, 90), sz: 2 }) }, 'A lingering cloud deadly to creatures. Leaves the world alone.', 'skull', '#86efac');
+  WEP('spores', 'Spore cloud', 'Chemical', { m: 'now', P: B({ r: 22, fx: 'spores' }) }, 'A drifting cloud that infects whoever breathes it.', 'cloud', '#d8b4fe');
+  WEP('slimecannon', 'Slime cannon', 'Chemical', { m: 'gun', rate: 6, P: B({ sp: 3, gr: .6, r: 4, fx: 'slime', col: C(112, 72, 136) }) }, 'Lobs globs of slime.', 'launcher', '#a855f7');
+  WEP('oilbomb', 'Oil bomb', 'Chemical', { m: 'throw', P: B({ gr: 1, imp: true, r: 10, fx: 'oil', col: C(96, 64, 28), sz: 2 }) }, 'Coats everything in oil. Add a spark.', 'drip', '#a16207');
+  // elemental
+  WEP('lavacannon', 'Lava cannon', 'Elemental', { m: 'gun', rate: 1, spray: { mat: LAVA, n: 3, sp: 2.6, spread: .2 } }, 'Hoses molten rock.', 'flame', '#f97316');
+  WEP('watercannon', 'Water cannon', 'Elemental', { m: 'gun', rate: 1, spray: { mat: WATER, n: 5, sp: 3.4, spread: .14, push: 1.2 } }, 'High-pressure water that knocks things over.', 'wave', '#60a5fa');
+  WEP('sandblaster', 'Sand blaster', 'Elemental', { m: 'gun', rate: 1, spray: { mat: SAND, n: 4, sp: 3, spread: .18, push: .5 } }, 'Blasts sand everywhere.', 'wave', '#fcd34d');
+  WEP('snowcannon', 'Snow cannon', 'Elemental', { m: 'gun', rate: 1, spray: { mat: SNOW, n: 4, sp: 2.6, spread: .3 } }, 'Buries things in snow.', 'snow', '#e0f2fe');
+  WEP('ln2bomb', 'LN2 bomb', 'Elemental', { m: 'throw', P: B({ gr: 1, bnc: 2, fuse: 50, r: 12, fx: 'ln2', col: C(150, 236, 255), sz: 2 }) }, 'Floods the area with liquid nitrogen.', 'snow', '#67e8f9');
+  WEP('magma', 'Magma bomb', 'Elemental', { m: 'throw', P: B({ gr: 1, imp: true, r: 9, fx: 'lava', col: C(255, 96, 20), tr: 'fire', sz: 2 }) }, 'Splashes lava where it lands.', 'flame', '#ea580c');
+  WEP('steambomb', 'Steam bomb', 'Elemental', { m: 'throw', P: B({ gr: 1, bnc: 2, fuse: 50, r: 12, fx: 'steam', col: C(220, 225, 235), sz: 2 }) }, 'Scalding burst of steam.', 'cloud', '#e2e8f0');
+  WEP('hail', 'Hailstorm', 'Elemental', { m: 'strike', fn: x => hail(x) }, 'Chunks of ice pelt the area.', 'cloud', '#bae6fd');
+  WEP('storm', 'Lightning storm', 'Elemental', { m: 'strike', fn: (x, y) => storm(x, y) }, 'Bolts rain down around the spot for a few seconds.', 'bolt', '#facc15');
+  WEP('firenado', 'Fire tornado', 'Elemental', { m: 'strike', fn: (x, y) => fireTornado(x, y) }, 'A burning twister that wanders and sets everything alight.', 'flame', '#ef4444');
+  // disasters
+  WEP('meteor', 'Meteor strike', 'Disasters', { m: 'sky', slant: 1.2, P: B({ sp: 3.4, gr: .4, r: 16, pow: 1.4, tr: 'fire', col: C(255, 220, 160), sz: 3 }) }, 'One big burning rock from the sky.', 'drop', '#fb923c');
+  WEP('asteroid', 'Asteroid', 'Disasters', { m: 'sky', slant: 1.4, P: B({ sp: 3.2, gr: .4, r: 30, pow: 2, fx: 'quake', tr: 'fire', col: C(150, 120, 100), sz: 5 }) }, 'Extinction-level impact plus an earthquake.', 'drop', '#f97316');
+  WEP('kinetic', 'Kinetic rod', 'Disasters', { m: 'sky', P: B({ sp: 9, pier: 80, r: 18, pow: 1.6, fx: 'kinetic', col: WHITE, tr: C(220, 230, 255) }) }, 'A tungsten rod from orbit punches deep, then detonates.', 'drop', '#e5e7eb');
+  WEP('airstrike', 'Airstrike', 'Disasters', { m: 'strike', fn: x => airstrike(x, 6, 50, 8, AIRBOMB) }, 'A line of six bombs across the spot.', 'drop', '#a3e635');
+  WEP('carpet', 'Carpet bombing', 'Disasters', { m: 'strike', fn: x => airstrike(x, 24, 130, 4, AIRBOMB) }, 'Two dozen bombs across a wide strip.', 'drop', '#84cc16');
+  WEP('napalmstrike', 'Napalm strike', 'Disasters', { m: 'strike', fn: x => airstrike(x, 8, 80, 6, NAPBOMB) }, 'A run of napalm bombs.', 'flame', '#f97316');
+  WEP('artillery', 'Artillery barrage', 'Disasters', { m: 'strike', fn: (x, y) => artillery(x, y) }, 'Shells arc in from far away for a few seconds.', 'target', '#bef264');
+  WEP('cruise', 'Cruise missile', 'Disasters', { m: 'edge', P: B({ sp: 3, life: 600, r: 13, pow: 1.4, tr: 'smoke', col: C(220, 220, 220), sz: 2 }) }, 'Flies in from the far edge and hits where you tapped.', 'missile', '#e2e8f0');
+  WEP('tsunami', 'Tsunami', 'Disasters', { m: 'strike', fn: x => tsunami(x) }, 'A wall of water rolls in from the far side.', 'wave', '#3b82f6');
+  WEP('volcano', 'Volcano', 'Disasters', { m: 'strike', fn: (x, y) => volcano(x, y) }, 'Erupts from the ground below: lava fountain and flying rocks.', 'flame', '#dc2626');
+  WEP('sinkhole', 'Sinkhole', 'Disasters', { m: 'now', P: B({ r: 12, fx: 'sink' }) }, 'The ground opens up and swallows things.', 'hole', '#a16207');
+  WEP('quakebomb', 'Earthquake bomb', 'Disasters', { m: 'throw', P: B({ gr: 1, fuse: 60, r: 10, fx: 'quake', col: C(160, 120, 80), sz: 2 }) }, 'A blast that shakes the whole world loose.', 'wave', '#d6a77a');
+  // traps: tap the ground to place
+  WEP('landmine', 'Landmine', 'Traps', { m: 'trap', trap: 'mine', P: B({ r: 8 }) }, 'Arms after a moment. Anything stepping on it goes up.', 'mine', '#a3e635');
+  WEP('minefield', 'Mine field', 'Traps', { m: 'trap', trap: 'field', P: B({ r: 7 }) }, 'Six mines in a row.', 'mine', '#84cc16');
+  WEP('betty', 'Bouncing betty', 'Traps', { m: 'trap', trap: 'betty' }, 'Jumps into the air before bursting into shrapnel.', 'mine', '#fde047');
+  WEP('claymore', 'Claymore', 'Traps', { m: 'trap', trap: 'claymore' }, 'Fires a fan of shrapnel at the first creature in front of it.', 'mine', '#bef264');
+  WEP('spikes', 'Spike pit', 'Traps', { m: 'trap', trap: 'spikes' }, 'Metal spikes. Anything that lands on them is done.', 'saw', '#cbd5e1');
+  WEP('tesla', 'Tesla coil', 'Traps', { m: 'trap', trap: 'tesla' }, 'Zaps any creature that wanders close.', 'bolt', '#93c5fd');
+  WEP('cannon', 'Cannon tower', 'Traps', { m: 'trap', trap: 'cannon' }, 'Fires cannonballs at the nearest creature.', 'turret', '#94a3b8');
+  WEP('mortarturret', 'Mortar turret', 'Traps', { m: 'trap', trap: 'mortar' }, 'Lobs shells at creatures far away.', 'turret', '#bef264');
+  WEP('laserturret', 'Laser turret', 'Traps', { m: 'trap', trap: 'lturret' }, 'Snipes creatures with a laser.', 'turret', '#f87171');
+  WEP('flameturret', 'Flame turret', 'Traps', { m: 'trap', trap: 'flamet' }, 'Torches anything that gets close.', 'turret', '#fb923c');
+  WEP('saw', 'Saw blade', 'Traps', { m: 'throw', P: B({ gr: 1, cut: true, roll: true, bnc: 999, rest: .3, life: 700, fx: 'none', col: C(210, 215, 225), sz: 3, cause: 'sawn' }) }, 'A spinning blade that rolls and cuts through everything.', 'saw', '#e5e7eb');
+  WEP('wrecking', 'Wrecking ball', 'Traps', { m: 'throw', P: B({ gr: 1, smash: 4, heavy: true, roll: true, bnc: 999, rest: .35, life: 600, fx: 'none', col: C(60, 62, 70), sz: 5, cause: 'crushed' }) }, 'A huge iron ball that smashes through walls.', 'ball', '#64748b');
+  // silly
+  WEP('anvil', 'Anvil drop', 'Silly', { m: 'sky', P: B({ sp: 2, gr: 1, pier: 8, heavy: true, fx: 'anvil', r: 1, col: C(70, 72, 80), sz: 3, cause: 'flattened' }) }, 'Exactly what it sounds like.', 'anvil', '#94a3b8');
+  WEP('piano', 'Piano drop', 'Silly', { m: 'sky', P: B({ sp: 2, gr: 1, pier: 4, heavy: true, fx: 'piano', r: 1, col: C(30, 30, 34), sz: 4, cause: 'flattened' }) }, 'A grand piano from a great height.', 'anvil', '#e5e7eb');
+  WEP('bowling', 'Bowling ball', 'Silly', { m: 'throw', P: B({ gr: 1, smash: 1.3, heavy: true, roll: true, bnc: 999, rest: .3, life: 600, fx: 'none', col: C(40, 60, 140), sz: 3, cause: 'bowled over' }) }, 'Rolls along knocking everything down. Drag to throw harder.', 'ball', '#3b82f6');
+  WEP('boulder', 'Boulder', 'Silly', { m: 'throw', P: B({ gr: 1, smash: 2, heavy: true, roll: true, bnc: 999, rest: .25, life: 500, fx: 'none', leave: STONE, leaveR: 2.5, col: C(120, 116, 110), sz: 5, cause: 'crushed' }) }, 'A rolling boulder that settles where it stops.', 'ball', '#a8a29e');
+  WEP('banana', 'Banana peel', 'Silly', { m: 'trap', trap: 'banana' }, 'Walkers slip on it and go flying.', 'banana', '#fde047');
+  WEP('confetti', 'Confetti cannon', 'Silly', { m: 'gun', rate: 2, spray: { conf: true, n: 8, sp: 2.4, spread: .5, push: .6 } }, 'Celebrate. Pushes things around a little.', 'star', '#f472b6');
+  WEP('paintball', 'Paintball gun', 'Silly', { m: 'gun', rate: 5, spread: .06, P: B({ sp: 3.6, gr: .2, r: 3, fx: 'paint', col: C(255, 90, 200) }) }, 'Splats random colours on everything.', 'gun', '#e879f9');
+  WEP('melon', 'Watermelon cannon', 'Silly', { m: 'gun', rate: 14, snd: 'thump', P: B({ sp: 3.2, gr: .6, r: 4, fx: 'melon', col: C(60, 160, 70), sz: 3 }) }, 'Big juicy splat.', 'launcher', '#4ade80');
+  WEP('fwlauncher', 'Firework launcher', 'Silly', { m: 'gun', rate: 12, snd: 'pop', P: B({ sp: 3.2, gr: .15, fuse: 40, fx: 'firework', tr: 'fire', col: C(255, 232, 120) }) }, 'Shoots fireworks that burst in the sky.', 'star', '#facc15');
+  WEP('glitter', 'Glitter bomb', 'Silly', { m: 'throw', P: B({ gr: 1, bnc: 2, fuse: 40, r: 20, fx: 'confetti', col: C(255, 200, 240), sz: 2 }) }, 'Explodes into glitter. Mostly harmless.', 'star', '#f9a8d4');
+  let wpCool = 0;
+  function weaponPress(wp) {
+    const x = ptr.x, y = ptr.y;
+    switch (wp.m) {
+      case 'throw': addShell(x, y, wp.P.roll ? (x < W / 2 ? 2.2 : -2.2) : 0, 0, wp.P); sfx('pop'); break; // rollers set off toward the middle
+      case 'now': blast(x, wp.P.fx === 'sink' ? groundBelow(x, y) + 1 : y, wp.P); break;
+      case 'sky': { const sl = wp.slant || 0, sp = wp.P.sp || 2; addShell(x - sl * (y + 4) / sp, -4, sl, sp, wp.P); sfx('hole'); break; }
+      case 'edge': { const ex = x < W / 2 ? W - 2 : 1; const s = addShell(ex, Math.max(3, y - 30), ex > 1 ? -wp.P.sp : wp.P.sp, 0, wp.P); if (s) { s.tx = x; s.ty = y; } sfx('hole'); break; }
+      case 'strike': wp.fn(x, y); break;
+      case 'trap': placeTrap(wp, x, y); break;
+    }
+  }
+  function weaponHold(wp) {
+    if (wp.m === 'hold') { wp.fn(); return; }
+    if (wp.m !== 'gun' && wp.m !== 'beam') return;
+    if (ptr.held % (wp.rate || 1)) return;
+    const [dx, dy] = aimVec();
+    if (wp.m === 'beam') { wp.fn(dx, dy); return; }
+    const mx = ptr.ax + dx * 3, my = ptr.ay + dy * 3, a0 = Math.atan2(dy, dx), sp0 = wp.spray;
+    if (sp0) {
+      for (let k = 0; k < sp0.n; k++) {
+        const a = a0 + (rnd() - .5) * sp0.spread, sp = sp0.sp * (.8 + rnd() * .4);
+        if (sp0.conf) addP(mx, my, Math.cos(a) * sp, Math.sin(a) * sp, 0, 30 + rndi(30), CONF[rndi(CONF.length)]);
+        else addP(mx, my, Math.cos(a) * sp, Math.sin(a) * sp, sp0.lit && rnd() < .35 ? FIRE : sp0.mat, -1, 0);
+      }
+      if (sp0.push) {
+        for (const c of creatures) { const ex = c.x - ptr.ax, ey = c.y - c.h / 2 - ptr.ay, along = ex * dx + ey * dy; if (along > 0 && along < 40 && Math.abs(ex * dy - ey * dx) < 3 + along * .2) { c.vx += dx * sp0.push * .3; c.vy += dy * sp0.push * .3; } }
+        for (const b of bodies) { const ex = b.x - ptr.ax, ey = b.y - ptr.ay, along = ex * dx + ey * dy; if (along > 0 && along < 40 && Math.abs(ex * dy - ey * dx) < b.w / 2 + along * .2) { b.vx += dx * sp0.push * .15; b.vy += dy * sp0.push * .15; } }
+      }
+      if (ptr.held % 6 === 0) sfx('fizz');
+      return;
+    }
+    const n = wp.count || 1;
+    for (let k = 0; k < n; k++) { const a = a0 + (rnd() - .5) * (wp.spread || .02), sp = wp.P.sp * (n > 1 ? .85 + rnd() * .3 : 1); addShell(mx, my, Math.cos(a) * sp, Math.sin(a) * sp, wp.P); }
+    for (let k = 0; k < 3; k++) addP(mx + dx, my + dy, dx * .5 + (rnd() - .5) * .4, dy * .5 + (rnd() - .5) * .4, 0, 4 + rndi(3), C(255, 240, 180));
+    stats.shots++; sfx(wp.snd || 'pew');
+  }
+  function drawTrap(t) {
+    const x = t.x | 0, y = t.y | 0, blink = (t.t >> 4) & 1;
+    const barrel = (len, col) => { const ca = Math.cos(t.a), sa = Math.sin(t.a); for (let k = 1; k <= len; k++) put(x + ca * k, y - 4 + sa * k, col); };
+    switch (t.k) {
+      case 'mine': for (let dx = -1; dx <= 1; dx++) put(x + dx, y, C(90, 96, 80)); put(x, y - 1, t.t > 40 && blink ? C(255, 60, 60) : C(120, 30, 30)); break;
+      case 'betty': put(x, y, C(80, 90, 70)); put(x, y - 1, C(110, 120, 96)); put(x, y - 2, t.t > 40 && blink ? C(255, 80, 80) : C(130, 40, 40)); break;
+      case 'claymore': for (let dx = -1; dx <= 1; dx++) put(x + dx, y - 1, C(96, 110, 70)); put(x - 1, y, C(60, 60, 60)); put(x + 1, y, C(60, 60, 60)); put(x + t.dir * 2, y - 1, C(255, 80, 80)); break;
+      case 'banana': put(x - 1, y, C(250, 220, 60)); put(x, y, C(250, 230, 90)); put(x + 1, y - 1, C(240, 210, 50)); put(x + 1, y, C(120, 90, 30)); break;
+      case 'spikes': for (let dx = -4; dx <= 4; dx += 2) put(x + dx, y - 1, C(215, 220, 230)); break;
+      case 'tesla':
+        for (let k = 0; k < 7; k++) put(x, y - k, k % 2 ? C(184, 115, 51) : C(150, 160, 174));
+        for (let dx = -1; dx <= 1; dx++) for (let dy = 7; dy <= 8; dy++) put(x + dx, y - dy, t.t % 24 < 4 && !t.off ? ELEC : C(190, 210, 235));
+        break;
+      default: { // turrets
+        const body = t.k === 'lturret' ? C(150, 60, 60) : t.k === 'flamet' ? C(170, 90, 40) : t.k === 'mortar' ? C(100, 120, 80) : C(110, 116, 128);
+        for (let dy = 0; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) put(x + dx, y - dy, body);
+        for (let dx = -1; dx <= 1; dx++) put(x + dx, y - 3, body);
+        barrel(t.k === 'mortar' ? 3 : 4, t.off ? C(80, 80, 90) : C(200, 210, 225));
+      }
+    }
+  }
+  function drawWeapons() {
+    for (const t of traps) drawTrap(t);
+    for (const s of shells) {
+      const P = s.P;
+      if (P.sz > 1) { const r = P.sz / 2, r2 = r * r + .3; for (let dy = -Math.ceil(r); dy <= Math.ceil(r); dy++) for (let dx = -Math.ceil(r); dx <= Math.ceil(r); dx++) if (dx * dx + dy * dy <= r2) put(s.x + dx, s.y + dy, (P.roll || P.cut) && ((dx + dy + (s.age >> 1)) & 3) === 0 ? mix(P.col, WHITE, .4) : P.col); }
+      else { put(s.x, s.y, P.col); if (!s.stuck) blend(s.x - s.vx * .4, s.y - s.vy * .4, P.col, .5); }
+      if (s.fuse && (s.fuse >> 3) & 1) blend(s.x, s.y - Math.ceil(P.sz / 2) - 1, C(255, 70, 60), .9);
+    }
+    for (const a of arcs) {
+      if (a.straight) { line(a.x0, a.y0, a.x1, a.y1, a.col, .85); continue; }
+      let x0 = a.x0, y0 = a.y0; const n = 7;
+      for (let k = 1; k <= n; k++) { const f = k / n, x1 = a.x0 + (a.x1 - a.x0) * f + (k < n ? (rnd() - .5) * 4 : 0), y1 = a.y0 + (a.y1 - a.y0) * f + (k < n ? (rnd() - .5) * 4 : 0); line(x0, y0, x1, y1, a.col, .9); x0 = x1; y0 = y1; }
+    }
+    for (const q of clouds) blend(q.x, q.y, q.col, .3);
+  }
+
   // ---------- tools ----------
   const svg = (inner, extra = '') => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" ${extra}>${inner}</svg>`;
   const sector = (a0, a1, r0, r1) => { const p = (a, r) => `${(12 + Math.cos(a) * r).toFixed(2)} ${(12 + Math.sin(a) * r).toFixed(2)}`; return `M${p(a0, r0)} L${p(a0, r1)} A${r1} ${r1} 0 0 1 ${p(a1, r1)} L${p(a1, r0)} A${r0} ${r0} 0 0 0 ${p(a0, r0)}Z`; };
@@ -2011,7 +2714,40 @@
     { id: 'eyedrop', name: 'Eyedropper', tab: 'power', sub: 'Edit', icon: true, dot: true, tip: 'Tap any matter to pick its tool.' },
     { id: 'grab', name: 'Grab', tab: 'power', sub: 'Edit', tip: 'Pick up crates, balls, bombs, turrets, ragdolls and creatures. Let go to throw.' },
   ];
-  const TABS = [['matter', 'Matter'], ['life', 'Life + things'], ['power', 'Powers']];
+  // weapon icons: a shared set of drawn glyphs, each weapon gets its own colour
+  const GLYPH = {
+    gun: '<path d="M3 8h15v4h-8l-2 7H5l1-7H3z" fill="currentColor" fill-opacity=".3"/><path d="M18 9h3"/>',
+    rifle: '<path d="M2 9h17l2-2v5H12l-2 6H7l1-6H2z" fill="currentColor" fill-opacity=".3"/>',
+    launcher: '<path d="M2 9h15v5H2z" fill="currentColor" fill-opacity=".3"/><path d="M17 8l5 3.5-5 3.5M7 14v5h3v-5"/>',
+    missile: '<path d="M14 4h6v6l-9 9-6-6z" fill="currentColor" fill-opacity=".3"/><path d="M8 13l-4-1M11 16l1 4M3 21l3-3"/>',
+    bomb: '<circle cx="11" cy="14" r="6.5" fill="currentColor" fill-opacity=".35"/><path d="M15.5 9.5l2-2M17.5 7.5c1-1.5 2.5-1.5 3.5-.5"/>',
+    grenade: '<rect x="7" y="8" width="10" height="13" rx="5" fill="currentColor" fill-opacity=".3"/><path d="M9 8V5h6v3M15 5l3-2M8 12h8M8 16h8"/>',
+    dyn: '<rect x="5" y="7" width="5" height="14" rx="1" fill="currentColor" fill-opacity=".3"/><rect x="11" y="7" width="5" height="14" rx="1" fill="currentColor" fill-opacity=".3"/><path d="M13 7c0-3 3-3 5-5"/>',
+    boom: '<path d="M12 2l2.4 6 6.6-2-4.4 5 5.4 4-6.5.5.5 6.5-4-5-4 5 .5-6.5L2 15l5.4-4L3 6l6.6 2z" fill="currentColor" fill-opacity=".35"/>',
+    beam: '<path d="M3 21L19 5" stroke-width="3"/><circle cx="20" cy="4" r="2" fill="currentColor"/>',
+    bolt: '<path d="M13 2L5 13h6l-2 9 10-13h-6l2-7z" fill="currentColor" fill-opacity=".35"/>',
+    drop: '<path d="M12 2v13M7 10l5 5 5-5"/><path d="M4 21h16"/>',
+    cloud: '<path d="M7 17a4 4 0 0 1 0-8 5 5 0 0 1 10 1 3.5 3.5 0 0 1 0 7z" fill="currentColor" fill-opacity=".3"/>',
+    snow: '<path d="M12 2v20M3.3 7l17.4 10M3.3 17L20.7 7"/>',
+    flame: '<path d="M12 2c1 4 6 6 6 12a6 6 0 0 1-12 0c0-3 2-5 3-7 1 2 1 4 3 4 0-3-1-6 0-9z" fill="currentColor" fill-opacity=".3"/>',
+    wave: '<path d="M2 9c3-3 5 3 8 0s5 3 8 0 4-1 4-1M2 15c3-3 5 3 8 0s5 3 8 0 4-1 4-1"/>',
+    mine: '<path d="M4 18a8 6 0 0 1 16 0z" fill="currentColor" fill-opacity=".3"/><path d="M12 12V8M9 9L8 7M15 9l1-2M3 18h18"/>',
+    saw: '<circle cx="12" cy="12" r="7" fill="currentColor" fill-opacity=".25"/><path d="M12 2l2 3M22 12l-3 2M12 22l-2-3M2 12l3-2M19 5l-1 3M19 19l-3-1M5 19l1-3M5 5l3 1"/><circle cx="12" cy="12" r="2"/>',
+    turret: '<path d="M4 20h16v-4H4z" fill="currentColor" fill-opacity=".3"/><path d="M8 16a4 4 0 0 1 8 0"/><path d="M13 13l6-6" stroke-width="3"/>',
+    target: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3" fill="currentColor" fill-opacity=".4"/><path d="M12 1v5M12 18v5M1 12h5M18 12h5"/>',
+    hole: '<circle cx="12" cy="12" r="4" fill="currentColor"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(-25 12 12)"/>',
+    drip: '<path d="M12 3c3 5 6 8 6 11a6 6 0 0 1-12 0c0-3 3-6 6-11z" fill="currentColor" fill-opacity=".3"/>',
+    skull: '<path d="M6 11a6 6 0 0 1 12 0v3l-2 1v4H8v-4l-2-1z" fill="currentColor" fill-opacity=".3"/><circle cx="9.5" cy="11" r="1.4" fill="currentColor"/><circle cx="14.5" cy="11" r="1.4" fill="currentColor"/><path d="M11 19v-2M13 19v-2"/>',
+    star: '<path d="M12 3l2.6 5.6 6 .7-4.5 4 1.3 6L12 16.4l-5.4 2.9 1.3-6-4.5-4 6-.7z" fill="currentColor" fill-opacity=".3"/>',
+    ball: '<circle cx="12" cy="12" r="8" fill="currentColor" fill-opacity=".35"/><circle cx="10" cy="9" r="1" fill="currentColor"/><circle cx="13" cy="8.5" r="1" fill="currentColor"/>',
+    anvil: '<path d="M3 7h15l3-2v5h-5l-2 4h3v5H6v-5h3L7 10H3z" fill="currentColor" fill-opacity=".3"/>',
+    banana: '<path d="M4 7c2 9 10 12 16 9-5-1-9-4-11-10z" fill="currentColor" fill-opacity=".35"/><path d="M4 7L3 5"/>',
+  };
+  const glyph = (k, col) => k === 'nuke'
+    ? `<svg viewBox="0 0 24 24" aria-hidden="true" style="color:${col}"><circle cx="12" cy="12" r="10.5" fill="none" stroke="currentColor" stroke-width="1.5"/>${[-90, 30, 150].map(a => `<path d="${sector((a - 30) * deg, (a + 30) * deg, 3, 9)}" fill="currentColor"/>`).join('')}<circle cx="12" cy="12" r="1.8" fill="currentColor"/></svg>`
+    : svg(GLYPH[k] || GLYPH.boom, `style="color:${col}"`);
+  for (const w of WEAPONS) { ICONS[w.id] = glyph(w.glyph, w.gcol); TOOLS.push(w); }
+  const TABS = [['matter', 'Matter'], ['life', 'Life + things'], ['power', 'Powers'], ['weapon', 'Weapons']];
   const toolById = Object.fromEntries(TOOLS.map(t => [t.id, t]));
   for (const id of [...stats.used]) if (!toolById[id]) stats.used.delete(id);
   let tool = toolById[store.get('tool', 'sand')] || toolById.sand;
@@ -2075,6 +2811,7 @@
     if (!NOUNDO[tool.id]) pushUndo();
     if (tool.body) { const b = makeBody(tool.body, ptr.x, ptr.y); if (b) sfx('pop'); return; }
     if (tool.spawn) { spawnCreature(); return; }
+    if (tool.wp) { weaponPress(tool.wp); return; }
     switch (tool.id) {
       case 'turret': makeTurret(x, y); sfx('pop'); break;
       case 'explode': explode(x, y, 4 + brush); break;
@@ -2137,6 +2874,7 @@
       return;
     }
     if (tool.spawn) { if (ptr.held % 10 === 0 && ptr.held) spawnCreature(); return; }
+    if (tool.wp) { weaponHold(tool.wp); return; }
     switch (tool.id) {
       case 'erase': {
         strokeDiscs(i => { if (g[i]) { g[i] = 0; dat[i] = 0; } }, r);
@@ -2145,6 +2883,8 @@
         for (const c of [...creatures]) if (hit(c.x, c.y - c.h / 2)) removeCreature(c);
         for (const t of [...turrets]) if (hit(t.x, t.y)) turrets.splice(turrets.indexOf(t), 1);
         for (const w of [...wells]) if (hit(w.x, w.y)) wells.splice(wells.indexOf(w), 1);
+        for (const t of [...traps]) if (hit(t.x, t.y - 1)) traps.splice(traps.indexOf(t), 1);
+        for (const q of [...shells]) if (hit(q.x, q.y)) shells.splice(shells.indexOf(q), 1);
         for (const f of [...fans]) if (hit(f.x, f.y - 1)) fans.splice(fans.indexOf(f), 1);
         for (const q of [...portals]) if (hit(q.x, q.y)) portals.splice(portals.indexOf(q), 1);
         for (const tw of [...twisters]) if (hit(tw.x, tw.base - 10)) twisters.splice(twisters.indexOf(tw), 1);
@@ -2453,13 +3193,14 @@
     for (const c of creatures) drawCreature(c, put);
     for (const m of meteors) { put(m.x, m.y, WHITE); blend(m.x - m.vx, m.y - m.vy, pack(255, 220, 120), .8); blend(m.x - m.vx * 2, m.y - m.vy * 2, pack(255, 140, 40), .6); blend(m.x - m.vx * 3, m.y - m.vy * 3, pack(200, 70, 30), .4); }
     for (const b of bullets) { put(b.x, b.y, pack(255, 250, 200)); blend(b.x - b.vx * .35, b.y - b.vy * .35, pack(255, 200, 80), .7); blend(b.x - b.vx * .7, b.y - b.vy * .7, pack(255, 120, 40), .4); }
+    drawWeapons();
     for (const f of fx) if (f.kind === 'ring') {
       const n = Math.ceil(f.r * 6.3), a = 1 - f.r / f.max;
       for (let k = 0; k < n; k++) { const ang = k / n * 6.283; blend(f.x + Math.cos(ang) * f.r, f.y + Math.sin(ang) * f.r, WHITE, a * .8); }
     }
     if (beam && performance.now() < beam.until) { line(beam.x0, beam.y0, beam.x1, beam.y1, beam.col, .75); line(beam.x0, beam.y0, beam.x1, beam.y1, WHITE, .25); }
     if (ptr.down && tool.id === 'line') { line(ptr.ax, ptr.ay, ptr.x, ptr.y, pal[lineMat * 8 + 3], .9); }
-    else if (ptr.down && BEAMS[tool.id]) { const [dx, dy] = aimVec(); for (let s = 0; s < 40; s += 3) blend(ptr.ax + dx * s, ptr.ay + dy * s, WHITE, .35); blend(ptr.ax, ptr.ay, WHITE, .8); }
+    else if (ptr.down && (BEAMS[tool.id] || tool.beam)) { const [dx, dy] = aimVec(); for (let s = 0; s < 40; s += 3) blend(ptr.ax + dx * s, ptr.ay + dy * s, WHITE, .35); blend(ptr.ax, ptr.ay, WHITE, .8); }
     // brush outline
     if (ptr.over && !tool.body && !tool.spawn && !tool.dot && tool.id !== 'grab' && tool.id !== 'turret' && tool.id !== 'shoot' && tool.id !== 'nuke' && tool.id !== 'blackhole') {
       const r = tool.id === 'explode' ? 4 + brush : tool.id === 'wind' ? brush * 1.6 + 2 : brush;
@@ -2512,6 +3253,7 @@
         case 'tink': tone(2400, 1800, .06, 'triangle', .12); break;
         case 'zap': noise(.35, 2500, 'highpass', .5); tone(180, 60, .3, 'sawtooth', .18); break;
         case 'pop': tone(320, 640, .08, 'sine', .25); break;
+        case 'thump': tone(160, 50, .18, 'sine', .45); noise(.15, 900, 'lowpass', .3); break;
         case 'blip': tone(660, 990, .06, 'triangle', .15); break;
         case 'fizz': noise(.2, 3000, 'bandpass', .18); break;
         case 'hole': tone(220, 50, .9, 'sine', .4); noise(.8, 200, 'lowpass', .3); break;
@@ -2635,6 +3377,7 @@
     g.fill(0); dat.fill(0); tint.fill(0); frz.fill(0); frzList.length = 0; anyTint = false;
     creatures.length = 0; bodies.length = 0; turrets.length = 0; wells.length = 0; bullets.length = 0; fx.length = 0; pn = 0; grab = null; elecList.length = 0; elec.fill(0);
     ragdolls.length = 0; fans.length = 0; portals.length = 0; twisters.length = 0; meteors.length = 0; boomQ.length = 0; rainT = 0; quakeT = 0; showerT = 0; beam = null;
+    shells.length = 0; traps.length = 0; strikes.length = 0; clouds.length = 0; arcs.length = 0;
   }
 
   addEventListener('keydown', e => {
@@ -2768,7 +3511,7 @@
     return `<h2>Settings</h2>
       <div class="srow"><label for="spd">Sim speed</label><input type="range" id="spd" min="25" max="300" step="5" value="${Math.round(speed * 100)}"><b id="spdVal">${speed.toFixed(2)}x</b></div>
       <div class="srow"><span>World size</span><div class="seg">${[['S', 'Small'], ['M', 'Medium'], ['L', 'Large']].map(([k, l]) => `<button class="btn tg${sizeMode === k ? ' on' : ''}" type="button" data-size="${k}">${l}</button>`).join('')}</div></div>
-      <div class="srow wrap">${tg('wrap', 'Wrap edges', wrap)}${tg('info', 'Cell info on hover', hoverInfo)}${tg('heat', 'Heat map', heatView)}${tg('sound', 'Sound', !muted)}</div>
+      <div class="srow wrap">${tg('wrap', 'Wrap edges', wrap)}${tg('info', 'Cell info on hover', hoverInfo)}${tg('heat', 'Heat map', heatView)}${tg('sound', 'Sound', !muted)}${tg('calm', 'Reduce shake + flash', reduceMotion)}</div>
       <div class="srow wrap"><button class="btn" type="button" data-act="random">Random world</button><button class="btn" type="button" data-act="scene">Demo scene</button><button class="btn" type="button" data-act="snap">Snapshot</button></div>
       <h3>World slots</h3>
       ${[1, 2, 3].map(n => `<div class="slot"><span>Slot ${n}: <em id="slotl${n}">${slotLabel(n)}</em></span><button class="btn" type="button" data-save="${n}">Save</button><button class="btn" type="button" data-load="${n}">Load</button></div>`).join('')}
@@ -2789,6 +3532,7 @@
       else if (s === 'info') { hoverInfo = !hoverInfo; store.set('info', hoverInfo); }
       else if (s === 'heat') heatView = !heatView;
       else if (s === 'sound') control('sound');
+      else if (s === 'calm') { reduceMotion = !reduceMotion; store.set('calm', reduceMotion); }
       refreshCtrls(); setBody.innerHTML = settingsHtml();
     } else if (b.dataset.save) { const n = +b.dataset.save; toast(saveSlot(n) ? `Saved to slot ${n}` : 'Could not save (storage full or blocked)'); setBody.innerHTML = settingsHtml(); }
     else if (b.dataset.load) { const n = +b.dataset.load; if (loadSlot(n)) { setEl.hidden = true; toast(`Loaded slot ${n}`); } else toast(`Slot ${n} is empty`); }
@@ -2840,6 +3584,9 @@
     stepCreatures();
     stepRagdolls();
     stepBullets();
+    stepShells();
+    stepTraps();
+    stepClouds();
     stepWells();
     stepFans();
     stepPortals();
@@ -2893,7 +3640,7 @@
   const api = {
     M: { EMPTY, SAND, WATER, STONE, WOOD, OIL, LAVA, ICE, STEAM, SMOKE, ACID, POWDER, SEED, PLANT, METAL, GLASS, SALT, SNOW, FIRE, VIRUS, DUST, CLONE, BOLT, BURN, SLIME,
       DIRT, MUD, CLAY, BRICK, CONCRETE, CONCSET, HONEY, MERCURY, NITRO, THERMITE, C4, NAPALM, PLASMA, LN2, COAL, RUBBER, GOLD, COPPER, WAX, WAXM, CLOUD, ANTI, VOID, CRYSTAL, FWORK, SAPLING, SPRING },
-    TOOLS, ragdolls, fans, portals, twisters, meteors, frzList,
+    TOOLS, WEAPONS, shells, traps, strikes, clouds, blast, ragdolls, fans, portals, twisters, meteors, frzList,
     advance(n) { for (let k = 0; k < n; k++) { toolTick(); simStep(); } },
     cell(x, y) { return g[y * W + x]; }, datAt(x, y) { return dat[y * W + x]; }, tintAt(x, y) { return tint[y * W + x]; },
     put(x, y, t, d) { if (x >= 0 && y >= 0 && x < W && y < H) set(y * W + x, t, d); },

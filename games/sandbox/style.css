@@ -149,3 +149,8 @@ h1 { margin: 0; font: 900 22px/1 var(--font); letter-spacing: .12em; color: var(
 @media (prefers-reduced-motion: reduce) {
   .tip { transition: none; }
 }
+
+/* weapons: long names wrap onto two lines */
+.group.weapon .tool { height: 64px; }
+.group.weapon .tool .lbl { white-space: normal; text-align: center; line-height: 1.1; max-height: 2.25em; overflow: hidden; }
+@media (max-width: 640px) { .group.weapon .tool { height: 60px; } .group.weapon .tool .lbl { font-size: 9px; } }
