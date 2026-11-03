@@ -85,6 +85,7 @@ h1 { margin: 0; font: 900 22px/1 var(--font); letter-spacing: .12em; color: var(
 .srow label, .srow > span { font-size: 13px; min-width: 90px; }
 .srow input[type=range] { flex: 1; min-width: 120px; accent-color: var(--accent); }
 .srow b { font: 700 12px var(--mono); min-width: 5ch; text-align: right; }
+.snote { font-size: 12px; opacity: .75; margin: 2px 0 6px; }
 .seg { display: flex; gap: 6px; flex-wrap: wrap; }
 .btn.tg.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 .slot { display: flex; align-items: center; gap: 8px; margin: 6px 0; }

@@ -171,12 +171,14 @@
   let flash = 0, shake = 0;
   const creatures = [], bodies = [], turrets = [], wells = [], bullets = [], fx = [];
   const ragdolls = [], fans = [], portals = [], twisters = [], meteors = [], boomQ = [], frzList = [], undoStack = [];
+  let noLimit = store.get('nolimit', true), rapidRate = clamp(+store.get('rrate', 12) || 12, 1, 60), rapidAmt = clamp(+store.get('ramt', 1) || 1, 1, 10), rapidSpd = clamp(+store.get('rspd', 0) || 0, 0, 10), rapidLeft = store.get('rleft', false);
+  const CAP = n => noLimit ? Infinity : n; // spawn caps, lifted when 'No spawn limits' is on
   let wrap = store.get('wrap', false), speed = clamp(+store.get('speed', 1) || 1, .25, 3), heatView = false, hoverInfo = store.get('info', false);
   let sizeMode = store.get('size', 'M'), rainT = 0, rainMat = 0, quakeT = 0, showerT = 0, showerX = 0, anyTint = false, portalNext = 0, lineMat = STONE, paintIdx = 1, beam = null;
   const stats = { fireworks: 0, annihilated: 0, explosions: 0, nukes: 0, bolts: 0, spawned: 0, lost: 0, infected: 0, shots: 0, deaths: [], used: new Set(store.get('used', [])) };
 
   // ---------- particles ----------
-  const PMAX = 7000;
+  const PMAX = 30000;
   const PX = new Float32Array(PMAX), PY = new Float32Array(PMAX), PVX = new Float32Array(PMAX), PVY = new Float32Array(PMAX);
   const PT = new Uint8Array(PMAX), PL = new Int16Array(PMAX), PC = new Uint32Array(PMAX);
   let pn = 0;
@@ -1025,7 +1027,7 @@
   const SHELLS = [[60, 160, 90], [200, 70, 60], [70, 110, 200], [220, 170, 40]];
   const BIRDC = [[240, 240, 250], [90, 150, 230], [240, 90, 80], [250, 200, 60]], FISHC = [[250, 140, 50], [80, 170, 250], [250, 90, 120], [240, 220, 90]];
   function makeCreature(kind, x, y) {
-    if (creatures.length >= 160) return null;
+    if (creatures.length >= CAP(160)) return null;
     const h0 = kind === 'walker' || kind === 'robot' ? 8 : kind === 'bird' || kind === 'fish' ? 1 : 2;
     const c = { kind, x: x + .5, y: y + .5, vx: 0, vy: 0, dir: rnd() < .5 ? -1 : 1, st: 'ok', h: h0, h0,
       burn: 0, inf: 0, zombie: false, frozen: 0, breath: 240, hp: 100, deadT: 0, cause: '', grabbed: false, step: 0, t: 0, cool: 40, tiny: false,
@@ -1335,7 +1337,7 @@
   }
 
   // ---------- turrets + bullets ----------
-  function makeTurret(x, y) { if (turrets.length >= 8) turrets.shift(); const t = { x: x + .5, y: y + .5, a: -Math.PI / 2 }; turrets.push(t); return t; }
+  function makeTurret(x, y) { if (turrets.length >= CAP(8)) turrets.shift(); const t = { x: x + .5, y: y + .5, a: -Math.PI / 2 }; turrets.push(t); return t; }
   function autoTurret() { // when Shoot is used with no turret, set one on the ground near the bottom middle
     const x = (W / 2) | 0;
     let y = gdir >= 0 ? H - 1 : 1;
@@ -1458,7 +1460,7 @@
       if (clear) break;
       if (k === 23) return null;
     }
-    if (ragdolls.length >= 10) ragdolls.shift();
+    if (ragdolls.length >= CAP(10)) ragdolls.shift();
     const rg = { p: RAG_P.map(([dx, dy]) => ({ x: (x | 0) + dx + .5, y: by + dy + .5, ox: (x | 0) + dx + .5, oy: by + dy + .5, held: false })), L: [], hp: 100, burn: 0, col: SHIRTS[rndi(SHIRTS.length)] };
     for (const [a, b] of RAG_L) rg.L.push(Math.hypot(RAG_P[a][0] - RAG_P[b][0], RAG_P[a][1] - RAG_P[b][1]));
     ragdolls.push(rg);
@@ -1517,7 +1519,7 @@
   function placeFan() {
     const x = clamp(ptr.x | 0, 2, W - 3), y = clamp(ptr.y | 0, 3, H - 1);
     for (const f of fans) if (Math.abs(f.x - x) < 3 && Math.abs(f.y - 1 - y) < 4) { f.dir = (f.dir + 1) & 3; return f; }
-    if (fans.length >= 10) fans.shift();
+    if (fans.length >= CAP(10)) fans.shift();
     const f = { x, y, dir: x < W / 2 ? 0 : 2 }; fans.push(f); return f;
   }
   function stepFans() {
@@ -1871,7 +1873,7 @@
   // shell template: speed, gravity scale, drag, life, pierce energy, bounces, blast radius/power/effect, colour, size...
   const B = o => Object.assign({ sp: 4, gr: 0, dr: 1, life: 160, pier: 0, bnc: 0, r: 0, pow: 1, fx: 'he', col: C(255, 240, 170), sz: 1 }, o);
   function addShell(x, y, vx, vy, P) {
-    if (shells.length >= SHELL_MAX) return null;
+    if (shells.length >= CAP(SHELL_MAX)) return null;
     const s = { x, y, vx, vy, P, life: P.life, pier: P.pier, bnc: P.bnc, fuse: P.fuse || 0, stuck: false, digT: -1, age: 0, tx: null, ty: 0 };
     shells.push(s);
     return s;
@@ -1967,10 +1969,10 @@
         ringFx(x, y, r); flash = Math.max(flash, .35); sfx('zap');
         for (let k = 0; k < 40; k++) { const a = rnd() * 6.283; addP(x + Math.cos(a) * r * .5, y + Math.sin(a) * r * .5, Math.cos(a), Math.sin(a), 0, 10 + rndi(10), C(140, 200, 255)); }
         break;
-      case 'grav': if (wells.length >= 3) wells.shift(); wells.push({ x, y, t: 480, ate: 0 }); sfx('hole'); break;
-      case 'bh': if (wells.length >= 3) wells.shift(); wells.push({ x, y, t: 300, ate: 0 }); sfx('hole'); break;
+      case 'grav': if (wells.length >= CAP(3)) wells.shift(); wells.push({ x, y, t: 480, ate: 0 }); sfx('hole'); break;
+      case 'bh': if (wells.length >= CAP(3)) wells.shift(); wells.push({ x, y, t: 300, ate: 0 }); sfx('hole'); break;
       case 'sing':
-        if (wells.length >= 3) wells.shift(); wells.push({ x, y, t: 0, ate: 0 });
+        if (wells.length >= CAP(3)) wells.shift(); wells.push({ x, y, t: 0, ate: 0 });
         flash = Math.max(flash, .5); shake = Math.max(shake, 8); ringFx(x, y, 60); sfx('hole');
         later(640, () => { explode(x, y, 22, 1.6); ringFx(x, y, 90); });
         break;
@@ -2169,7 +2171,7 @@
     const xs = wp.trap === 'field' ? [-26, -16, -6, 4, 14, 24].map(d => x + d) : [x];
     for (const tx of xs) {
       if (tx < 1 || tx >= W - 1) continue;
-      if (traps.length >= 120) traps.shift();
+      if (traps.length >= CAP(120)) traps.shift();
       const ty = groundBelow(tx, y);
       traps.push({ k: wp.trap === 'field' ? 'mine' : wp.trap, x: (tx | 0) + .5, y: ty, t: 0, dir: tx < W / 2 ? 1 : -1, a: -Math.PI / 2, off: 0, P: wp.P });
       if (wp.trap === 'spikes') for (let dx = -4; dx <= 4; dx += 2) { const xx = (tx | 0) + dx; if (xx >= 0 && xx < W && !g[ty * W + xx]) set(ty * W + xx, METAL, 0); }
@@ -2335,7 +2337,7 @@
     sfx('hole');
   }
   function fireTornado(x, y) {
-    if (twisters.length >= 3) twisters.shift();
+    if (twisters.length >= CAP(3)) twisters.shift();
     const tw = { x, base: groundBelow(x, y), h: Math.min(H * .75, 90), t: 0, dir: rnd() < .5 ? -1 : 1 };
     twisters.push(tw); sfx('hole');
     for (let f = 0; f < 420; f += 3) later(f, () => {
@@ -2770,7 +2772,7 @@
     ensureAudio();
     try { cvs.setPointerCapture(e.pointerId); } catch { /* synthetic or already-released pointer */ }
     const [x, y] = toCell(e);
-    Object.assign(ptr, { down: true, id: e.pointerId, x, y, px: x, py: y, vx: 0, vy: 0, held: 0, over: true, hist: [] });
+    Object.assign(ptr, { down: true, id: e.pointerId, x, y, px: x, py: y, vx: 0, vy: 0, held: 0, over: true, hist: [], rapid: e.button === 2 || (rapidLeft && e.button === 0), racc: 0 });
     track(x, y);
     onPress();
     e.preventDefault();
@@ -2804,20 +2806,18 @@
     if (window.Ballpark && (stats.used.size >= 3)) Ballpark.report('sandbox', { score: stats.used.size, max: TOOLS.length, label: `${stats.used.size}/${TOOLS.length} TOOLS` });
   }
   const NOUNDO = { grab: 1, shoot: 1, eyedrop: 1, portal: 1 };
-  function onPress() {
+  function onPress(quiet) {
     const x = ptr.x | 0, y = ptr.y | 0;
-    ptr.ax = ptr.x; ptr.ay = ptr.y;
-    markUsed(tool.id);
-    if (!NOUNDO[tool.id]) pushUndo();
-    if (tool.body) { const b = makeBody(tool.body, ptr.x, ptr.y); if (b) sfx('pop'); return; }
-    if (tool.spawn) { spawnCreature(); return; }
+    if (!quiet) { ptr.ax = ptr.x; ptr.ay = ptr.y; markUsed(tool.id); if (!NOUNDO[tool.id]) pushUndo(); }
+    if (tool.body) { const b = makeBody(tool.body, ptr.x, ptr.y); if (b) { launch(b); if (!quiet || ptr.held % 4 === 0) sfx('pop'); } return; }
+    if (tool.spawn) { spawnCreature(quiet); return; }
     if (tool.wp) { weaponPress(tool.wp); return; }
     switch (tool.id) {
       case 'turret': makeTurret(x, y); sfx('pop'); break;
       case 'explode': explode(x, y, 4 + brush); break;
       case 'nuke': if (frame - lastNuke > 50) { lastNuke = frame; nuke(x, y); } break;
       case 'lightning': lightning(x, y); lastBolt = frame; break;
-      case 'blackhole': if (wells.length >= 3) wells.shift(); wells.push({ x: ptr.x, y: ptr.y, t: 0, ate: 0 }); sfx('hole'); break;
+      case 'blackhole': if (wells.length >= CAP(3)) wells.shift(); wells.push({ x: ptr.x, y: ptr.y, t: 0, ate: 0 }); sfx('hole'); break;
       case 'grab': {
         let best = null, bd = 12;
         for (const b of bodies) { const d = Math.hypot(b.x - ptr.x, b.y - ptr.y) - b.w / 2; if (d < bd) { bd = d; best = b; } }
@@ -2831,7 +2831,7 @@
       }
       case 'shoot': if (!turrets.length) autoTurret(); break;
       case 'spark': spark(ptr.x, ptr.y); break;
-      case 'tornado': if (twisters.length >= 3) twisters.shift(); twisters.push({ x: ptr.x, base: ptr.y, h: Math.min(H * .75, 90), t: 0, dir: rnd() < .5 ? -1 : 1 }); sfx('hole'); break;
+      case 'tornado': if (twisters.length >= CAP(3)) twisters.shift(); twisters.push({ x: ptr.x, base: ptr.y, h: Math.min(H * .75, 90), t: 0, dir: rnd() < .5 ? -1 : 1 }); sfx('hole'); break;
       case 'quake': quakeT = 120; sfx('bigboom'); break;
       case 'meteors': showerT = 360; showerX = ptr.x; break;
       case 'flood': rainT = 170; rainMat = WATER; break;
@@ -2845,12 +2845,36 @@
       case 'line': showTip(`<b>Line</b> drawing ${NAME[lineMat]}. Drag, then let go.`); break;
     }
   }
-  function spawnCreature() {
+  function spawnCreature(quiet) {
     const x = ptr.x | 0, y = ptr.y | 0;
     if (x < 1 || x >= W - 1 || y < 1 || y >= H) return;
     if (solidAt(x, y)) return;
     const c = makeCreature(tool.spawn === 'zombie' ? 'walker' : tool.spawn, x, y);
-    if (c) { if (tool.spawn === 'zombie') { c.inf = 200; c.zombie = true; stats.infected++; } sfx('blip'); }
+    if (c) { launch(c); if (tool.spawn === 'zombie') { c.inf = 200; c.zombie = true; stats.infected++; } if (!quiet || ptr.held % 4 === 0) sfx('blip'); }
+  }
+  // launch speed: fling along the drag, or spray upward when the pointer is still
+  function launch(o) {
+    if (!rapidSpd || !ptr.rapid) return;
+    const k = rapidSpd * .35, mv = Math.hypot(ptr.vx, ptr.vy);
+    let dx = 0, dy = -1; if (mv > .15) { dx = ptr.vx / mv; dy = ptr.vy / mv; }
+    const a = Math.atan2(dy, dx) + (rnd() - .5) * .7;
+    o.vx = Math.cos(a) * k; o.vy = Math.sin(a) * k;
+  }
+  // tools that make sense to repeat while the right button is held
+  const NOREPEAT = { grab: 1, line: 1, eyedrop: 1, fill: 1, shoot: 1, quake: 1, meteors: 1, flood: 1, acidrain: 1 };
+  function rapidTick() {
+    if (!ptr.rapid || NOREPEAT[tool.id] || tool.mat) return;
+    if (tool.wp && (tool.wp.m === 'gun' || tool.wp.m === 'beam' || tool.wp.m === 'hold')) return; // these already fire while held
+    ptr.racc += rapidRate / 60;
+    const ox = ptr.x, oy = ptr.y, spread = tool.wp ? 0 : Math.max(1, brush * .6);
+    while (ptr.racc >= 1) {
+      ptr.racc--;
+      for (let n = 0; n < rapidAmt; n++) {
+        if (rapidAmt > 1 || spread > 1) { ptr.x = clamp(ox + (rnd() - .5) * 2 * spread * (rapidAmt > 1 ? 1.5 : 1), 1, W - 2); ptr.y = clamp(oy + (rnd() - .5) * 2 * spread * (rapidAmt > 1 ? 1.5 : 1), 1, H - 2); }
+        onPress(true);
+      }
+    }
+    ptr.x = ox; ptr.y = oy;
   }
   function disc(cx, cy, r, fn) {
     const rr = r * r + r * .8;
@@ -2873,7 +2897,7 @@
       }, r);
       return;
     }
-    if (tool.spawn) { if (ptr.held % 10 === 0 && ptr.held) spawnCreature(); return; }
+    if (tool.spawn) { if (!ptr.rapid && ptr.held % 10 === 0 && ptr.held) spawnCreature(); return; }
     if (tool.wp) { weaponHold(tool.wp); return; }
     switch (tool.id) {
       case 'erase': {
@@ -3512,6 +3536,12 @@
       <div class="srow"><label for="spd">Sim speed</label><input type="range" id="spd" min="25" max="300" step="5" value="${Math.round(speed * 100)}"><b id="spdVal">${speed.toFixed(2)}x</b></div>
       <div class="srow"><span>World size</span><div class="seg">${[['S', 'Small'], ['M', 'Medium'], ['L', 'Large']].map(([k, l]) => `<button class="btn tg${sizeMode === k ? ' on' : ''}" type="button" data-size="${k}">${l}</button>`).join('')}</div></div>
       <div class="srow wrap">${tg('wrap', 'Wrap edges', wrap)}${tg('info', 'Cell info on hover', hoverInfo)}${tg('heat', 'Heat map', heatView)}${tg('sound', 'Sound', !muted)}${tg('calm', 'Reduce shake + flash', reduceMotion)}</div>
+      <h3>Spawning</h3>
+      <p class="snote">Hold the <b>right mouse button</b> to spawn the selected thing over and over.</p>
+      <div class="srow"><label for="rrate">Spawn rate</label><input type="range" id="rrate" min="1" max="60" step="1" value="${rapidRate}"><b id="rrateVal">${rapidRate}/s</b></div>
+      <div class="srow"><label for="ramt">Per spawn</label><input type="range" id="ramt" min="1" max="10" step="1" value="${rapidAmt}"><b id="ramtVal">${rapidAmt}</b></div>
+      <div class="srow"><label for="rspd">Launch speed</label><input type="range" id="rspd" min="0" max="10" step="1" value="${rapidSpd}"><b id="rspdVal">${rapidSpd ? rapidSpd : 'Off'}</b></div>
+      <div class="srow wrap">${tg('nolimit', 'No spawn limits', noLimit)}${tg('rleft', 'Rapid spawn on tap / left click too', rapidLeft)}</div>
       <div class="srow wrap"><button class="btn" type="button" data-act="random">Random world</button><button class="btn" type="button" data-act="scene">Demo scene</button><button class="btn" type="button" data-act="snap">Snapshot</button></div>
       <h3>World slots</h3>
       ${[1, 2, 3].map(n => `<div class="slot"><span>Slot ${n}: <em id="slotl${n}">${slotLabel(n)}</em></span><button class="btn" type="button" data-save="${n}">Save</button><button class="btn" type="button" data-load="${n}">Load</button></div>`).join('')}
@@ -3533,9 +3563,17 @@
       else if (s === 'heat') heatView = !heatView;
       else if (s === 'sound') control('sound');
       else if (s === 'calm') { reduceMotion = !reduceMotion; store.set('calm', reduceMotion); }
+      else if (s === 'nolimit') { noLimit = !noLimit; store.set('nolimit', noLimit); }
+      else if (s === 'rleft') { rapidLeft = !rapidLeft; store.set('rleft', rapidLeft); }
       refreshCtrls(); setBody.innerHTML = settingsHtml();
     } else if (b.dataset.save) { const n = +b.dataset.save; toast(saveSlot(n) ? `Saved to slot ${n}` : 'Could not save (storage full or blocked)'); setBody.innerHTML = settingsHtml(); }
     else if (b.dataset.load) { const n = +b.dataset.load; if (loadSlot(n)) { setEl.hidden = true; toast(`Loaded slot ${n}`); } else toast(`Slot ${n} is empty`); }
+  });
+  setEl.addEventListener('input', e => {
+    const id = e.target.id, v = +e.target.value;
+    if (id === 'rrate') { rapidRate = clamp(v, 1, 60); store.set('rrate', rapidRate); $('#rrateVal').textContent = rapidRate + '/s'; }
+    else if (id === 'ramt') { rapidAmt = clamp(v, 1, 10); store.set('ramt', rapidAmt); $('#ramtVal').textContent = rapidAmt; }
+    else if (id === 'rspd') { rapidSpd = clamp(v, 0, 10); store.set('rspd', rapidSpd); $('#rspdVal').textContent = rapidSpd || 'Off'; }
   });
   setEl.addEventListener('input', e => { if (e.target.id === 'spd') { speed = clamp(e.target.value / 100, .25, 3); store.set('speed', speed); $('#spdVal').textContent = speed.toFixed(2) + 'x'; } });
   function genWorld() {
@@ -3573,7 +3611,7 @@
   function toolTick() {
     const ivx = ptr.x - ptr.px, ivy = ptr.y - ptr.py; // pointer velocity, cells per tick
     ptr.vx = ptr.vx * .5 + ivx * .5; ptr.vy = ptr.vy * .5 + ivy * .5;
-    if (ptr.down) { applyTool(); ptr.held++; }
+    if (ptr.down) { applyTool(); if (ptr.held) rapidTick(); ptr.held++; }
     ptr.px = ptr.x; ptr.py = ptr.y;
   }
   function simStep() {
@@ -3661,7 +3699,10 @@
     get gravity() { return gdir; }, get paused() { return paused; }, get slow() { return slow; },
     makeCreature, makeBody, explode, nuke, lightning,
     // simulate the pointer in cell coordinates
-    press(x, y) { ptr.down = true; ptr.x = ptr.px = x; ptr.y = ptr.py = y; ptr.held = 0; ptr.over = true; ptr.hist = []; track(x, y); onPress(); },
+    press(x, y, right) { ptr.down = true; ptr.x = ptr.px = x; ptr.y = ptr.py = y; ptr.held = 0; ptr.over = true; ptr.hist = []; ptr.rapid = !!right; ptr.racc = 0; track(x, y); onPress(); },
+    tick() { toolTick(); },
+    spawnSet(o) { if ('rate' in o) rapidRate = o.rate; if ('amt' in o) rapidAmt = o.amt; if ('spd' in o) rapidSpd = o.spd; if ('nolimit' in o) noLimit = o.nolimit; },
+    ragdolls_n() { return ragdolls.length; },
     move(x, y) { ptr.x = x; ptr.y = y; if (ptr.down) track(x, y); },
     release() { up({ pointerId: ptr.id }); },
   };
