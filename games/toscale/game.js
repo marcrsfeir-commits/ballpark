@@ -93,11 +93,11 @@ function roundsFor(n) {
   });
 }
 
-let day = today, rounds = [], ri = 0, guess = 1, shown = 1, revealed = false, practice = false, zoom = 1, ppm = 1, ppmTarget = 1, dragging = null;
+let day = today, rounds = [], ri = 0, guess = 1, shown = 1, revealed = false, practice = false, endless = false, lives = 0, zoom = 1, ppm = 1, ppmTarget = 1, dragging = null;
 let state = { results: [] };
 
 function loadDay(n) {
-  day = n; practice = n !== today;
+  day = n; practice = n !== today; endless = false;
   rounds = roundsFor(n);
   state = store.get('day:' + n, { results: [] });
   if (practice) state = { results: [] };
@@ -119,7 +119,7 @@ function startRound() {
   $('#fact').textContent = '';
   $('#badge').hidden = true;
   $('#lock').textContent = 'Lock In';
-  $('#roundLabel').textContent = `ROUND ${ri + 1} / 5${practice ? ' · PRACTICE' : ''}`;
+  $('#roundLabel').textContent = endless ? `ROUND ${ri + 1} · ${'❤️'.repeat(lives)}` : `ROUND ${ri + 1} / 5${practice ? ' · ARCHIVE' : ''}`;
   $('#scoreLabel').textContent = state.results.reduce((s, x) => s + x.pts, 0);
   $('#hint').hidden = false;
   fit(true);
@@ -231,18 +231,22 @@ $('#lock').onclick = () => {
     revealed = true; zoom = 1; fit();
     state.results[ri] = { pts, off: Math.round((guess / tgt.size - 1) * 100), pair: [rounds[ri].ref, rounds[ri].tgt] };
     if (!practice) store.set('day:' + day, state);
+    if (endless && pts < ENDLESS_PASS) lives--;
     $('#badge').innerHTML = `${pts} <small>/ 100</small>`; $('#badge').hidden = false;
     const off = state.results[ri].off;
     $('#fact').textContent = `${off === 0 ? 'Dead on!' : `You were ${Math.abs(off)}% ${off > 0 ? 'too big' : 'too small'}.`} ${tgt.fact || ''}`;
     $('#scoreLabel').textContent = state.results.reduce((s, x) => s + x.pts, 0);
-    $('#lock').textContent = ri < 4 ? 'Next Round →' : 'See Results →';
+    $('#lock').textContent = hasNext() ? 'Next Round →' : 'See Results →';
+    if (endless) $('#roundLabel').textContent = `ROUND ${ri + 1} · ${lives ? '❤️'.repeat(lives) : 'OUT OF LIVES'}${pts < ENDLESS_PASS ? ' · −1 life (under ' + ENDLESS_PASS + ')' : ''}`;
     sfx(pts > 80 ? 880 : pts > 50 ? 660 : 330, 0.18, 'triangle');
-  } else if (ri < 4) { ri++; startRound(); }
+  } else if (hasNext()) { ri++; if (ri >= rounds.length) rounds.push(endlessRound()); startRound(); }
   else showEnd();
 };
 
+const hasNext = () => (endless ? lives > 0 : ri < 4);
 const emo = p => (p >= 80 ? '🟩' : p >= 50 ? '🟨' : '🟥');
 function showEnd() {
+  if (endless) return showEndlessEnd();
   const total = state.results.reduce((s, x) => s + x.pts, 0), line = state.results.map(r => emo(r.pts)).join('');
   if (!practice && !state.reported) {
     state.reported = true; store.set('day:' + day, state);
@@ -253,17 +257,44 @@ function showEnd() {
   end.hidden = false;
   end.innerHTML = `<h2>${total} / 500</h2><div>${line} · best ${store.get('best', 0)}</div>
     <div class="rows">${state.results.map(r => `<div><span>${emo(r.pts)}</span><span>${byId[r.pair[1]].name} vs ${byId[r.pair[0]].name} · ${r.off > 0 ? '+' : ''}${r.off}%</span><b>${r.pts}</b></div>`).join('')}</div>
-    <div class="btns"><button class="primary" id="share">Copy result</button><button id="again">Practice round</button><button id="arch2">Archive</button><a href="../../index.html">BALLPARK</a></div>`;
+    <div class="btns"><button class="primary" id="share">Copy result</button><button id="again">Play Endless</button><button id="arch2">Archive</button><a href="../../index.html">BALLPARK</a></div>`;
   $('#share').onclick = () => navigator.clipboard?.writeText(`To Scale No. ${day}${practice ? ' (practice)' : ''} · ${total}/500\n${line}`).then(() => toast('Copied!'));
-  $('#again').onclick = practiceRound;
+  $('#again').onclick = startEndless;
   $('#arch2').onclick = openArchive;
   end.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
-function practiceRound() {
-  practice = true; $('#end').hidden = true;
-  rounds = roundsFor(1000 + Math.floor(Math.random() * 100000)); state = { results: [] }; ri = 0;
-  $('#archHead').hidden = false; $('#archHead').textContent = 'PRACTICE · random pairs';
+
+// ---------- endless: fresh random pairs until you run out of lives ----------
+const ENDLESS_LIVES = 3, ENDLESS_PASS = 50, RECENT = 40;
+let recent = [];
+function endlessRound() {
+  for (let tries = 0; tries < 500; tries++) {
+    const a = OBJECTS[Math.floor(Math.random() * OBJECTS.length)], b = OBJECTS[Math.floor(Math.random() * OBJECTS.length)];
+    const ra = dims(a, a.size), rb = dims(b, b.size), ratio = Math.max(ra.h, rb.h) / Math.min(ra.h, rb.h);
+    if (a === b || ratio > 25 || ratio < 1.15 || (tries < 400 && (recent.includes(a.id) || recent.includes(b.id)))) continue;
+    recent = [...recent, a.id, b.id].slice(-RECENT);
+    const k = Math.random(), f = k < 0.5 ? 0.25 + k * 0.7 : 1.6 + (k - 0.5) * 4;
+    return { ref: a.id, tgt: b.id, start: b.size * f };
+  }
+  return { ref: 'human', tgt: 'door', start: 1 };
+}
+function startEndless() {
+  practice = true; endless = true; lives = ENDLESS_LIVES; $('#end').hidden = true;
+  rounds = [endlessRound()]; state = { results: [] }; ri = 0;
+  $('#archHead').hidden = false; $('#archHead').textContent = `ENDLESS · score under ${ENDLESS_PASS} loses a life`;
   startRound();
+}
+function showEndlessEnd() {
+  const total = state.results.reduce((s, x) => s + x.pts, 0), n = state.results.length;
+  const best = store.get('bestEndless', 0); if (total > best) store.set('bestEndless', total);
+  const end = $('#end');
+  end.hidden = false;
+  end.innerHTML = `<h2>${total} pts</h2><div>${n} rounds · best endless ${store.get('bestEndless', 0)}</div>
+    <div class="rows">${state.results.slice(-10).map(r => `<div><span>${emo(r.pts)}</span><span>${byId[r.pair[1]].name} vs ${byId[r.pair[0]].name} · ${r.off > 0 ? '+' : ''}${r.off}%</span><b>${r.pts}</b></div>`).join('')}</div>
+    <div class="btns"><button class="primary" id="again">Play again</button><button id="share">Copy result</button><a href="../../index.html">BALLPARK</a></div>`;
+  $('#share').onclick = () => navigator.clipboard?.writeText(`To Scale Endless · ${total} pts in ${n} rounds\n${state.results.map(r => emo(r.pts)).join('')}`).then(() => toast('Copied!'));
+  $('#again').onclick = startEndless;
+  end.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 // ---------- archive / help / sound ----------
@@ -278,8 +309,9 @@ function openArchive() {
 function modal(html) { $('#modalBody').innerHTML = html; $('#modal').hidden = false; }
 $('#modal').onclick = e => { if (e.target.id === 'modal' || e.target.closest('[data-close]')) $('#modal').hidden = true; };
 $('#archBtn').onclick = openArchive;
-$('#practiceBtn').onclick = practiceRound;
-$('#helpBtn').onclick = () => modal(`<h3>How to play</h3><p>The <b style="color:#6aa8ff">blue</b> silhouette is drawn at its true size. Stretch the <b style="color:#ff5a63">red</b> one until it matches real life — drag it up or down, scroll, or use the arrow keys — then <b>Lock In</b>.</p><p>Five pairs a day, up to 100 points each. Use the zoom buttons when one of them is enormous.</p>`);
+$('#endlessBtn').onclick = startEndless;
+$('#dailyBtn').onclick = () => loadDay(today);
+$('#helpBtn').onclick = () => modal(`<h3>How to play</h3><p>The <b style="color:#6aa8ff">blue</b> silhouette is drawn at its true size. Stretch the <b style="color:#ff5a63">red</b> one until it matches real life — drag it up or down, scroll, or use the arrow keys — then <b>Lock In</b>.</p><p>Five pairs a day, up to 100 points each. <b>Endless</b> keeps going with new pairs — score under 50 and you lose one of 3 lives. Use the zoom buttons when one of them is enormous.</p>`);
 let muted = store.get('muted', false), ac = null;
 $('#muteBtn').textContent = 'Sound: ' + (muted ? 'off' : 'on');
 $('#muteBtn').onclick = () => { muted = !muted; store.set('muted', muted); $('#muteBtn').textContent = 'Sound: ' + (muted ? 'off' : 'on'); };
