@@ -192,6 +192,7 @@
   function launch(i, vx, vy) { // lift a grid cell into a flying particle
     const t = g[i];
     if (!t || t === BOLT || t === CLONE) return false;
+    if (pn > 9000 && rnd() < (pn - 9000) / 9000) return false; // debris budget: keeps huge blasts smooth
     if (!addP(i % W + .5, ((i / W) | 0) + .5, vx, vy, t === BURN ? FIRE : t, -1, 0)) return false;
     g[i] = 0; dat[i] = 0;
     return true;
@@ -784,9 +785,13 @@
   }
   // the blast front past the crater: loose matter (powders, liquids, gas) is thrown outward,
   // solids near the rim crack loose, and the force falls off with distance
+  let swBudget = 60000; // cells the shockwaves may scan this tick, shared by every blast in a chain reaction
   function shockwave(cx, cy, r, power) {
-    if (r < 3) return;
-    const R = Math.min(r * (2.3 + power * .4), 120), R2 = R * R, r2 = r * r, big = Math.min(2.4, .8 + r / 12);
+    if (r < 3 || swBudget <= 0) return;
+    let R = Math.min(r * (2.3 + power * .4), 100);
+    if (4 * R * R > swBudget) R = Math.max(r + 2, Math.sqrt(swBudget / 4));
+    swBudget -= 4 * R * R;
+    const R2 = R * R, r2 = r * r, big = Math.min(2.4, .8 + r / 12);
     for (let dy = -R; dy <= R; dy++) {
       const y = cy + dy; if (y < 0 || y >= H) continue;
       for (let dx = -R; dx <= R; dx++) {
@@ -2897,11 +2902,13 @@
   function rapidTick() {
     if (!ptr.rapid || NOREPEAT[tool.id] || tool.mat) return;
     if (tool.wp && (tool.wp.m === 'gun' || tool.wp.m === 'beam' || tool.wp.m === 'hold')) return; // these already fire while held
-    ptr.racc += rapidRate / 60;
+    const wp = tool.wp, heavy = tool.id === 'nuke' || tool.id === 'meteors' || (wp && (wp.m === 'strike' || (wp.P && (wp.P.r || 0) >= 14)));
+    if (api.workMs > 14) return; // already over budget: skip this repeat
+    ptr.racc += (heavy ? Math.min(rapidRate, 3) : rapidRate) / 60;
     const ox = ptr.x, oy = ptr.y, spread = tool.wp ? 0 : Math.max(1, brush * .6);
     while (ptr.racc >= 1) {
       ptr.racc--;
-      for (let n = 0; n < rapidAmt; n++) {
+      for (let n = 0, amt = heavy ? 1 : rapidAmt; n < amt; n++) {
         if (rapidAmt > 1 || spread > 1) { ptr.x = clamp(ox + (rnd() - .5) * 2 * spread * (rapidAmt > 1 ? 1.5 : 1), 1, W - 2); ptr.y = clamp(oy + (rnd() - .5) * 2 * spread * (rapidAmt > 1 ? 1.5 : 1), 1, H - 2); }
         onPress(true);
       }
@@ -3647,6 +3654,7 @@
     ptr.px = ptr.x; ptr.py = ptr.y;
   }
   function simStep() {
+    swBudget = 60000;
     stampMask(true);
     stepGrid();
     updParticles();
@@ -3677,7 +3685,8 @@
     // tools run on a fixed 60 Hz tick (also while paused) so 120/144/240 Hz screens behave the same
     toolAcc += dt;
     let tn = 0;
-    while (toolAcc >= 16.6 && tn < 2) {
+    const busy = api.workMs > 11; // the last frames ran long: do one tick per frame and let time slip instead
+    while (toolAcc >= 16.6 && tn < (busy ? 1 : 2)) {
       toolAcc -= 16.6; tn++;
       toolTick();
     }
@@ -3685,7 +3694,7 @@
     if (!paused || stepOnce) {
       acc += (slow ? dt / 4 : dt) * speed;
       let n = 0;
-      const maxN = speed > 1 ? Math.ceil(speed * 2) : 2;
+      const maxN = busy ? 1 : speed > 1 ? Math.ceil(speed * 2) : 2;
       if (stepOnce) { simStep(); stepOnce = false; acc = 0; }
       else while (acc >= 16.6 && n < maxN) { simStep(); acc -= 16.6; n++; }
       if (acc > 25 * maxN) acc = 0;
