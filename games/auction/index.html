@@ -40,6 +40,10 @@
   .end td { padding: 5px 8px; border-bottom: 1px solid rgba(255,255,255,.12); } .end td:last-child { text-align: right; color: #f5d77e; font-weight: 700; }
   @media (max-width: 480px) { .bid { flex-direction: column; } .bid button { padding: 12px; } }
   .bp-pic.big { width: 1em; height: 1em; border-radius: 10px; }
+  .lotpic { display: block; margin: 0 auto; max-width: 100%; height: clamp(170px, 46vw, 290px); object-fit: contain; border-radius: 3px; }
+  .lotpic.sm { display: inline-block; height: 30px; width: 30px; object-fit: cover; vertical-align: middle; margin-right: 6px; }
+  .credit { min-height: 14px; margin-top: 8px; font: 10.5px "Segoe UI", system-ui, sans-serif; color: #a08a66; }
+  .credit a { color: inherit; }
 </style>
 </head>
 <body data-bp-pos="br">
@@ -47,7 +51,7 @@
   <h1>Going Once</h1>
   <p class="sub">Real lots. Real hammer prices. What did it sell for?</p>
   <div class="bar"><span>LOT <b id="lotNo">1</b> / 10</span><span>SCORE <b id="score">0</b></span></div>
-  <div class="frame"><div class="canvas"><div class="em" id="em"></div></div></div>
+  <div class="frame"><div class="canvas"><div class="em" id="em"></div><div class="credit" id="credit"></div></div></div>
   <div class="lot"><div class="no" id="house"></div><h2 id="name"></h2><p id="desc"></p></div>
   <form class="bid" id="bidForm" autocomplete="off"><label class="field"><span>$</span><input id="guess" inputmode="decimal" placeholder="your bid (e.g. 2.5m)" aria-label="Your price guess"></label><button><svg viewBox="0 0 24 24" width="1.1em" height="1.1em" aria-hidden="true" style="vertical-align:-.2em;margin-right:.35em"><g transform="rotate(-40 12 12)" fill="currentColor"><rect x="5" y="3" width="14" height="7" rx="1.6"/><rect x="10.6" y="10" width="2.8" height="12" rx="1"/></g></svg>BID</button></form>
   <div class="preview" id="preview"></div>
@@ -73,10 +77,22 @@ for (let i = order.length - 1; i > 0; i--) { const j = Math.floor(Math.random() 
 order.sort((a, b) => (seen[a] || 0) - (seen[b] || 0));
 const game = order.slice(0, 10);
 let r = 0, total = 0; const results = [];
+
+// real photos of each lot (photos/<ph>.webp); credits loaded once for the licence line
+let CREDITS = {};
+fetch('photos/credits.json').then(r => r.json()).then(c => { CREDITS = c; if (cur) showCredit(cur); }).catch(() => {});
+const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const lotPic = (L, cls) => L.ph ? `<img class="${cls}" src="photos/${L.ph}.webp" alt="${esc(L.n)}" draggable="false">` : BALLPARK_PIC(L.e, cls === 'lotpic' ? 'bp-pic big' : 'bp-pic', L.n);
+let cur = null;
+function showCredit(L) {
+  cur = L; const c = CREDITS[L.ph], el = document.getElementById('credit');
+  el.innerHTML = c ? `Photo: <a href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.artist.slice(0, 60))}</a> · ${esc(c.license)}` : '';
+}
+
 function show() {
   const L = LOTS[game[r]];
   seen[game[r]] = ++tick; store.set('seen', seen); store.set('tick', tick);
-  $('lotNo').textContent = r + 1; $('em').innerHTML = BALLPARK_PIC(L.e, 'bp-pic big', L.n); $('em').style.animation = 'none'; void $('em').offsetWidth; $('em').style.animation = '';
+  $('lotNo').textContent = r + 1; $('em').innerHTML = lotPic(L, 'lotpic'); showCredit(L); $('em').style.animation = 'none'; void $('em').offsetWidth; $('em').style.animation = '';
   const [what, where] = L.d.split(' · ');
   $('house').textContent = (where || '').toUpperCase(); $('name').textContent = L.n; $('desc').textContent = what;
   $('sold').hidden = true; $('bidForm').hidden = false; $('guess').value = ''; $('preview').textContent = ''; $('guess').focus();
@@ -101,10 +117,10 @@ $('bidForm').addEventListener('submit', e => {
 function end() {
   const best = Math.max(store.get('best', 0), total); store.set('best', best);
   BP.report('auction', { score: total, max: 1000, label: `${total}/1000` });
-  $('bidForm').hidden = true; $('em').innerHTML = total >= 750 ? BALLPARK_PIC('1f3c6', 'bp-pic big', 'Trophy') : total >= 500 ? BALLPARK_PIC('1f3a9', 'bp-pic big', 'Top hat') : BALLPARK_PIC('1f4b0', 'bp-pic big', 'Money bag');
+  $('bidForm').hidden = true; $('credit').textContent = ''; $('em').innerHTML = total >= 750 ? BALLPARK_PIC('1f3c6', 'bp-pic big', 'Trophy') : total >= 500 ? BALLPARK_PIC('1f3a9', 'bp-pic big', 'Top hat') : BALLPARK_PIC('1f4b0', 'bp-pic big', 'Money bag');
   $('house').textContent = 'AUCTION CLOSED'; $('name').textContent = `${total} / 1000`; $('desc').textContent = total >= 750 ? 'You could run an auction house.' : total >= 500 ? 'A seasoned collector.' : 'Maybe leave the paddle at home.';
   $('sold').hidden = false; $('sold').className = 'sold end';
-  $('sold').innerHTML = `<table>${results.map(x => `<tr><td>${BALLPARK_PIC(x.L.e, 'bp-pic', x.L.n)} ${x.L.n}</td><td>${fmt(x.L.p)}</td><td>${x.pts}</td></tr>`).join('')}</table>
+  $('sold').innerHTML = `<table>${results.map(x => `<tr><td>${lotPic(x.L, 'lotpic sm')} ${x.L.n}</td><td>${fmt(x.L.p)}</td><td>${x.pts}</td></tr>`).join('')}</table>
     <div class="you" style="margin-top:12px">Best ever: ${best}</div><button class="next" id="again">NEW AUCTION</button> <button class="next" id="share">COPY SCORE</button>`;
   $('again').onclick = () => location.reload();
   $('share').onclick = () => navigator.clipboard?.writeText(`Going Once: ${total}/1000\n${results.map(x => x.pts >= 80 ? '■' : x.pts >= 50 ? '◧' : '□').join('')}\nBALLPARK`).then(() => { $('share').textContent = 'COPIED'; });

@@ -43,7 +43,10 @@ function newRound() {
   const frag = document.createDocumentFragment();
   for (let i = 0; i < count; i++) {
     const b = document.createElement('button');
-    b.style.background = `hsl(${h} ${s}% ${i === oddIndex ? l2 : l}%)`;
+    // colour is painted as pixels, not written into the page, so inspect element can't reveal the odd block
+    const c = document.createElement('canvas'); c.width = c.height = 4;
+    const g = c.getContext('2d'); g.fillStyle = `hsl(${h} ${s}% ${i === oddIndex ? l2 : l}%)`; g.fillRect(0, 0, 4, 4);
+    b.append(c);
     b.setAttribute('aria-label', `Block ${i + 1}`);
     b.dataset.i = i;
     frag.append(b);
