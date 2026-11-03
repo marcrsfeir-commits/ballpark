@@ -103,7 +103,7 @@ body.playing .top { margin-bottom: 8px; }
 .row { display: flex; gap: 8px; align-items: center; justify-content: center; flex-wrap: wrap; }
 .tiny { font-size: 11.5px; color: var(--muted); text-align: center; line-height: 1.4; }
 
-/* Tile grids (fish, traffic lights, odd emoji, robots) */
+/* Tile grids (fish, traffic lights, odd face, robots) */
 .grid { display: grid; grid-template-columns: repeat(var(--cols), 1fr); gap: 4px; width: 100%; }
 .tile {
   position: relative; aspect-ratio: 1; border: 0; padding: 0; border-radius: 4px;
@@ -206,7 +206,8 @@ body.playing .top { margin-bottom: 8px; }
 .rnum { position: absolute; inset: 0; display: grid; place-items: center; font: 800 36px var(--mono); font-variant-numeric: tabular-nums; }
 
 /* L15 */
-.judge { font-size: 64px; line-height: 1; font-family: var(--emoji); }
+.judge { font-size: 64px; line-height: 1; }
+.judge svg { margin: 0 auto; }
 .sq { margin: 0; font-size: 19px; font-weight: 800; line-height: 1.25; text-align: center; }
 .ssub { margin: 0; font-size: 13px; color: var(--muted); text-align: center; line-height: 1.4; min-height: 2.8em; }
 .ans { display: flex; gap: 10px; width: 100%; justify-content: center; flex-wrap: wrap; }

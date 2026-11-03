@@ -29,7 +29,9 @@ async function fuse(req, res) {
     });
     const out = JSON.parse((await r.json()).message.content);
     const n = String(out.result || '').replace(/["'.!]+/g, '').trim().split(/\s+/).slice(0, 3).map(w => w[0].toUpperCase() + w.slice(1)).join(' ');
-    const e = [...new Intl.Segmenter('en', { granularity: 'grapheme' }).segment(String(out.emoji || '✨'))][0]?.segment || '✨';
+    // The model picks an emoji, but BALLPARK never shows emoji: keep only its photo key (codepoints, e.g. '1f525').
+    const g = [...new Intl.Segmenter('en', { granularity: 'grapheme' }).segment(String(out.emoji || '').trim())][0]?.segment || '';
+    const e = /\p{Extended_Pictographic}/u.test(g) ? [...g].filter(c => c !== '\ufe0f').map(c => c.codePointAt(0).toString(16)).join('-') : '';
     const bad = !n || n.length > 32 || [a, b].some(x => String(x).toLowerCase() === n.toLowerCase());
     res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify(bad ? { n: null } : { n, e }));
   } catch (err) {

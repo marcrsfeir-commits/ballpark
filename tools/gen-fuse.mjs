@@ -20,11 +20,12 @@ Rules:
 Reply with JSON only: {"result": "...", "emoji": "..."}`;
 
 const seg = new Intl.Segmenter('en', { granularity: 'grapheme' });
-const firstGrapheme = s => [...seg.segment(String(s || '').trim())][0]?.segment || '✨';
+// The model picks an emoji, but BALLPARK never shows emoji: store only its photo key (codepoints, e.g. '1f525'), or ''.
+const firstGrapheme = s => { const g = [...seg.segment(String(s || '').trim())][0]?.segment || ''; return /\p{Extended_Pictographic}/u.test(g) ? [...g].filter(c => c !== '\ufe0f').map(c => c.codePointAt(0).toString(16)).join('-') : ''; };
 const title = s => String(s).replace(/["'.!]+/g, '').replace(/\s+/g, ' ').trim().split(' ').slice(0, 3).map(w => w[0] ? w[0].toUpperCase() + w.slice(1) : w).join(' ');
 
 let data = fs.existsSync(OUT) ? JSON.parse(fs.readFileSync(OUT, 'utf8'))
-  : { model: MODEL, elements: [{ n: 'Water', e: '💧' }, { n: 'Fire', e: '🔥' }, { n: 'Wind', e: '🌬️' }, { n: 'Earth', e: '🌍' }], recipes: [] };
+  : { model: MODEL, elements: [{ n: 'Water', e: '1f4a7' }, { n: 'Fire', e: '1f525' }, { n: 'Wind', e: '1f32c' }, { n: 'Earth', e: '1f30d' }], recipes: [] };
 const index = new Map(data.elements.map((el, i) => [el.n.toLowerCase(), i]));
 const done = new Set(data.recipes.map(([a, b]) => `${a},${b}`));
 const save = () => fs.writeFileSync(OUT, JSON.stringify(data));

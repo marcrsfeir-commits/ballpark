@@ -43,3 +43,4 @@ h1 { margin: 0; font-size: 34px; font-weight: 800; }
 .days button small { display: block; color: var(--muted); font-size: 11px; }
 .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); padding: 10px 16px; border-radius: 10px; background: #fff; color: #111; font-size: 14px; z-index: 30; }
 @media (max-width: 560px) { #stage { height: 320px; } .bar { flex-direction: column; align-items: stretch; } .lock { width: 100%; } h1 { font-size: 28px; } }
+.life{width:.9em;height:.8em;fill:#e5212e;vertical-align:-.05em;margin-left:2px}

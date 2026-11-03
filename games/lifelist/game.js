@@ -45,12 +45,12 @@
     let rows = '';
     sec.items.forEach((it, i) => {
       const id = sec.key + String(i + 1).padStart(2, '0');
-      rows += `<label class="row" data-id="${id}"><span class="emo" aria-hidden="true">${BALLPARK_PIC(it[0])}</span>` +
+      rows += `<label class="row" data-id="${id}"><span class="emo" aria-hidden="true">${BALLPARK_PIC(it[0], 'bp-pic', it[1])}</span>` +
         `<span class="txt">${esc(it[1])}</span><input type="checkbox" id="c-${id}">` +
         `<span class="box" aria-hidden="true"><svg viewBox="0 0 24 24"><path pathLength="1" d="M5 12.5l4.5 4.5L19 7.5"/></svg></span></label>`;
     });
     el.innerHTML =
-      `<div class="sec-head"><span class="sec-emoji" aria-hidden="true">${BALLPARK_PIC(sec.emoji)}</span>` +
+      `<div class="sec-head"><span class="sec-emoji" aria-hidden="true">${BALLPARK_PIC(sec.emoji, 'bp-pic', sec.name)}</span>` +
       `<div class="sec-title"><h2>${esc(sec.name)}</h2><p>${esc(sec.sub)}</p></div><span class="sec-count"></span></div>` +
       `<div class="sec-bar"><i></i></div><div class="rows">${rows}</div>`;
     listEl.append(el);
@@ -77,9 +77,9 @@
     barEl.setAttribute('aria-valuenow', n);
     barEl.setAttribute('aria-valuetext', `${n} of ${MAX} things done`);
     const ri = rankIndex(n), r = RANKS[ri], nx = RANKS[ri + 1];
-    rankEmoji.innerHTML = BALLPARK_PIC(r.emoji);
+    rankEmoji.innerHTML = BALLPARK_PIC(r.emoji, 'bp-pic', r.name);
     rankName.textContent = r.name;
-    rankNext.textContent = nx ? `· ${nx.at - n} more for ${nx.name} ${nx.emoji}` : '· every last one!';
+    rankNext.textContent = nx ? `· ${nx.at - n} more for ${nx.name}` : '· every last one!';
     SECTIONS.forEach(sec => {
       const c = secCount(sec), t = sec.items.length, ref = refs[sec.key];
       ref.count.textContent = `${c}/${t}`;
@@ -163,8 +163,9 @@
     finale() { [523, 659, 784, 1047, 784, 1047, 1319].forEach((f, i) => tone(f, i * 0.11, 0.4, 'triangle', 0.14)); }
   };
   const muteBtn = $('muteBtn');
+  const SPK = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/>';
   function paintMute() {
-    muteBtn.textContent = muted ? '🔇' : '🔊';
+    muteBtn.innerHTML = SPK + (muted ? '<path d="M17 9l5 6M22 9l-5 6"/></svg>' : '<path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>');
     muteBtn.setAttribute('aria-pressed', String(muted));
     muteBtn.setAttribute('aria-label', muted ? 'Sound off' : 'Sound on');
   }
@@ -299,13 +300,13 @@
       sfx.finale();
       burst(innerWidth / 2, innerHeight * 0.4, 120, { power: 900, life: 1.8 });
       rain(2800);
-      toast(`🌈 ${MAX} of ${MAX}! You are officially ${RANKS[rankNow].name}.`, 4200, 'finale');
+      toast(`${MAX} of ${MAX}! You are officially ${RANKS[rankNow].name}.`, 4200, 'finale');
       return;
     }
     if (secDone) {
       burst(innerWidth / 2, Math.min(y, innerHeight * 0.55), 90, { spread: 3.4, power: 820, life: 1.6 });
       sfx.big();
-      toast(`${sec.emoji} ${sec.name} complete!`, 2200, 'cele');
+      toast(`${sec.name} complete!`, 2200, 'cele');
     } else if (item.big) {
       sfx.big();
     } else {
@@ -316,7 +317,7 @@
       burst(innerWidth / 2, 80, 70, { spread: Math.PI, dir: Math.PI / 2, power: 560, life: 1.5 });
       retrigger(rankLine, 'rankup');
       if (!secDone) sfx.rank();
-      toast(`New title: ${rk.emoji} ${rk.name}`, 2600, 'cele');
+      toast(`New title: ${rk.name}`, 2600, 'cele');
     }
   }
 
@@ -358,11 +359,11 @@
   const shareBtn = $('shareBtn');
   let shareTimer = 0;
   shareBtn.addEventListener('click', async () => {
-    const text = `I've done ${done.size}/${MAX} things on Been There ✅`;
+    const text = `I've done ${done.size}/${MAX} things on Been There.`;
     const ok = await copyText(text);
     clearTimeout(shareTimer);
-    shareBtn.textContent = ok ? '✅ Copied!' : '📋 Share my list';
-    shareTimer = setTimeout(() => { shareBtn.textContent = '📋 Share my list'; }, 1800);
+    shareBtn.textContent = ok ? 'Copied!' : 'Share my list';
+    shareTimer = setTimeout(() => { shareBtn.textContent = 'Share my list'; }, 1800);
     toast(ok ? 'Copied! Paste it anywhere to show off.' : `Could not copy. Here it is: ${text}`, ok ? 2000 : 4500);
     if (ok) { sfx.big(); }
     const r = shareBtn.getBoundingClientRect();
@@ -389,7 +390,7 @@
     persist(); render(true); report();
     clearTimeout(filterTimer); applyFilter();
     closeModal();
-    toast('Fresh start! Go and collect some stories. 🌱', 2600);
+    toast('Fresh start! Go and collect some stories.', 2600);
     window.scrollTo({ top: 0, behavior: RM.matches ? 'auto' : 'smooth' });
   }
   resetBtn.addEventListener('click', openModal);

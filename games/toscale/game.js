@@ -11,73 +11,27 @@ const cv = $('#stage'), g = cv.getContext('2d');
 const BLUE = '#6aa8ff', RED = '#e5212e';
 
 // ---------- silhouettes ----------
-// Unit-box polygons (x 0..1 across, y 0..1 top→ground) for things with no good emoji; [aspect w/h, ...polygons]
-const SHAPES = {
-  eiffel: [0.38, [[0,1],[.2,1],[.33,.8],[.67,.8],[.8,1],[1,1],[.72,.68],[.6,.42],[.54,.2],[.515,.05],[.505,0],[.495,0],[.485,.05],[.46,.2],[.4,.42],[.28,.68]]],
-  bigben: [0.17, [[.15,1],[.85,1],[.85,.36],[.95,.36],[.95,.22],[.9,.22],[.5,.04],[.1,.22],[.05,.22],[.05,.36],[.15,.36]], [[.47,.05],[.53,.05],[.51,0],[.49,0]]],
-  burj: [0.11, [[0,1],[1,1],[1,.85],[.85,.85],[.85,.68],[.72,.68],[.72,.5],[.62,.5],[.62,.32],[.56,.32],[.56,.16],[.52,.16],[.505,0],[.495,0],[.48,.16],[.44,.16],[.44,.32],[.38,.32],[.38,.5],[.28,.5],[.28,.68],[.15,.68],[.15,.85],[0,.85]]],
-  christ: [0.74, [[.38,1],[.62,1],[.62,.8],[.6,.8],[.57,.33],[1,.32],[1,.25],[.57,.24],[.555,.2],[.445,.2],[.43,.24],[0,.25],[0,.32],[.43,.33],[.4,.8],[.38,.8]], [[.45,.2],[.55,.2],[.56,.1],[.5,.04],[.44,.1]]],
-  stepped: [1.8, [[0,1],[1,1],[.95,.89],[.9,.89],[.86,.78],[.82,.78],[.78,.67],[.74,.67],[.7,.56],[.66,.56],[.62,.45],[.6,.45],[.6,.18],[.4,.18],[.4,.45],[.38,.45],[.34,.56],[.3,.56],[.26,.67],[.22,.67],[.18,.78],[.14,.78],[.1,.89],[.05,.89]]],
-  pyramid: [1.57, [[0,1],[1,1],[.5,0]]],
-  pisa: [0.42, [[0,1],[.55,1],[.98,.06],[.72,0],[.45,.06]]],
-  mountain: [3.2, [[0,1],[.18,.62],[.26,.7],[.4,.25],[.47,.33],[.55,0],[.63,.22],[.7,.18],[.82,.55],[.9,.5],[1,1]]],
-  mountain2: [3.6, [[0,1],[.2,.6],[.3,.5],[.42,.12],[.5,0],[.6,.14],[.72,.45],[.85,.6],[1,1]]],
-  mountain3: [4.2, [[0,1],[.25,.4],[.36,.06],[.44,0],[.58,0],[.66,.08],[.78,.42],[1,1]]],
-  empire: [0.22, [[0,1],[1,1],[1,.78],[.88,.78],[.88,.42],[.76,.42],[.76,.3],[.64,.3],[.6,.22],[.53,.2],[.51,0],[.49,0],[.47,.2],[.4,.22],[.36,.3],[.24,.3],[.24,.42],[.12,.42],[.12,.78],[0,.78]]],
-  plane: [3.0, [[0,.62],[.05,.5],[.1,.48],[.13,.05],[.2,.05],[.3,.45],[.9,.45],[.97,.5],[1,.58],[.97,.66],[.9,.7],[.1,.7]], [[.42,.62],[.6,.62],[.5,.95],[.44,.95]]],
-  rocket: [0.17, [[.5,0],[.62,.08],[.62,.86],[1,1],[0,1],[.38,.86],[.38,.08]]],
-  bat: [0.12, [[.38,0],[.62,0],[.62,.32],[.95,.36],[.95,.98],[.5,1],[.05,.98],[.05,.36],[.38,.32]]],
-  racket: [0.4, 'racket'],
-  paper: [0.707, [[0,0],[.78,0],[1,.16],[1,1],[0,1]]],
-  bottle: [0.25, [[.38,0],[.62,0],[.62,.36],[.95,.5],[1,.56],[1,1],[0,1],[0,.56],[.05,.5],[.38,.36]]],
-  pitch: [43, [[0,1],[1,1],[1,.86],[0,.86]], [[0,.86],[.004,.86],[.004,0],[0,0]], [[.996,.86],[1,.86],[1,0],[.996,0]]],
-  door: [0.45, [[0,0],[1,0],[1,1],[0,1]]],
-  fridge: [0.42, [[.03,0],[.97,0],[1,.03],[1,1],[0,1],[0,.03]]],
-};
-const cache = new Map();
-// Cut-out photos (photos/<id>.webp, from Wikipedia — see photos/credits.json). Loaded before the first round.
-const PHOTOS = new Map();
-await Promise.all(OBJECTS.filter(o => o.photo).map(o => new Promise(res => {
+// Every object is a silhouette cut from a real side-profile photo (sil/<id>.png, white on transparent, made by
+// tools/toscale-sil.py from photos/<id>.webp — Wikimedia Commons, licences in photos/credits.json). Only the
+// silhouette is ever drawn; the photos stay on the side. Loaded before the first round.
+const SIL = new Map();
+await Promise.all(OBJECTS.map(o => new Promise(res => {
   const img = new Image();
-  img.onload = () => { PHOTOS.set(o.id, img); res(); };
-  img.onerror = () => res();                              // missing photo: falls back to the drawn silhouette
-  img.src = `photos/${o.id}.webp`;
+  img.onload = () => { SIL.set(o.id, img); res(); };
+  img.onerror = () => { console.warn('missing silhouette', o.id); res(); };
+  img.src = `sil/${o.id}.png`;
 })));
+const cache = new Map();
 function silhouette(o, color) {
   const key = o.id + color;
   if (cache.has(key)) return cache.get(key);
-  let c;
-  if (o.photo && PHOTOS.get(o.id)) {                      // real cut-out photo, already trimmed to the object
-    const img = PHOTOS.get(o.id);
-    c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight;
-    const cg = c.getContext('2d');
-    cg.drawImage(img, 0, 0);
-    if (color === '#ffffff') { cg.globalCompositeOperation = 'source-in'; cg.fillStyle = color; cg.fillRect(0, 0, c.width, c.height); }
-  } else if (o.e) {
-    const t = document.createElement('canvas'); t.width = t.height = 320;
-    const tg = t.getContext('2d', { willReadFrequently: true });
-    tg.font = '240px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif';
-    tg.textAlign = 'center'; tg.textBaseline = 'middle'; tg.fillText(o.e, 160, 170);
-    const d = tg.getImageData(0, 0, 320, 320).data;
-    let x0 = 320, y0 = 320, x1 = 0, y1 = 0;
-    for (let y = 0; y < 320; y++) for (let x = 0; x < 320; x++) if (d[(y * 320 + x) * 4 + 3] > 60) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
-    if (x1 <= x0) { x0 = 40; y0 = 40; x1 = 280; y1 = 280; }
-    c = document.createElement('canvas'); c.width = x1 - x0 + 1; c.height = y1 - y0 + 1;
-    const cg = c.getContext('2d');
-    cg.drawImage(t, x0, y0, c.width, c.height, 0, 0, c.width, c.height);
-    cg.globalCompositeOperation = 'source-in'; cg.fillStyle = color; cg.fillRect(0, 0, c.width, c.height);
-  } else {
-    const [aspect, ...polys] = SHAPES[o.s];
-    const H = 400, W = Math.max(8, Math.round(H * Math.min(aspect, 12)));
-    c = document.createElement('canvas'); c.width = W; c.height = H;
-    const cg = c.getContext('2d'); cg.fillStyle = color;
-    if (polys[0] === 'racket') {
-      cg.beginPath(); cg.ellipse(W / 2, H * 0.24, W * 0.48, H * 0.235, 0, 0, Math.PI * 2); cg.ellipse(W / 2, H * 0.24, W * 0.38, H * 0.19, 0, 0, Math.PI * 2); cg.fill('evenodd');
-      cg.beginPath(); cg.moveTo(W * .42, H * .46); cg.lineTo(W * .58, H * .46); cg.lineTo(W * .56, H); cg.lineTo(W * .44, H); cg.fill();
-    } else for (const p of polys) { cg.beginPath(); p.forEach(([x, y], i) => (i ? cg.lineTo(x * W, y * H) : cg.moveTo(x * W, y * H))); cg.closePath(); cg.fill(); }
-    c.aspect = aspect;
-  }
-  c.aspect = c.aspect || c.width / c.height;
+  const img = SIL.get(o.id);
+  const c = document.createElement('canvas');
+  c.width = img ? img.naturalWidth : 100; c.height = img ? img.naturalHeight : 100;
+  const cg = c.getContext('2d');
+  if (img) { cg.drawImage(img, 0, 0); cg.globalCompositeOperation = 'source-in'; }
+  cg.fillStyle = color; cg.fillRect(0, 0, c.width, c.height);
+  c.aspect = c.width / c.height;
   cache.set(key, c);
   return c;
 }
@@ -133,7 +87,7 @@ function startRound() {
   $('#fact').textContent = '';
   $('#badge').hidden = true;
   $('#lock').textContent = 'Lock In';
-  $('#roundLabel').textContent = endless ? `ROUND ${ri + 1} · ${'❤️'.repeat(lives)}` : `ROUND ${ri + 1} / 5${practice ? ' · ARCHIVE' : ''}`;
+  $('#roundLabel').innerHTML = endless ? `ROUND ${ri + 1} · ${HEART.repeat(lives)}` : `ROUND ${ri + 1} / 5${practice ? ' · ARCHIVE' : ''}`;
   $('#scoreLabel').textContent = state.results.reduce((s, x) => s + x.pts, 0);
   $('#hint').hidden = false;
   fit(true);
@@ -251,14 +205,15 @@ $('#lock').onclick = () => {
     $('#fact').textContent = `${off === 0 ? 'Dead on!' : `You were ${Math.abs(off)}% ${off > 0 ? 'too big' : 'too small'}.`} ${tgt.fact || ''}`;
     $('#scoreLabel').textContent = state.results.reduce((s, x) => s + x.pts, 0);
     $('#lock').textContent = hasNext() ? 'Next Round →' : 'See Results →';
-    if (endless) $('#roundLabel').textContent = `ROUND ${ri + 1} · ${lives ? '❤️'.repeat(lives) : 'OUT OF LIVES'}${pts < ENDLESS_PASS ? ' · −1 life (under ' + ENDLESS_PASS + ')' : ''}`;
+    if (endless) $('#roundLabel').innerHTML = `ROUND ${ri + 1} · ${lives ? HEART.repeat(lives) : 'OUT OF LIVES'}${pts < ENDLESS_PASS ? ' · −1 life (under ' + ENDLESS_PASS + ')' : ''}`;
     sfx(pts > 80 ? 880 : pts > 50 ? 660 : 330, 0.18, 'triangle');
   } else if (hasNext()) { ri++; if (ri >= rounds.length) rounds.push(endlessRound()); startRound(); }
   else showEnd();
 };
 
 const hasNext = () => (endless ? lives > 0 : ri < 4);
-const emo = p => (p >= 80 ? '🟩' : p >= 50 ? '🟨' : '🟥');
+const emo = p => (p >= 80 ? '■' : p >= 50 ? '▣' : '□');   // plain squares, never emoji
+const HEART = '<svg class="life" viewBox="0 0 16 14" aria-hidden="true"><path d="M8 14 1.4 7.4A4 4 0 0 1 8 2.3a4 4 0 0 1 6.6 5.1Z"/></svg>';
 function showEnd() {
   if (endless) return showEndlessEnd();
   const total = state.results.reduce((s, x) => s + x.pts, 0), line = state.results.map(r => emo(r.pts)).join('');
@@ -290,7 +245,7 @@ function endlessRound() {
     const k = Math.random(), f = k < 0.5 ? 0.25 + k * 0.7 : 1.6 + (k - 0.5) * 4;
     return { ref: a.id, tgt: b.id, start: b.size * f };
   }
-  return { ref: 'human', tgt: 'door', start: 1 };
+  return { ref: 'horse', tgt: 'car', start: 2 };
 }
 function startEndless() {
   practice = true; endless = true; lives = ENDLESS_LIVES; $('#end').hidden = true;
@@ -343,7 +298,7 @@ function toast(t) { const el = $('#toast'); el.textContent = t; el.hidden = fals
 resize();
 const qs = new URLSearchParams(location.search);
 if (qs.get('gallery')) {
-  rounds = [{ ref: 'human', tgt: 'human', start: 1.7 }];
+  rounds = [{ ref: 'horse', tgt: 'horse', start: 2 }];
   document.querySelector('.wrap').insertAdjacentHTML('beforeend', `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;margin-top:20px">${OBJECTS.map(o => `<figure style="margin:0;background:#10172d;border-radius:10px;padding:8px"><img data-id="${o.id}" style="height:70px;max-width:100%;object-fit:contain"><figcaption style="font-size:11px">${o.name}</figcaption></figure>`).join('')}</div>`);
   document.querySelectorAll('img[data-id]').forEach(i => { i.src = silhouette(byId[i.dataset.id], RED).toDataURL(); });
 }

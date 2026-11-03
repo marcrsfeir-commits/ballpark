@@ -1,5 +1,5 @@
 /* NOT A ROBOT - a captcha gauntlet for BALLPARK.
-   15 original, absurd verification tests. Everything is client-side; art is emoji, SVG and canvas. */
+   15 original, absurd verification tests. Everything is client-side; art is real photos, SVG and canvas (no emoji). */
 (() => {
 'use strict';
 
@@ -72,7 +72,7 @@ addEventListener('keydown', () => sfx.unlock(), { capture: true });
 
 function paintMute() {
   const m = !!store.get('muted', false);
-  muteBtn.textContent = m ? '\u{1F507}' : '\u{1F50A}';
+  muteBtn.innerHTML = m ? '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" style="display:block;margin:auto"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16 9.5l5 5M21 9.5l-5 5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>' : '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" style="display:block;margin:auto"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>';
   muteBtn.setAttribute('aria-pressed', String(m));
   muteBtn.setAttribute('aria-label', m ? 'Unmute sounds' : 'Mute sounds');
 }
@@ -193,6 +193,28 @@ document.addEventListener('keydown', e => {
     e.preventDefault(); S.verifyFn();
   }
 });
+
+/* Drawn art (inline SVG, no emoji): faces, the robot, and its hiding places. */
+function face(o = {}) {
+  const ink = '#5b3a10', er = o.eye === 'big' ? 2.5 : 1.8;
+  const eyes = o.eye === 'line' ? `<path d="M11 15h4M21 15h4" stroke="${ink}" stroke-width="1.8" stroke-linecap="round"/>`
+    : o.eye === 'happy' ? `<path d="M11 16q2-3 4 0M21 16q2-3 4 0" stroke="${ink}" stroke-width="1.8" fill="none" stroke-linecap="round"/>`
+    : `<circle cx="13" cy="15" r="${er}" fill="${ink}"/><circle cx="23" cy="15" r="${er}" fill="${ink}"/>`;
+  const M = { smile: 'M12 22q6 5 12 0', wide: 'M10 21q8 7 16 0', grin: 'M11 21q7 8 14 0z', flat: 'M13 24h10', frown: 'M12 26q6-5 12 0', hmm: 'M13 24.5q5-3 10 0.5' }[o.mouth || 'smile'];
+  const mouth = o.mouth === 'o' ? `<circle cx="18" cy="24" r="2.6" fill="${ink}"/>`
+    : `<path d="${M}" stroke="${ink}" stroke-width="1.8" fill="${o.mouth === 'grin' ? ink : 'none'}" stroke-linecap="round" stroke-linejoin="round"/>`;
+  const brow = o.brow === 'raise' ? `<path d="M10 9.5q3-3 6.5-1M20 11.5h6" stroke="${ink}" stroke-width="1.6" fill="none" stroke-linecap="round"/>`
+    : o.brow === 'angry' ? `<path d="M10 10l5 2M26 10l-5 2" stroke="${ink}" stroke-width="1.6" stroke-linecap="round"/>` : '';
+  const mono = o.mono ? '<circle cx="23" cy="15" r="4.2" fill="rgba(255,255,255,.35)" stroke="#2b2b2b" stroke-width="1.3"/><path d="M27.2 15.5q2 6 -.5 13" stroke="#2b2b2b" stroke-width=".9" fill="none"/>' : '';
+  return `<svg viewBox="0 0 36 36" width="1em" height="1em" style="display:block" aria-hidden="true"><circle cx="18" cy="18" r="16" fill="${o.fill || '#fcd34d'}" stroke="#d99a0b" stroke-width="1.2"/>${brow}${eyes}${mouth}${mono}</svg>`;
+}
+const svg1 = body => `<svg viewBox="0 0 36 36" width="1em" height="1em" style="display:block" aria-hidden="true">${body}</svg>`;
+const ROBOT = svg1('<line x1="18" y1="3" x2="18" y2="8" stroke="#64748b" stroke-width="2"/><circle cx="18" cy="3" r="2.2" fill="#ef4444"/><rect x="4" y="13" width="3" height="7" rx="1" fill="#64748b"/><rect x="29" y="13" width="3" height="7" rx="1" fill="#64748b"/><rect x="7" y="8" width="22" height="17" rx="4" fill="#94a3b8" stroke="#475569" stroke-width="1.5"/><circle cx="13.5" cy="15.5" r="3" fill="#e0f2fe" stroke="#0ea5e9" stroke-width="1.4"/><circle cx="22.5" cy="15.5" r="3" fill="#e0f2fe" stroke="#0ea5e9" stroke-width="1.4"/><rect x="12" y="20.5" width="12" height="2.2" rx="1" fill="#475569"/><rect x="11" y="26" width="14" height="8" rx="2" fill="#94a3b8" stroke="#475569" stroke-width="1.5"/>');
+const PINE = svg1('<rect x="16" y="27" width="4" height="8" fill="#7c4a1e"/><path d="M18 2l9 12h-5l7 9h-5l6 6H6l6-6H7l7-9H9z" fill="#15803d"/>');
+const TREE = svg1('<rect x="16" y="22" width="4" height="13" fill="#7c4a1e"/><circle cx="18" cy="14" r="10" fill="#16a34a"/><circle cx="11" cy="19" r="6.5" fill="#15803d"/><circle cx="25" cy="19" r="6.5" fill="#15803d"/>');
+const HAT = svg1('<rect x="10" y="5" width="16" height="21" rx="1.5" fill="#1f2937"/><rect x="10" y="20" width="16" height="3.2" fill="#b91c1c"/><rect x="3" y="25" width="30" height="5" rx="2.5" fill="#111827"/>');
+const CITY = svg1('<rect x="2" y="14" width="8" height="21" fill="#64748b"/><rect x="11" y="5" width="9" height="30" fill="#475569"/><rect x="21" y="11" width="6" height="24" fill="#64748b"/><rect x="28" y="18" width="6" height="17" fill="#475569"/>' + [8, 13, 18, 23, 28].map(y => `<rect x="13" y="${y}" width="2" height="2" fill="#fde68a"/><rect x="16.5" y="${y}" width="2" height="2" fill="#fde68a"/>`).join(''));
+const CAR = svg1('<path d="M3 24v-5q0-2 2-2.5l5-1 4-5q1-1.5 3-1.5h7q2 0 3 1.5l3 5 2 .5q2 .5 2 2.5v5z" fill="#dc2626"/><path d="M14 15.5l3-4h6.5l2.5 4z" fill="#bae6fd"/><circle cx="10" cy="25" r="4" fill="#1f2937"/><circle cx="26" cy="25" r="4" fill="#1f2937"/><circle cx="10" cy="25" r="1.6" fill="#cbd5e1"/><circle cx="26" cy="25" r="1.6" fill="#cbd5e1"/>');
 
 /* ---------- shared UI pieces ---------- */
 function tileGrid(cols, cells, onSingle) {
@@ -488,7 +510,7 @@ function feelingQuip(raw) {
 }
 function L_feel(root, api) {
   const inp = h('input', { class: 'txt', type: 'text', maxlength: '120', autocomplete: 'off', placeholder: 'honestly…', 'aria-label': 'How are you feeling?' });
-  root.append(h('div', { style: 'font-size:64px;line-height:1', 'aria-hidden': 'true', text: '\u{1F914}' }), inp,
+  root.append(h('div', { style: 'font-size:64px;line-height:1', 'aria-hidden': 'true', html: face({ mouth: 'hmm', brow: 'raise' }) }), inp,
     h('div', { class: 'tiny', text: 'There are no wrong answers. There are only suspicious ones.' }));
   const go = () => {
     if (!inp.value.trim()) return api.nudge('Silence. Very robot. Say literally anything.');
@@ -500,12 +522,12 @@ function L_feel(root, api) {
   api.after(() => inp.focus({ preventScroll: true }), 60);
 }
 
-/* 9 - the odd emoji out */
+/* 9 - the odd face out */
 function L_odd(root, api) {
-  const [a, b] = pick([['\u{1F600}', '\u{1F603}'], ['\u{1F642}', '\u{1F643}'], ['\u{1F610}', '\u{1F611}'], ['\u{1F620}', '\u{1F621}'], ['\u{1F62E}', '\u{1F62F}'], ['\u{1F345}', '\u{1F34E}'], ['\u{1F315}', '\u{1F31D}'], ['\u{1F535}', '\u{1F7E3}'], ['\u{1F60A}', '\u{1F60C}'], ['\u{1F970}', '\u{1F60D}']]);
+  const [a, b] = pick([[{}, { eye: 'big' }], [{ mouth: 'smile' }, { mouth: 'wide' }], [{ mouth: 'flat' }, { mouth: 'flat', eye: 'line' }], [{ brow: 'angry', mouth: 'frown' }, { brow: 'angry', mouth: 'flat' }], [{ mouth: 'o' }, { mouth: 'o', eye: 'big' }], [{}, { fill: '#fbbf24' }], [{ eye: 'happy' }, { eye: 'happy', mouth: 'wide' }], [{ mouth: 'hmm' }, { mouth: 'flat' }], [{ mouth: 'grin' }, { mouth: 'grin', eye: 'happy' }], [{ brow: 'raise', mouth: 'flat' }, { brow: 'angry', mouth: 'flat' }]].map(p => p.map(face)));
   const flip = Math.random() < .5, base = flip ? b : a, odd = flip ? a : b;
   const idx = ri(0, 24);
-  const cells = Array.from({ length: 25 }, (_, i) => ({ html: i === idx ? odd : base, label: 'emoji' }));
+  const cells = Array.from({ length: 25 }, (_, i) => ({ html: i === idx ? odd : base, label: 'face' }));
   const g = tileGrid(5, cells, i => {
     if (i === idx) api.pass(pick(['That one! Eyes like a hawk.', 'Spotted. Nothing escapes you.']), 1100);
     else api.fail('Nope. That one is identical to its neighbours. Try spotting the liar.');
@@ -564,15 +586,15 @@ function L_alpha(root, api) {
 
 /* 12 - "select the robot": there is a robot in EVERY square */
 const ROBOTS = [
-  '<i style="font-size:1.1em">\u{1F916}</i>',
-  '<i class="bg" style="font-size:1.1em">\u{1F332}</i><i style="font-size:.5em;margin:.7em 0 0 .8em">\u{1F916}</i>',
-  '<i style="transform:rotate(180deg) translate(0,0)">\u{1F916}</i>',
-  '<i style="margin-top:.14em">\u{1F916}</i><i style="font-size:.5em;margin-top:-.62em">\u{1F3A9}</i>',
-  '<i style="font-size:.95em">\u{1F916}</i><i style="font-size:1.25em;opacity:.78">\u{1F333}</i>',
-  '<i style="rotate:90deg">\u{1F916}</i>',
-  '<i class="bg" style="font-size:1.35em;opacity:.45">\u{1F3D9}️</i><i style="font-size:.4em;margin:.3em 0 0 -.4em">\u{1F916}</i>',
-  '<i style="transform:scaleX(-1);filter:hue-rotate(150deg) saturate(1.6)">\u{1F916}</i>',
-  '<i style="font-size:1.05em">\u{1F697}</i><i style="font-size:.38em;margin-top:-.28em">\u{1F916}</i>',
+  `<i style="font-size:1.1em">${ROBOT}</i>`,
+  `<i class="bg" style="font-size:1.1em">${PINE}</i><i style="font-size:.5em;margin:.7em 0 0 .8em">${ROBOT}</i>`,
+  `<i style="transform:rotate(180deg) translate(0,0)">${ROBOT}</i>`,
+  `<i style="margin-top:.14em">${ROBOT}</i><i style="font-size:.5em;margin-top:-.62em">${HAT}</i>`,
+  `<i style="font-size:.95em">${ROBOT}</i><i style="font-size:1.25em;opacity:.78">${TREE}</i>`,
+  `<i style="rotate:90deg">${ROBOT}</i>`,
+  `<i class="bg" style="font-size:1.35em;opacity:.45">${CITY}</i><i style="font-size:.4em;margin:.3em 0 0 -.4em">${ROBOT}</i>`,
+  `<i style="transform:scaleX(-1);filter:hue-rotate(150deg) saturate(1.6)">${ROBOT}</i>`,
+  `<i style="font-size:1.05em">${CAR}</i><i style="font-size:.38em;margin:-.3em 0 0 .1em">${ROBOT}</i>`,
 ];
 function L_robots(root, api) {
   const cells = shuffle(ROBOTS).map(html => ({ html, cls: 'rob', label: 'square with a robot in it' }));
@@ -640,10 +662,10 @@ function L_still(root, api) {
 /* 15 - are you SURE? */
 function L_sure(root, api) {
   const stages = [
-    { face: '\u{1F642}', q: 'Are you sure you’re not a robot?', sub: 'Take your time. (Not too much time.)', yes: 'Yes', no: 'No', tint: '#2d5bd8', title: 'Are you sure?', hsub: 'A routine follow-up question.', bad: 'Honest! Refreshing. But a robot would admit it to seem trustworthy. Restarting the interview.' },
-    { face: '\u{1F610}', q: 'Hm. That was a very confident “yes”. Are you SURE?', sub: 'Our logs say you click like someone who has never blinked.', yes: 'Yes, I’m sure', no: 'Maybe?', tint: '#6a4fd8', title: 'Are you SURE?', hsub: 'Just double-checking.', bad: '“Maybe” is exactly what a robot says when its confidence interval is wide. Restarting.' },
-    { face: '\u{1F928}', q: 'Look at me. LOOK AT ME. Are you REALLY, TRULY sure?', sub: 'Robots always say yes. Humans also say yes. This is not helping.', yes: 'YES. REALLY.', no: 'No', tint: '#c2570c', title: 'Are you REALLY sure?', hsub: 'This is not a drill.', shuffle: true, bad: 'You were SO close to being believable. Restarting the interrogation.' },
-    { face: '\u{1F9D0}', q: '…I want to believe you.', sub: 'Type it. “I am not a robot.” Nice and slowly.', input: true, tint: '#b42323', title: 'Final answer?', hsub: 'Last one. Promise.' },
+    { face: face(), q: 'Are you sure you’re not a robot?', sub: 'Take your time. (Not too much time.)', yes: 'Yes', no: 'No', tint: '#2d5bd8', title: 'Are you sure?', hsub: 'A routine follow-up question.', bad: 'Honest! Refreshing. But a robot would admit it to seem trustworthy. Restarting the interview.' },
+    { face: face({ mouth: 'flat' }), q: 'Hm. That was a very confident “yes”. Are you SURE?', sub: 'Our logs say you click like someone who has never blinked.', yes: 'Yes, I’m sure', no: 'Maybe?', tint: '#6a4fd8', title: 'Are you SURE?', hsub: 'Just double-checking.', bad: '“Maybe” is exactly what a robot says when its confidence interval is wide. Restarting.' },
+    { face: face({ mouth: 'hmm', brow: 'raise' }), q: 'Look at me. LOOK AT ME. Are you REALLY, TRULY sure?', sub: 'Robots always say yes. Humans also say yes. This is not helping.', yes: 'YES. REALLY.', no: 'No', tint: '#c2570c', title: 'Are you REALLY sure?', hsub: 'This is not a drill.', shuffle: true, bad: 'You were SO close to being believable. Restarting the interrogation.' },
+    { face: face({ mouth: 'flat', brow: 'raise', mono: true }), q: '…I want to believe you.', sub: 'Type it. “I am not a robot.” Nice and slowly.', input: true, tint: '#b42323', title: 'Final answer?', hsub: 'Last one. Promise.' },
   ];
   let k = 0;
   const judge = h('div', { class: 'judge', 'aria-hidden': 'true' });
@@ -654,7 +676,7 @@ function L_sure(root, api) {
   const reactions = ['', 'Hmm.', 'Hmmmmm.', 'Okay. Okay. One last thing.'];
   function render() {
     const s = stages[k];
-    judge.textContent = s.face; q.textContent = s.q; sub.textContent = s.sub;
+    judge.innerHTML = s.face; q.textContent = s.q; sub.textContent = s.sub;
     api.head(s.title, s.hsub, s.tint);
     [...meter.querySelectorAll('span')].forEach((sp, i) => sp.classList.toggle('on', i <= k));
     answers.textContent = '';
@@ -697,7 +719,7 @@ const LEVELS = [
   { id: 'slider',  name: 'Exact dial',        kicker: 'Precision check',    title: 'Set the dial to exactly 73',          sub: 'Not 72. Not 74.',                                   mount: L_slider },
   { id: 'green',   name: 'Green bar',         kicker: 'Reflex check',       title: 'Click when it’s exactly green',  sub: 'Not almost green. Green.',                          mount: L_green },
   { id: 'feel',    name: 'Feelings',          kicker: 'Wellness check',     title: 'How are you feeling?',                sub: 'Be honest. Or don’t. We’re a captcha.',    mount: L_feel },
-  { id: 'odd',     name: 'Odd emoji',         kicker: 'Pattern check',      title: 'Find the odd emoji out',              sub: 'One of them is lying.',                             mount: L_odd },
+  { id: 'odd',     name: 'Odd face',          kicker: 'Pattern check',      title: 'Find the odd face out',               sub: 'One of them is lying.',                             mount: L_odd },
   { id: 'hold',    name: 'Hold 3 seconds',    kicker: 'Patience check',     title: 'Hold for exactly 3 seconds',          sub: 'Release at 3.0. We’ll hide the clock.',         mount: L_hold },
   { id: 'alpha',   name: 'Backwards alphabet', kicker: 'Brain check',       title: 'Type the alphabet backwards from M',  sub: 'M, then L, then… you know.',                   mount: L_alpha },
   { id: 'robots',  name: 'Robot hunt',        kicker: 'Image check',        title: 'Select every square with a robot',    sub: 'We only ask because we care.',                      mount: L_robots },
@@ -813,10 +835,10 @@ function showFinish() {
       h('div', {}, h('b', { text: `${N}/${N}` }), h('span', { text: 'tests passed' }))),
     h('div', { class: 'cert', text: `CERTIFICATE OF HUMANITY · ${certNo}` }),
     h('div', { class: 'row' }, copyBtn, againBtn)));
-  const share = `NOT A ROBOT \u{1F916}\u{1F6AB}\nVerified human in ${mmss(t)} · ${oops} ${S.fails === 1 ? 'oopsie' : 'oopsies'}\nSlowest test: ${slowName} (${Math.round(slowT)}s)\n${SHARE_URL}`;
+  const share = `NOT A ROBOT\nVerified human in ${mmss(t)} · ${oops} ${S.fails === 1 ? 'oopsie' : 'oopsies'}\nSlowest test: ${slowName} (${Math.round(slowT)}s)\n${SHARE_URL}`;
   copyBtn.addEventListener('click', async () => {
     const ok = await copyText(share);
-    copyBtn.textContent = ok ? 'Copied ✓' : 'Copy failed';
+    copyBtn.textContent = ok ? 'Copied' : 'Copy failed';
     if (!ok) setMsg(share.replace(/\n/g, '  '), '');
     setTimeout(() => { copyBtn.textContent = 'Copy result'; }, 1800);
   });

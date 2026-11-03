@@ -34,13 +34,6 @@
 "license": "Public domain",
 "url": "https://commons.wikimedia.org/wiki/File:American_bison_k5680-1.jpg"
 },
-"turtle": {
-"title": "Leatherback sea turtle",
-"file": "Leatherback_sea_turtle_Tinglar,_USVI_(5839996547).jpg",
-"artist": "U.S. Fish and Wildlife Service Southeast Region",
-"license": "Public domain",
-"url": "https://commons.wikimedia.org/wiki/File:Leatherback_sea_turtle_Tinglar,_USVI_(5839996547).jpg"
-},
 "whale": {
 "title": "Sperm whale",
 "file": "Mother_and_baby_sperm_whale.jpg",
@@ -55,26 +48,12 @@
 "license": "Public domain",
 "url": "https://commons.wikimedia.org/wiki/File:Golden_Retriever_Dukedestiny01_drvd.jpg"
 },
-"mouse": {
-"title": "House mouse",
-"file": "Mouse_white_background.jpg",
-"artist": "Unknown authorUnknown author (original) / Ilmari Karonen (editing)",
-"license": "Public domain",
-"url": "https://commons.wikimedia.org/wiki/File:Mouse_white_background.jpg"
-},
 "trex": {
-"title": "Tyrannosaurus",
-"file": "Tyrannosaurus_Rex_Holotype.jpg",
-"artist": "ScottRobertAnselmo",
-"license": "CC BY-SA 3.0",
-"url": "https://commons.wikimedia.org/wiki/File:Tyrannosaurus_Rex_Holotype.jpg"
-},
-"croc": {
-"title": "Saltwater crocodile",
-"file": "SaltwaterCrocodile('Maximo').jpg",
-"artist": "Obtained from Molly Ebersold of the St. Augustine Alligator Farm",
-"license": "Public domain",
-"url": "https://commons.wikimedia.org/wiki/File:SaltwaterCrocodile(%27Maximo%27).jpg"
+"title": "Tyrannosaurus-rex-Profile-steveoc86.png",
+"file": "Tyrannosaurus-rex-Profile-steveoc86.png",
+"artist": "Steveoc 86",
+"license": "CC BY-SA 4.0",
+"url": "https://commons.wikimedia.org/wiki/File:Tyrannosaurus-rex-Profile-steveoc86.png"
 },
 "rhino": {
 "title": "White rhinoceros",
@@ -84,11 +63,11 @@
 "url": "https://commons.wikimedia.org/wiki/File:109_Male_White_rhinoceros_walking_in_the_Kalahari_Desert_of_Namibia_Photo_by_Giles_Laurent.jpg"
 },
 "bee": {
-"title": "Western honey bee",
-"file": "Apis_mellifera_Western_honey_bee.jpg",
-"artist": "Andreas Trepte",
-"license": "CC BY-SA 2.5",
-"url": "https://commons.wikimedia.org/wiki/File:Apis_mellifera_Western_honey_bee.jpg"
+"title": "Apis mellifera F (13632845464).jpg",
+"file": "Apis mellifera F (13632845464).jpg",
+"artist": "maxson.erin",
+"license": "CC BY 2.0",
+"url": "https://commons.wikimedia.org/wiki/File:Apis_mellifera_F_(13632845464).jpg"
 },
 "hippo": {
 "title": "Hippopotamus",
@@ -112,25 +91,25 @@
 "url": ""
 },
 "bus": {
-"title": "School bus",
-"file": "IC_CE_school_bus_(shortened_chassis).jpg",
-"artist": "unknown",
-"license": "see source",
-"url": ""
+"title": "Right side of Thomas Built MVP ER school bus (13182501015).jpg",
+"file": "Right side of Thomas Built MVP ER school bus (13182501015).jpg",
+"artist": "Ben Schumin from Montgomery Village, Maryland, USA",
+"license": "CC BY-SA 2.0",
+"url": "https://commons.wikimedia.org/wiki/File:Right_side_of_Thomas_Built_MVP_ER_school_bus_(13182501015).jpg"
 },
 "cab": {
-"title": "Hackney carriage",
-"file": "2005_LTI_TXII_Silver_Automatic_2.4_Front.jpg",
-"artist": "unknown",
-"license": "see source",
-"url": ""
+"title": "Hackney carriage.jpg",
+"file": "Hackney carriage.jpg",
+"artist": "ed g2s • talk",
+"license": "CC BY-SA 3.0",
+"url": "https://commons.wikimedia.org/wiki/File:Hackney_carriage.jpg"
 },
 "bike": {
-"title": "Bicycle",
-"file": "Left_side_of_Flying_Pigeon.jpg",
-"artist": "unknown",
-"license": "see source",
-"url": ""
+"title": "California city bicycle side view.JPG",
+"file": "California city bicycle side view.JPG",
+"artist": "User:Javier Carro",
+"license": "CC BY-SA 4.0",
+"url": "https://commons.wikimedia.org/wiki/File:California_city_bicycle_side_view.JPG"
 },
 "titanic": {
 "title": "Titanic",
@@ -154,11 +133,11 @@
 "url": "https://commons.wikimedia.org/wiki/File:Front_view_of_Statue_of_Liberty_(cropped).jpg"
 },
 "saturn": {
-"title": "Saturn V",
-"file": "Apollo_11_Launch_-_GPN-2000-000630.jpg",
-"artist": "NASA",
-"license": "Public domain",
-"url": "https://commons.wikimedia.org/wiki/File:Apollo_11_Launch_-_GPN-2000-000630.jpg"
+"title": "Saturn V model 2019.jpg",
+"file": "Saturn V model 2019.jpg",
+"artist": "Ke4roh",
+"license": "CC BY-SA 4.0",
+"url": "https://commons.wikimedia.org/wiki/File:Saturn_V_model_2019.jpg"
 },
 "bigben": {
 "title": "Big Ben",
@@ -189,11 +168,11 @@
 "url": "https://commons.wikimedia.org/wiki/File:Great_Pyramid_of_Giza_-_Pyramid_of_Khufu.jpg"
 },
 "pisa": {
-"title": "Leaning Tower of Pisa",
-"file": "Italy_-_Pisa_-_Leaning_Tower.jpg",
-"artist": "Arne Müseler",
-"license": "CC BY-SA 3.0 de",
-"url": "https://commons.wikimedia.org/wiki/File:Italy_-_Pisa_-_Leaning_Tower.jpg"
+"title": "Pisa - Leaning Tower.jpg",
+"file": "Pisa - Leaning Tower.jpg",
+"artist": "Ingo Mehling",
+"license": "CC BY-SA 4.0",
+"url": "https://commons.wikimedia.org/wiki/File:Pisa_-_Leaning_Tower.jpg"
 },
 "christ": {
 "title": "Christ the Redeemer (statue)",
@@ -203,18 +182,18 @@
 "url": "https://commons.wikimedia.org/wiki/File:Christ_the_Redeemer_-_Cristo_Redentor.jpg"
 },
 "bottle": {
-"title": "Wine bottle",
-"file": "Wine_bottle.JPG",
-"artist": "Cabe6403 at English Wikipedia",
-"license": "CC BY 2.5",
-"url": "https://commons.wikimedia.org/wiki/File:Wine_bottle.JPG"
+"title": "Angélus 2015.jpg",
+"file": "Angélus 2015.jpg",
+"artist": "Somm88",
+"license": "CC BY-SA 4.0",
+"url": "https://commons.wikimedia.org/wiki/File:Ang%C3%A9lus_2015.jpg"
 },
 "empire": {
-"title": "Empire State Building",
-"file": "Empire_State_Building_(aerial_view).jpg",
-"artist": "Sam Valadi",
-"license": "Public domain",
-"url": "https://commons.wikimedia.org/wiki/File:Empire_State_Building_(aerial_view).jpg"
+"title": "Empire State Building From Rooftop 2019-10-05 19-11.jpg",
+"file": "Empire State Building From Rooftop 2019-10-05 19-11.jpg",
+"artist": "Axel Tschentscher",
+"license": "CC BY-SA 4.0",
+"url": "https://commons.wikimedia.org/wiki/File:Empire_State_Building_From_Rooftop_2019-10-05_19-11.jpg"
 },
 "basketball": {
 "title": "Basketball (ball)",
@@ -245,11 +224,11 @@
 "url": "https://commons.wikimedia.org/wiki/File:Giraffe_Mikumi_National_Park.jpg"
 },
 "tiger": {
-"title": "Bengal tiger",
-"file": "Bengal_tiger_in_Sanjay_Dubri_Tiger_Reserve_December_2024_by_Tisha_Mukherjee_11.jpg",
-"artist": "Tisha Mukherjee",
-"license": "CC BY-SA 4.0",
-"url": "https://commons.wikimedia.org/wiki/File:Bengal_tiger_in_Sanjay_Dubri_Tiger_Reserve_December_2024_by_Tisha_Mukherjee_11.jpg"
+"title": "Bengal tiger walking on the grass.jpg",
+"file": "Bengal tiger walking on the grass.jpg",
+"artist": "Joselodos",
+"license": "CC0",
+"url": "https://commons.wikimedia.org/wiki/File:Bengal_tiger_walking_on_the_grass.jpg"
 },
 "goat": {
 "title": "Goat",
@@ -272,13 +251,6 @@
 "license": "CC BY 4.0",
 "url": "https://commons.wikimedia.org/wiki/File:Holstein-Friesian_in_Dundee,_Quebec.jpg"
 },
-"sheep": {
-"title": "Sheep",
-"file": "Flock_of_sheep.jpg",
-"artist": "unknown",
-"license": "see source",
-"url": ""
-},
 "seal": {
 "title": "Harbor seal",
 "file": "Common_seal_(Phoca_vitulina)_2.jpg",
@@ -293,40 +265,19 @@
 "license": "Public domain",
 "url": "https://commons.wikimedia.org/wiki/File:Tursiops_truncatus_01-cropped.jpg"
 },
-"scorpion": {
-"title": "Emperor scorpion",
-"file": "Female_Emperor_Scorpion.jpg",
-"artist": "Rosa Pineda",
-"license": "CC BY-SA 3.0",
-"url": "https://commons.wikimedia.org/wiki/File:Female_Emperor_Scorpion.jpg"
-},
-"butterfly": {
-"title": "Monarch butterfly",
-"file": "Monarch_Butterfly_Danaus_plexippus_Male_2664px.jpg",
-"artist": "Photo by and (c)2007 Derek Ramsey (Ram-Man)",
-"license": "GFDL 1.2",
-"url": "https://commons.wikimedia.org/wiki/File:Monarch_Butterfly_Danaus_plexippus_Male_2664px.jpg"
-},
 "ladybug": {
-"title": "Coccinella septempunctata",
-"file": "7-Spotted-Ladybug-Coccinella-septempunctata-sq1.jpg",
-"artist": "Photographer: Dominik Stodulski Graphic Processing: User:MathKnight",
-"license": "CC BY-SA 3.0",
-"url": "https://commons.wikimedia.org/wiki/File:7-Spotted-Ladybug-Coccinella-septempunctata-sq1.jpg"
-},
-"spider": {
-"title": "Goliath birdeater",
-"file": "Theraphosa_blondi_MHNT.jpg",
-"artist": "Didier Descouens",
-"license": "CC BY-SA 4.0",
-"url": "https://commons.wikimedia.org/wiki/File:Theraphosa_blondi_MHNT.jpg"
+"title": "Ladybird.jpg",
+"file": "Ladybird.jpg",
+"artist": "Jon Sullivan (PD-PDphoto.org)",
+"license": "Public domain",
+"url": "https://commons.wikimedia.org/wiki/File:Ladybird.jpg"
 },
 "lizard": {
-"title": "Komodo dragon",
-"file": "202306_Varanus_komodoensis.jpg",
-"artist": "James Jolokia (james1203)",
-"license": "CC BY 4.0",
-"url": "https://commons.wikimedia.org/wiki/File:202306_Varanus_komodoensis.jpg"
+"title": "KomodoDragon JayWalking.jpg",
+"file": "KomodoDragon JayWalking.jpg",
+"artist": "Danadi Sutjianto",
+"license": "CC BY-SA 4.0",
+"url": "https://commons.wikimedia.org/wiki/File:KomodoDragon_JayWalking.jpg"
 },
 "swan": {
 "title": "Mute swan",
@@ -336,60 +287,60 @@
 "url": "https://commons.wikimedia.org/wiki/File:CygneVaires.jpg"
 },
 "hamster": {
-"title": "Golden hamster",
-"file": "Golden_hamster_front_1.jpg",
+"title": "Golden hamster front 1.jpg",
+"file": "Golden hamster front 1.jpg",
 "artist": "Adamjennison111 at English Wikipedia",
 "license": "CC BY 2.5",
 "url": "https://commons.wikimedia.org/wiki/File:Golden_hamster_front_1.jpg"
 },
 "hedgehog": {
-"title": "European hedgehog",
-"file": "Erinaceus_europaeus_LC0119.jpg",
-"artist": "Jörg Hempel",
-"license": "CC BY-SA 2.0 de",
-"url": "https://commons.wikimedia.org/wiki/File:Erinaceus_europaeus_LC0119.jpg"
+"title": "City hedgehog (17667096398).jpg",
+"file": "City hedgehog (17667096398).jpg",
+"artist": "hedera.baltica from Wrocław, Poland",
+"license": "CC BY-SA 2.0",
+"url": "https://commons.wikimedia.org/wiki/File:City_hedgehog_(17667096398).jpg"
 },
 "bronto": {
-"title": "Brachiosaurus",
-"file": "Brachiosaurus_mount.jpg",
-"artist": "Matt Wedel",
-"license": "CC BY 3.0",
-"url": "https://commons.wikimedia.org/wiki/File:Brachiosaurus_mount.jpg"
+"title": "Brachiosaurus DB flipped.jpg",
+"file": "Brachiosaurus DB flipped.jpg",
+"artist": "Богданов dmitrchel@mail.ru",
+"license": "Public domain",
+"url": "https://commons.wikimedia.org/wiki/File:Brachiosaurus_DB_flipped.jpg"
 },
 "mammoth": {
-"title": "Woolly mammoth",
-"file": "Siegsdorfer_Mammut.jpg",
-"artist": "Lou.gruber",
-"license": "Public domain",
-"url": "https://commons.wikimedia.org/wiki/File:Siegsdorfer_Mammut.jpg"
+"title": "202003 Woolly mammoth.png",
+"file": "202003 Woolly mammoth.png",
+"artist": "DataBase Center for Life Science (DBCLS)",
+"license": "CC BY 4.0",
+"url": "https://commons.wikimedia.org/wiki/File:202003_Woolly_mammoth.png"
 },
 "firetruck": {
-"title": "Fire engine",
-"file": "Dublin_Fire_Brigade_Pump_Ladder_D32.jpg",
-"artist": "William Murphy",
-"license": "CC BY-SA 2.0",
-"url": "https://commons.wikimedia.org/wiki/File:Dublin_Fire_Brigade_Pump_Ladder_D32.jpg"
+"title": "DID18611 - Side view of new fire engine at Redcliffe.jpg",
+"file": "DID18611 - Side view of new fire engine at Redcliffe.jpg",
+"artist": "Queensland State Archives",
+"license": "PDM-owner",
+"url": "https://commons.wikimedia.org/wiki/File:DID18611_-_Side_view_of_new_fire_engine_at_Redcliffe.jpg"
 },
 "tractor": {
-"title": "Tractor",
-"file": "Ford_8N.jpg",
-"artist": "Mulad",
-"license": "CC BY 2.0",
-"url": "https://commons.wikimedia.org/wiki/File:Ford_8N.jpg"
+"title": "Ford 8N tractor, side view.jpg",
+"file": "Ford 8N tractor, side view.jpg",
+"artist": "William Morrow (Wmmorrow)",
+"license": "CC BY-SA 3.0",
+"url": "https://commons.wikimedia.org/wiki/File:Ford_8N_tractor,_side_view.jpg"
 },
 "pickup": {
-"title": "Pickup truck",
-"file": "1994_Toyota_T100_Deluxe,_rear_left.jpg",
-"artist": "Mr.choppers",
-"license": "CC BY-SA 3.0",
-"url": "https://commons.wikimedia.org/wiki/File:1994_Toyota_T100_Deluxe,_rear_left.jpg"
+"title": "1967 Ford F-100 pickup truck, blue, left side, Golden Super Cruise 2026-10-03.jpg",
+"file": "1967 Ford F-100 pickup truck, blue, left side, Golden Super Cruise 2026-10-03.jpg",
+"artist": "Xnatedawgx",
+"license": "CC BY-SA 4.0",
+"url": "https://commons.wikimedia.org/wiki/File:1967_Ford_F-100_pickup_truck,_blue,_left_side,_Golden_Super_Cruise_2026-10-03.jpg"
 },
 "car": {
-"title": "Hatchback",
-"file": "2025_Suzuki_Swift_hybrid_in_Flame_Orange_Metallic,_rear_left,_06-06-2025.jpg",
-"artist": "Cutlass",
-"license": "CC0",
-"url": "https://commons.wikimedia.org/wiki/File:2025_Suzuki_Swift_hybrid_in_Flame_Orange_Metallic,_rear_left,_06-06-2025.jpg"
+"title": "2006 Toyota Corolla (E12U) hatchback 01.jpg",
+"file": "2006 Toyota Corolla (E12U) hatchback 01.jpg",
+"artist": "Kalaxone at English Wikipedia",
+"license": "Public domain",
+"url": "https://commons.wikimedia.org/wiki/File:2006_Toyota_Corolla_(E12U)_hatchback_01.jpg"
 },
 "moto": {
 "title": "Motorcycle",
@@ -398,19 +349,12 @@
 "license": "CC BY-SA 4.0",
 "url": "https://commons.wikimedia.org/wiki/File:Istockphoto-114285168-612x612.jpg"
 },
-"train": {
-"title": "TGV",
-"file": "SNCF_TGV_Duplex_2N2_4718_(8464339495).jpg",
-"artist": "Nelso Silva",
-"license": "CC BY-SA 2.0",
-"url": "https://commons.wikimedia.org/wiki/File:SNCF_TGV_Duplex_2N2_4718_(8464339495).jpg"
-},
 "heli": {
-"title": "Helicopter",
-"file": "VH-SUF_Taking_Off.jpg",
-"artist": "Fly45yt",
-"license": "CC BY 4.0",
-"url": "https://commons.wikimedia.org/wiki/File:VH-SUF_Taking_Off.jpg"
+"title": "Airbus Helicopter H145 over Haringey London England.jpg",
+"file": "Airbus Helicopter H145 over Haringey London England.jpg",
+"artist": "Acabashi",
+"license": "CC BY-SA 4.0",
+"url": "https://commons.wikimedia.org/wiki/File:Airbus_Helicopter_H145_over_Haringey_London_England.jpg"
 },
 "balloon": {
 "title": "Hot air balloon",
@@ -434,11 +378,11 @@
 "url": ""
 },
 "shard": {
-"title": "The Shard",
-"file": "The_Shard_at_sunset_2017_(cropped).jpg",
-"artist": "unknown",
-"license": "see source",
-"url": ""
+"title": "The Shard from the Sky Garden 2015.jpg",
+"file": "The Shard from the Sky Garden 2015.jpg",
+"artist": "Colin",
+"license": "CC BY-SA 4.0",
+"url": "https://commons.wikimedia.org/wiki/File:The_Shard_from_the_Sky_Garden_2015.jpg"
 },
 "windmill": {
 "title": "Wind turbine",
@@ -453,13 +397,6 @@
 "artist": "Cullen328",
 "license": "CC BY-SA 4.0",
 "url": "https://commons.wikimedia.org/wiki/File:1910_top_hat.jpg"
-},
-"castle": {
-"title": "Neuschwanstein Castle",
-"file": "Schloss_Neuschwanstein_2013.jpg",
-"artist": "Thomas Wolf, www.foto-tw.de",
-"license": "CC BY-SA 3.0 de",
-"url": "https://commons.wikimedia.org/wiki/File:Schloss_Neuschwanstein_2013.jpg"
 },
 "football": {
 "title": "Ball (association football)",
@@ -482,16 +419,9 @@
 "license": "CC BY-SA 4.0",
 "url": "https://commons.wikimedia.org/wiki/File:Yamaha_Trumpet_YTR-8335LA_crop.jpg"
 },
-"chair": {
-"title": "Chair",
-"file": "Set_of_fourteen_side_chairs_MET_DP110780.jpg",
-"artist": "Thomas Chippendale",
-"license": "CC0",
-"url": "https://commons.wikimedia.org/wiki/File:Set_of_fourteen_side_chairs_MET_DP110780.jpg"
-},
 "trophy": {
-"title": "FIFA World Cup Trophy",
-"file": "FIFA_World_Cup_Trophy_photo_by_Djuradj_Vujcic.jpg",
+"title": "FIFA World Cup Trophy photo by Djuradj Vujcic.jpg",
+"file": "FIFA World Cup Trophy photo by Djuradj Vujcic.jpg",
 "artist": "Djuradj Vujcic",
 "license": "CC BY 2.0",
 "url": "https://commons.wikimedia.org/wiki/File:FIFA_World_Cup_Trophy_photo_by_Djuradj_Vujcic.jpg"
@@ -503,26 +433,19 @@
 "license": "CC BY-SA 4.0",
 "url": "https://commons.wikimedia.org/wiki/File:Tokyo_Tower_2023.jpg"
 },
-"toilet": {
-"title": "Toilet",
-"file": "Toilet_photo.jpg",
-"artist": "Amin",
-"license": "CC BY-SA 4.0",
-"url": "https://commons.wikimedia.org/wiki/File:Toilet_photo.jpg"
-},
 "bathtub": {
-"title": "Bathtub",
-"file": "Clawfoot_bathtub.jpg",
-"artist": "Yannick Trottier (ytrottier)",
+"title": "1rm60rt0t rtbcwh.jpg",
+"file": "1rm60rt0t rtbcwh.jpg",
+"artist": "L.M.Arias",
 "license": "CC BY-SA 3.0",
-"url": "https://commons.wikimedia.org/wiki/File:Clawfoot_bathtub.jpg"
+"url": "https://commons.wikimedia.org/wiki/File:1rm60rt0t_rtbcwh.jpg"
 },
 "pineapple": {
-"title": "Pineapple",
-"file": "കൈതച്ചക്ക.jpg",
-"artist": "Suniltg at Malayalam Wikipedia",
-"license": "CC BY 3.0",
-"url": "https://commons.wikimedia.org/wiki/File:%E0%B4%95%E0%B5%88%E0%B4%A4%E0%B4%9A%E0%B5%8D%E0%B4%9A%E0%B4%95%E0%B5%8D%E0%B4%95.jpg"
+"title": "Pineapple on white table.jpg",
+"file": "Pineapple on white table.jpg",
+"artist": "Julien Pianetti",
+"license": "CC0",
+"url": "https://commons.wikimedia.org/wiki/File:Pineapple_on_white_table.jpg"
 },
 "scissors": {
 "title": "Scissors",
@@ -530,13 +453,6 @@
 "artist": "Doggerelblogger",
 "license": "CC BY-SA 4.0",
 "url": "https://commons.wikimedia.org/wiki/File:Standard_household_scissors.jpg"
-},
-"pizza": {
-"title": "Pizza",
-"file": "Pizza-3007395.jpg",
-"artist": "igorovsyannykov",
-"license": "CC0",
-"url": "https://commons.wikimedia.org/wiki/File:Pizza-3007395.jpg"
 },
 "candle": {
 "title": "Candle",
@@ -560,32 +476,32 @@
 "url": ""
 },
 "snowman": {
-"title": "Snowman",
-"file": "Snowman_in_Indiana_2014.jpg",
-"artist": "unknown",
-"license": "see source",
-"url": ""
+"title": "Bonhomme de neige 2.jpg",
+"file": "Bonhomme de neige 2.jpg",
+"artist": "Sphiiix",
+"license": "CC BY-SA 4.0",
+"url": "https://commons.wikimedia.org/wiki/File:Bonhomme_de_neige_2.jpg"
 },
 "cactus": {
-"title": "Saguaro",
-"file": "Carnegiea_gigantea_in_Saguaro_National_Park_near_Tucson,_Arizona_during_November_(58).jpg",
-"artist": "unknown",
-"license": "see source",
-"url": ""
+"title": "Carnegiea gigantea or Sahuaro or Saguaro.jpg",
+"file": "Carnegiea gigantea or Sahuaro or Saguaro.jpg",
+"artist": "Tomascastelazo",
+"license": "CC BY-SA 4.0",
+"url": "https://commons.wikimedia.org/wiki/File:Carnegiea_gigantea_or_Sahuaro_or_Saguaro.jpg"
 },
 "ambulance": {
-"title": "Ambulance",
+"title": "Buick Roadmaster Ambulance rear side.jpg",
 "file": "Buick Roadmaster Ambulance rear side.jpg",
-"artist": "<a href=\"//commons.wikimedia.org/wiki/User:Erremm\" title=\"User:Erremm\">Erremm</a>",
+"artist": "Erremm",
 "license": "CC BY-SA 4.0",
 "url": "https://commons.wikimedia.org/wiki/File:Buick_Roadmaster_Ambulance_rear_side.jpg"
 },
 "f1": {
-"title": "Formula 1 car",
-"file": "Formula 1 Hot Wheels Showcar Side View.jpg",
-"artist": "<a href=\"//commons.wikimedia.org/wiki/User:TaurusEmerald\" title=\"User:TaurusEmerald\">TaurusEmerald</a>",
-"license": "CC BY-SA 4.0",
-"url": "https://commons.wikimedia.org/wiki/File:Formula_1_Hot_Wheels_Showcar_Side_View.jpg"
+"title": "2017 FIA Masters Historic Formula One Championship, Circuit of the Americas (23970311758).jpg",
+"file": "2017 FIA Masters Historic Formula One Championship, Circuit of the Americas (23970311758).jpg",
+"artist": "https://www.flickr.com/photos/mrlaugh/",
+"license": "CC BY-SA 2.0",
+"url": "https://commons.wikimedia.org/wiki/File:2017_FIA_Masters_Historic_Formula_One_Championship,_Circuit_of_the_Americas_(23970311758).jpg"
 },
 "fridge": {
 "title": "Fridge",
@@ -595,11 +511,11 @@
 "url": "https://commons.wikimedia.org/wiki/File:Ms_Girlees_Kitchen_RVA_Community_Fridge.jpg"
 },
 "gorilla": {
-"title": "Gorilla",
-"file": "Flachlandgorilla Gorilla gorilla gorilla Tiergarten-Nuernberg-2.jpg",
-"artist": "<a href=\"//commons.wikimedia.org/wiki/User:Rufus46\" title=\"User:Rufus46\">Rufus46</a>",
-"license": "CC BY-SA 3.0",
-"url": "https://commons.wikimedia.org/wiki/File:Flachlandgorilla_Gorilla_gorilla_gorilla_Tiergarten-Nuernberg-2.jpg"
+"title": "Gorilla gorilla 1.jpg",
+"file": "Gorilla gorilla 1.jpg",
+"artist": "derekkeats",
+"license": "CC BY-SA 2.0",
+"url": "https://commons.wikimedia.org/wiki/File:Gorilla_gorilla_1.jpg"
 },
 "horse": {
 "title": "Horse",
@@ -630,32 +546,25 @@
 "url": "https://commons.wikimedia.org/wiki/File:Polar_bear_after_unlucky_hunt_for_a_seal.jpg"
 },
 "snail": {
-"title": "Garden snail",
-"file": "Snails and slugs at night in Dnipro by baby-bear.org Natalka-Ukraine.jpg 06.jpg",
-"artist": "<a href=\"//commons.wikimedia.org/wiki/User:Natalka_Ukraine\" title=\"User:Natalka Ukraine\">Natalka Ukraine</a>",
-"license": "CC BY 4.0",
-"url": "https://commons.wikimedia.org/wiki/File:Snails_and_slugs_at_night_in_Dnipro_by_baby-bear.org_Natalka-Ukraine.jpg_06.jpg"
+"title": "Cornu aspersum (Helix aspersa).jpg",
+"file": "Cornu aspersum (Helix aspersa).jpg",
+"artist": "Gzen92",
+"license": "CC BY-SA 4.0",
+"url": "https://commons.wikimedia.org/wiki/File:Cornu_aspersum_(Helix_aspersa).jpg"
 },
 "tram": {
-"title": "Tram",
-"file": "TRANVIA ALFAMA (Lisboa)Alfama.jpg",
-"artist": "<a href=\"//commons.wikimedia.org/w/index.php?title=User:Celtacorto&amp;action=edit&amp;redlink=1\" class=\"new\" title=\"User:Celtacorto (page does not exist)\">Celtacorto</a>",
-"license": "CC BY-SA 3.0",
-"url": "https://commons.wikimedia.org/wiki/File:TRANVIA_ALFAMA_(Lisboa)Alfama.jpg"
+"title": "Melbourne tram at Muni Heritage Weekend line scan dllu.jpg",
+"file": "Melbourne tram at Muni Heritage Weekend line scan dllu.jpg",
+"artist": "Daniel Lu (User:dllu)",
+"license": "CC BY-SA 4.0",
+"url": "https://commons.wikimedia.org/wiki/File:Melbourne_tram_at_Muni_Heritage_Weekend_line_scan_dllu.jpg"
 },
 "sailboat": {
-"title": "Small sailboat",
-"file": "Sailboats, VNZMM, 2013 (01).jpg",
-"artist": "<a href=\"//commons.wikimedia.org/wiki/User:Bahnfrend\" title=\"User:Bahnfrend\">Bahnfrend</a>",
-"license": "CC BY-SA 4.0",
-"url": "https://commons.wikimedia.org/wiki/File:Sailboats,_VNZMM,_2013_(01).jpg"
-},
-"scooter": {
-"title": "Kick scooter",
-"file": "E-Scooter am Wegesrand 20240708 HOF0418 RAW-Export.png",
-"artist": "<a href=\"//commons.wikimedia.org/wiki/User:PantheraLeo1359531\" title=\"User:PantheraLeo1359531\">PantheraLeo1359531</a>",
-"license": "CC BY 4.0",
-"url": "https://commons.wikimedia.org/wiki/File:E-Scooter_am_Wegesrand_20240708_HOF0418_RAW-Export.png"
+"title": "Optimist on the beach.jpg",
+"file": "Optimist on the beach.jpg",
+"artist": "Bilby",
+"license": "CC BY 3.0",
+"url": "https://commons.wikimedia.org/wiki/File:Optimist_on_the_beach.jpg"
 },
 "taipei": {
 "title": "Taipei 101",
@@ -665,10 +574,31 @@
 "url": "https://commons.wikimedia.org/wiki/File:Taipei_101_April_2026_1.jpg"
 },
 "guitar": {
-"title": "Acoustic guitar",
-"file": "Kimbara Acoustic Guitar Model 169 right side angled.jpg",
-"artist": "<a rel=\"nofollow\" class=\"external text\" href=\"https://www.flickr.com/people/68643536@N00\">Eggybird</a>",
+"title": "Classical Guitar.jpg",
+"file": "Classical Guitar.jpg",
+"artist": "David Chavanel",
+"license": "CC BY-SA 3.0",
+"url": "https://commons.wikimedia.org/wiki/File:Classical_Guitar.jpg"
+},
+"penguin": {
+"title": "Aptenodytes forsteri -Antarctica -blzzard-8.jpg",
+"file": "Aptenodytes forsteri -Antarctica -blzzard-8.jpg",
+"artist": "Ian Duffy from UK",
 "license": "CC BY 2.0",
-"url": "https://commons.wikimedia.org/wiki/File:Kimbara_Acoustic_Guitar_Model_169_right_side_angled.jpg"
+"url": "https://commons.wikimedia.org/wiki/File:Aptenodytes_forsteri_-Antarctica_-blzzard-8.jpg"
+},
+"flamingo": {
+"title": "Flamant rose Salines de Thyna.jpg",
+"file": "Flamant rose Salines de Thyna.jpg",
+"artist": "Elgollimoh",
+"license": "CC BY-SA 3.0",
+"url": "https://commons.wikimedia.org/wiki/File:Flamant_rose_Salines_de_Thyna.jpg"
+},
+"wolf": {
+"title": "Wolf-Standing Tall (41830604430) (cropped).jpg",
+"file": "Wolf-Standing Tall (41830604430) (cropped).jpg",
+"artist": "Arwen_7",
+"license": "CC BY-SA 2.0",
+"url": "https://commons.wikimedia.org/wiki/File:Wolf-Standing_Tall_(41830604430)_(cropped).jpg"
 }
 }

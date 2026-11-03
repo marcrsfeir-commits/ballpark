@@ -14,21 +14,24 @@ async function loadRecipes() {
   return { elements: [], recipes: [] };
 }
 const data = await loadRecipes();
-const EMOJI = new Map(data.elements.map(e => [e.n, e.e]));
+const PICKEY = window.BALLPARK_PIC_KEY || (k => k);
+const EMOJI = new Map(data.elements.map(e => [e.n, e.e]));          // name -> shared photo key ('' when none)
 const RECIPES = new Map();
 const key = (a, b) => [a.toLowerCase(), b.toLowerCase()].sort().join('|');
 for (const [a, b, r] of data.recipes) RECIPES.set(key(data.elements[a].n, data.elements[b].n), data.elements[r].n);
 const live = store.get('live', {});                         // combos invented on this device
-for (const [k, v] of Object.entries(live)) { if (v) { RECIPES.set(k, v.n); EMOJI.set(v.n, v.e); } }
+for (const [k, v] of Object.entries(live)) { if (v) { v.e = PICKEY(v.e || ''); RECIPES.set(k, v.n); EMOJI.set(v.n, v.e); } }
 
-const BASICS = [['Water', '💧'], ['Fire', '🔥'], ['Wind', '🌬️'], ['Earth', '🌍']];
+const BASICS = [['Water', '1f4a7'], ['Fire', '1f525'], ['Wind', '1f32c'], ['Earth', '1f30d']];
 let found = store.get('found', null) || BASICS.map(([n, e]) => ({ n, e, t: 0 }));
+found.forEach(f => { f.e = PICKEY(f.e || ''); });                  // older saves stored emoji: keep only the photo key
 let sortMode = store.get('sort', 'newest'), fresh = new Set(), muted = store.get('muted', false);
 // Real photos for things that have one (photos/<slug>.webp, from Wikipedia — credits in photos/credits.json).
 const PHOTO = new Set(await fetch('photos/index.json').then(r => r.json()).catch(() => []));
 const slug = n => n.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-const icon = (n, e) => (PHOTO.has(slug(n)) ? `<img class="ph" src="photos/${slug(n)}.webp" alt="" loading="lazy" draggable="false">` : e);
-const emojiOf = n => EMOJI.get(n) || found.find(f => f.n === n)?.e || '✨';
+// Otherwise the shared photo for its key, otherwise a drawn initials badge (never an emoji).
+const icon = (n, e) => (PHOTO.has(slug(n)) ? `<img class="ph" src="photos/${slug(n)}.webp" alt="" loading="lazy" draggable="false">` : BALLPARK_PIC(e, 'ph', n));
+const emojiOf = n => EMOJI.get(n) || found.find(f => f.n === n)?.e || '';
 
 // ---------- sidebar ----------
 function renderList() {
@@ -141,7 +144,7 @@ async function combine(a, b) {
   if (!found.some(f => f.n === result)) {
     found.push({ n: result, e: emojiOf(result), t: Date.now() });
     fresh.add(result); store.set('found', found);
-    toast(`New discovery: ${emojiOf(result)} ${result}`);
+    toast(`New discovery: ${result}`);
     sfx(880); setTimeout(() => sfx(1320), 90);
     BP.report('fuse', { score: found.length, label: `${found.length} discovered` });
     renderList();
@@ -156,8 +159,10 @@ function sfx(f, type = 'triangle') {
     o.type = type; o.frequency.value = f; g.gain.setValueAtTime(0.06, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
     o.connect(g).connect(ac.destination); o.start(t); o.stop(t + 0.13); } catch { /* no audio */ }
 }
-$('mute').textContent = muted ? '🔇' : '🔊';
-$('mute').onclick = () => { muted = !muted; store.set('muted', muted); $('mute').textContent = muted ? '🔇' : '🔊'; };
+const SPK = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/>';
+const paintMute = () => { $('mute').innerHTML = SPK + (muted ? '<path d="M17 9l5 6M22 9l-5 6"/></svg>' : '<path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>'); $('mute').setAttribute('aria-label', muted ? 'Sound off' : 'Sound on'); };
+paintMute();
+$('mute').onclick = () => { muted = !muted; store.set('muted', muted); paintMute(); };
 $('clear').onclick = () => { board.querySelectorAll('.item').forEach(i => i.remove()); picked = null; };
-$('share').onclick = () => navigator.clipboard?.writeText(`Fuse: I've discovered ${found.length} things ✨ — latest: ${found.slice().sort((a, b) => b.t - a.t).slice(0, 5).map(f => f.e + ' ' + f.n).join(', ')}\nBALLPARK`).then(() => toast('Copied!'));
+$('share').onclick = () => navigator.clipboard?.writeText(`Fuse: I've discovered ${found.length} things. Latest: ${found.slice().sort((a, b) => b.t - a.t).slice(0, 5).map(f => f.n).join(', ')}\nBALLPARK`).then(() => toast('Copied!'));
 renderList();

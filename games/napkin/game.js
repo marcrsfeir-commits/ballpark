@@ -49,7 +49,10 @@ function fmt(n) {
 }
 const short = n => { const a = Math.abs(n); return a >= 1e12 ? +(n / 1e12).toFixed(1) + 'T' : a >= 1e9 ? +(n / 1e9).toFixed(1) + 'B' : a >= 1e6 ? +(n / 1e6).toFixed(1) + 'M' : a >= 1e3 ? +(n / 1e3).toFixed(1) + 'K' : +n.toFixed(2) + ''; };
 const pointsFor = r => Math.round(100 * Math.max(0, 1 - Math.abs(Math.log10(r)) / 1.5));
-const emojiFor = r => { const e = Math.max(r, 1 / r); return e <= 1.1 ? '🎯' : e <= 1.5 ? '🟩' : e <= 3 ? '🟨' : e <= 10 ? '🟧' : '🟥'; };
+// accuracy tier 0 (within 10%) .. 4 (more than 10x off), drawn as a coloured square (.tier) and named in share text
+const tierOf = r => { const e = Math.max(r, 1 / r); return e <= 1.1 ? 0 : e <= 1.5 ? 1 : e <= 3 ? 2 : e <= 10 ? 3 : 4; };
+const TIER_NAMES = ['spot on', 'within 1.5x', 'within 3x', 'within 10x', 'way off'];
+const tierMark = r => { const t = tierOf(r); return `<i class="tier t${t}" title="${TIER_NAMES[t]}"></i>`; };
 function ratioText(r) {
   const label = Math.max(r, 1 / r) <= 1.1 ? 'Spot On' : r > 1 ? 'Too High' : 'Too Low';
   const v = r >= 100 ? Math.round(r).toLocaleString('en-US') : r < 0.01 ? r.toExponential(1) : r.toFixed(2);
@@ -66,8 +69,9 @@ function crowd(q) {
 }
 
 // ---------- views ----------
+const CALC_ICON = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2.5"/><path d="M8.5 7.5h7M8.5 12h.01M12 12h.01M15.5 12h.01M8.5 16h.01M12 16h.01M15.5 16h.01"/></svg>';
 function header(q) {
-  const qs = [0, 1, 2].map(i => `<span class="${i === qi ? 'on' : state.answers[i] ? 'done' : ''}">Q${i + 1} ${state.answers[i] ? emojiFor(state.answers[i].ratio) : '○'}</span>`).join('');
+  const qs = [0, 1, 2].map(i => `<span class="${i === qi ? 'on' : state.answers[i] ? 'done' : ''}">Q${i + 1} ${state.answers[i] ? tierMark(state.answers[i].ratio) : '○'}</span>`).join('');
   return `<div class="head"><span>Napkin</span><div class="qs">${qs}</div><span>${day === today ? '' : 'Archive · '}No. ${String(day).padStart(3, '0')}</span></div>`;
 }
 
@@ -81,10 +85,10 @@ function render() {
 
 function renderQuestion(q) {
   app.innerHTML = `<section class="card">${header(q)}
-    <div class="qtext ${q.e ? 'has-pic' : ''}">${q.q}${q.e ? `<div class="polaroid" aria-hidden="true">${BALLPARK_PIC(q.e, 'bp-pic big')}</div>` : ''}</div>
+    <div class="qtext ${q.e ? 'has-pic' : ''}">${q.q}${q.e ? `<div class="polaroid" aria-hidden="true">${BALLPARK_PIC(q.e, 'bp-pic big', q.unit)}</div>` : ''}</div>
     <label class="field"><input id="guess" inputmode="decimal" autocomplete="off" placeholder="your guess" aria-label="Your guess"><span class="unit">${q.unit}</span></label>
     <div class="preview" id="preview"></div>
-    <div class="row"><button class="calcbtn" id="calcBtn" title="Calculator" aria-label="Calculator">🧮</button><button class="lock" id="lock">LOCK IT IN ✓</button></div>
+    <div class="row"><button class="calcbtn" id="calcBtn" title="Calculator" aria-label="Calculator">${CALC_ICON}</button><button class="lock" id="lock">LOCK IT IN</button></div>
     <div id="calc"></div></section>`;
   const inp = document.getElementById('guess'), prev = document.getElementById('preview'), lock = document.getElementById('lock');
   const update = () => {
@@ -159,20 +163,20 @@ function renderResult(q, ans) {
 
 function renderFinal(qsDay) {
   document.documentElement.style.setProperty('--c', '#26282e');
-  const total = state.answers.reduce((s, a) => s + a.pts, 0), line = state.answers.map(a => emojiFor(a.ratio)).join('');
+  const total = state.answers.reduce((s, a) => s + a.pts, 0), line = state.answers.map(a => tierMark(a.ratio)).join('');
   if (!state.done) {
     state.done = true; save();
-    if (day === today) BP.report('napkin', { score: total, max: 300, label: `${total}/300 ${line}` });
+    if (day === today) BP.report('napkin', { score: total, max: 300, label: `${total}/300` });
     const st = store.get('stats', { days: 0, spot: 0, sumLog: 0, n: 0 });
     st.days++; for (const a of state.answers) { st.n++; st.sumLog += Math.abs(Math.log10(a.ratio)); if (Math.max(a.ratio, 1 / a.ratio) <= 1.1) st.spot++; }
     store.set('stats', st);
   }
-  app.innerHTML = `<section class="card final"><div class="head"><span>Napkin</span><span>${line}</span><span>No. ${String(day).padStart(3, '0')}</span></div>
+  app.innerHTML = `<section class="card final"><div class="head"><span>Napkin</span><span class="tiers">${line}</span><span>No. ${String(day).padStart(3, '0')}</span></div>
     <h2>${total} / 300</h2><div>${total >= 240 ? 'Human calculator.' : total >= 170 ? 'Solid napkin work.' : total >= 100 ? 'In the right ballpark.' : 'Wild guesses — that\'s half the fun.'}</div>
-    <div class="rows">${qsDay.map((q, i) => { const a = state.answers[i], t = ratioText(a.ratio); return `<div><span>${emojiFor(a.ratio)}</span><span>${q.q}</span><b>${t.v}</b></div>`; }).join('')}</div>
+    <div class="rows">${qsDay.map((q, i) => { const a = state.answers[i], t = ratioText(a.ratio); return `<div><span>${tierMark(a.ratio)}</span><span>${q.q}</span><b>${t.v}</b></div>`; }).join('')}</div>
     <div class="btns"><button class="solid" id="share">COPY RESULT</button><button id="arch">PLAY THE ARCHIVE</button><a href="../../index.html">BALLPARK</a></div></section>`;
   document.getElementById('share').onclick = () => {
-    const text = `Napkin No. ${day} · ${total}/300\n${state.answers.map((a, i) => `${emojiFor(a.ratio)} Q${i + 1} ${ratioText(a.ratio).v}`).join('\n')}`;
+    const text = `Napkin No. ${day} · ${total}/300\n${state.answers.map((a, i) => `Q${i + 1} ${ratioText(a.ratio).v} (${TIER_NAMES[tierOf(a.ratio)]})`).join('\n')}`;
     navigator.clipboard?.writeText(text).then(() => toast('Copied!'), () => toast('Copy failed'));
   };
   document.getElementById('arch').onclick = () => openMenu('archive');
@@ -189,9 +193,9 @@ function openMenu(tab = 'archive') {
         return `<button data-n="${n}" class="${n === today ? 'today' : ''}"><b>No. ${n}</b><small>${d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} · ${tot == null ? (s.answers.length ? 'in progress' : 'unplayed') : tot + ' pts'}</small></button>`;
       }).join('')}</div>`
     : tab === 'how'
-      ? `<p>Each day brings three questions with enormous answers. Nobody knows them exactly — use napkin math: break the question into pieces you can guess, multiply them out, and lock it in.</p><p>You score on how close your <b>ratio</b> is: 1.00× is perfect, 2× (or 0.5×) is off by double. Type numbers like <b>3,500,000</b>, <b>3.5 million</b>, <b>2k</b> or <b>4e6</b>, and use the 🧮 calculator.</p><p>🎯 within 10% · 🟩 within 1.5× · 🟨 within 3× · 🟧 within 10× · 🟥 further.</p>`
+      ? `<p>Each day brings three questions with enormous answers. Nobody knows them exactly — use napkin math: break the question into pieces you can guess, multiply them out, and lock it in.</p><p>You score on how close your <b>ratio</b> is: 1.00× is perfect, 2× (or 0.5×) is off by double. Type numbers like <b>3,500,000</b>, <b>3.5 million</b>, <b>2k</b> or <b>4e6</b>, and use the calculator button.</p><p class="legend"><i class="tier t0"></i> within 10% · <i class="tier t1"></i> within 1.5× · <i class="tier t2"></i> within 3× · <i class="tier t3"></i> within 10× · <i class="tier t4"></i> further.</p>`
       : `<p>Days played: <b>${st.days}</b><br>Spot-ons: <b>${st.spot}</b><br>Average miss: <b>${st.n ? (10 ** (st.sumLog / st.n)).toFixed(2) + '×' : '—'}</b></p>`;
-  m.innerHTML = `<div class="box"><div class="tabs">${[['archive', 'Archive'], ['how', 'How to play'], ['stats', 'Stats']].map(([k, l]) => `<button data-tab="${k}" class="${k === tab ? 'on' : ''}">${l}</button>`).join('')}<button data-close style="margin-left:auto">✕</button></div>${body}</div>`;
+  m.innerHTML = `<div class="box"><div class="tabs">${[['archive', 'Archive'], ['how', 'How to play'], ['stats', 'Stats']].map(([k, l]) => `<button data-tab="${k}" class="${k === tab ? 'on' : ''}">${l}</button>`).join('')}<button data-close style="margin-left:auto" aria-label="Close">×</button></div>${body}</div>`;
   m.hidden = false;
   m.onclick = e => {
     if (e.target === m || e.target.closest('[data-close]')) { m.hidden = true; return; }

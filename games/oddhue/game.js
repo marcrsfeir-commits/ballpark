@@ -133,7 +133,7 @@ function end(wrongIndex) {
 $('#again').addEventListener('click', () => start(mode));
 $('#share').addEventListener('click', () => {
   const label = mode === 'daily' ? `Daily ${today()}` : mode === 'rush' ? 'Rush 60s' : 'Classic';
-  const text = `Odd Hue · ${label}: ${score} 🎨\nBALLPARK`;
+  const text = `Odd Hue · ${label}: ${score}\nBALLPARK`;
   navigator.clipboard?.writeText(text).then(() => toast('Copied!'), () => toast(text));
 });
 document.querySelectorAll('.modes button').forEach(b => b.addEventListener('click', () => start(b.dataset.mode)));

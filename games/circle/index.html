@@ -111,7 +111,7 @@ function showBest() {
 cv.addEventListener('pointerdown', e => { cv.setPointerCapture(e.pointerId); start(e); });
 cv.addEventListener('pointermove', move);
 cv.addEventListener('pointerup', finish);
-document.getElementById('share').onclick = () => navigator.clipboard?.writeText(`Circle Up: ${final.toFixed(1)}% ⭕\nBALLPARK`).then(() => { document.getElementById('share').textContent = 'Copied!'; });
+document.getElementById('share').onclick = () => navigator.clipboard?.writeText(`Circle Up: ${final.toFixed(1)}%\nBALLPARK`).then(() => { document.getElementById('share').textContent = 'Copied!'; });
 resize(); showBest();
 </script>
 </body>

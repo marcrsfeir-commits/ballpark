@@ -5,7 +5,9 @@ html, body { margin: 0; min-height: 100%; background: #050507; color: #eee; font
 button { font: inherit; cursor: pointer; }
 .card { width: min(700px, calc(100vw - 20px)); margin: 18px auto 30px; background: #0b0b0f; border: 1px solid #1d1d26; border-radius: 16px; overflow: hidden; }
 header { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; flex-wrap: wrap; }
-.brand { font: 800 13px var(--mono); letter-spacing: .18em; }
+.brand { display: inline-flex; align-items: center; gap: 7px; font: 800 13px var(--mono); letter-spacing: .18em; color: #e6e0ff; }
+.brand .logo { width: 16px; height: 16px; }
+.ic { width: .8em; height: .8em; vertical-align: -.05em; }
 #modes { display: flex; gap: 4px; }
 #modes button { border: 1px solid #262633; background: none; color: #9a9ab0; font-size: 12px; font-weight: 600; padding: 5px 10px; border-radius: 999px; }
 #modes button.on { color: #0b0b0f; background: var(--accent); border-color: var(--accent); }
@@ -16,7 +18,12 @@ header { display: flex; align-items: center; justify-content: space-between; gap
 .view { position: relative; height: min(56vh, 460px); min-height: 300px; background: radial-gradient(ellipse at 50% 70%, #15151d, #050507 70%); touch-action: none; }
 .view canvas { display: block; width: 100%; height: 100%; }
 .spin { position: absolute; left: 12px; bottom: 10px; font: 600 10px var(--mono); color: #55556a; letter-spacing: .1em; pointer-events: none; }
-.mute { position: absolute; right: 10px; bottom: 8px; border: 0; background: none; font-size: 15px; opacity: .6; }
+.mute { position: absolute; right: 8px; bottom: 6px; border: 0; background: none; color: #c8c8d8; padding: 4px; line-height: 0; opacity: .7; }
+.mute:hover { opacity: 1; }
+.glnote { position: absolute; left: 50%; top: 12px; transform: translateX(-50%); padding: 6px 12px; border-radius: 999px; background: #1d1d28; color: #ddd; font: 600 11px var(--mono); }
+.grades { display: inline-flex; gap: 4px; margin-left: 8px; vertical-align: -1px; }
+.grades i { width: 14px; height: 14px; border-radius: 3px; display: inline-block; }
+.grades .g4 { background: #7ee2c4; box-shadow: 0 0 0 2px #0b0b0f, 0 0 0 3px #7ee2c4; } .grades .g3 { background: #4ade80; } .grades .g2 { background: #facc15; } .grades .g1 { background: #ff4d6d; }
 .overlay { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; background: rgba(5,5,7,.55); backdrop-filter: blur(2px); }
 .overlay .k { font: 700 11px var(--mono); letter-spacing: .3em; color: #aaa; }
 .overlay .big { font: 800 clamp(64px, 14vw, 104px)/1 var(--font); color: var(--accent); text-shadow: 0 0 30px var(--accent); }

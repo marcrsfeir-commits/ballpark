@@ -48,22 +48,22 @@
 // BIG SPENDER — spend a fictional $100B fortune on things with (roughly) real price tags.
 const BUDGET = 100e9;
 const ITEMS = [
-  ['🍔', 'Burger', 4], ['☕', 'Fancy coffee', 6], ['🎟️', 'Movie ticket', 15], ['📚', 'Hardback book', 25], ['🎮', 'New video game', 70],
-  ['👟', 'Limited sneakers', 250], ['🎤', 'Front-row concert seat', 1500], ['📱', 'Top-end smartphone', 1200], ['🖥️', 'Monster gaming PC', 4000],
-  ['👜', 'Designer handbag', 5000], ['🛶', 'Jet ski', 13000], ['🐎', 'Horse', 15000], ['⌚', 'Luxury watch', 30000], ['🏍️', 'Motorcycle', 22000],
-  ['🛻', 'Pickup truck', 60000], ['🚗', 'Electric car', 45000], ['🥇', '1 kg gold bar', 85000], ['💍', 'Huge diamond ring', 250000],
-  ['🏎️', 'Supercar', 350000], ['🏠', 'Family house', 420000], ['🦖', 'Real dinosaur skeleton', 3000000], ['🚁', 'Helicopter', 4000000],
-  ['🍟', 'Burger franchise', 2000000], ['📺', '30-second big-game TV ad', 7000000], ['🪖', 'Battle tank', 9000000], ['🏁', 'Racing team car', 15000000],
-  ['🏝️', 'Private island', 45000000], ['🏰', 'Mega mansion', 60000000], ['🛩️', 'Private jet', 70000000], ['🚀', 'Rocket launch', 70000000],
-  ['🎬', 'Make a blockbuster movie', 200000000], ['✈️', 'Jumbo jet', 400000000], ['🛥️', 'Superyacht', 450000000], ['🏙️', 'Skyscraper', 900000000],
-  ['🚢', 'Cruise ship', 1200000000], ['🏟️', 'Brand-new stadium', 2000000000], ['⚽', 'Famous football club', 4000000000], ['🏀', 'Pro basketball team', 5000000000],
+  ['1f354', 'Burger', 4], ['2615', 'Fancy coffee', 6], ['1f39f', 'Movie ticket', 15], ['1f4da', 'Hardback book', 25], ['1f3ae', 'New video game', 70],
+  ['1f45f', 'Limited sneakers', 250], ['1f3a4', 'Front-row concert seat', 1500], ['1f4f1', 'Top-end smartphone', 1200], ['1f5a5', 'Monster gaming PC', 4000],
+  ['1f45c', 'Designer handbag', 5000], ['1f6f6', 'Jet ski', 13000], ['1f40e', 'Horse', 15000], ['231a', 'Luxury watch', 30000], ['1f3cd', 'Motorcycle', 22000],
+  ['1f6fb', 'Pickup truck', 60000], ['1f697', 'Electric car', 45000], ['1f947', '1 kg gold bar', 85000], ['1f48d', 'Huge diamond ring', 250000],
+  ['1f3ce', 'Supercar', 350000], ['1f3e0', 'Family house', 420000], ['1f996', 'Real dinosaur skeleton', 3000000], ['1f681', 'Helicopter', 4000000],
+  ['1f35f', 'Burger franchise', 2000000], ['1f4fa', '30-second big-game TV ad', 7000000], ['1fa96', 'Battle tank', 9000000], ['1f3c1', 'Racing team car', 15000000],
+  ['1f3dd', 'Private island', 45000000], ['1f3f0', 'Mega mansion', 60000000], ['1f6e9', 'Private jet', 70000000], ['1f680', 'Rocket launch', 70000000],
+  ['1f3ac', 'Make a blockbuster movie', 200000000], ['2708', 'Jumbo jet', 400000000], ['1f6e5', 'Superyacht', 450000000], ['1f3d9', 'Skyscraper', 900000000],
+  ['1f6a2', 'Cruise ship', 1200000000], ['1f3df', 'Brand-new stadium', 2000000000], ['26bd', 'Famous football club', 4000000000], ['1f3c0', 'Pro basketball team', 5000000000],
 ];
 const store = Ballpark.store('spender');
 let cart = store.get('cart', {});
 const fmt = n => '$' + Math.round(n).toLocaleString('en-US');
 const spent = () => ITEMS.reduce((s, [, name, price]) => s + (cart[name] || 0) * price, 0);
 const grid = document.getElementById('grid');
-grid.innerHTML = ITEMS.map(([e, name, price], i) => `<div class="item"><div class="e">${BALLPARK_PIC(e)}</div><h3>${name}</h3><div class="price">${fmt(price)}</div>
+grid.innerHTML = ITEMS.map(([e, name, price], i) => `<div class="item"><div class="e">${BALLPARK_PIC(e, 'bp-pic', name)}</div><h3>${name}</h3><div class="price">${fmt(price)}</div>
   <div class="ctl"><button class="sell" data-i="${i}" data-d="-1">Sell</button><input data-i="${i}" inputmode="numeric" value="0" aria-label="${name} quantity"><button class="buy" data-i="${i}" data-d="1">Buy</button></div></div>`).join('');
 let shown = BUDGET - spent();
 function setQty(i, q) {
@@ -85,7 +85,7 @@ function render() {
   });
   const pct = (100 * (BUDGET - left) / BUDGET);
   document.getElementById('pct').textContent = left <= 0 ? 'You spent it ALL. Congratulations?' : `${pct < 0.01 && pct > 0 ? '<0.01' : pct.toFixed(pct < 1 ? 2 : 1)}% spent`;
-  const rows = ITEMS.filter(([, n]) => cart[n]).map(([e, n, p]) => `<div class="row"><span>${BALLPARK_PIC(e)} ${n}</span><span>x${cart[n].toLocaleString('en-US')}</span><span>${fmt(cart[n] * p)}</span></div>`);
+  const rows = ITEMS.filter(([, n]) => cart[n]).map(([e, n, p]) => `<div class="row"><span>${BALLPARK_PIC(e, 'bp-pic', n)} ${n}</span><span>x${cart[n].toLocaleString('en-US')}</span><span>${fmt(cart[n] * p)}</span></div>`);
   document.getElementById('receipt').innerHTML = rows.length ? rows.join('') + `<div class="row total"><span>TOTAL</span><span></span><span>${fmt(BUDGET - left)}</span></div>` : '<p class="empty">Nothing bought yet. Go on, treat yourself.</p>';
   if (rows.length) Ballpark.report('spender', { score: Math.round(pct), max: 100, label: `${pct.toFixed(pct < 1 ? 2 : 0)}% of $100B spent` });
   animateMoney(left);
@@ -97,7 +97,7 @@ function animateMoney(target) {
   step();
 }
 document.getElementById('share').onclick = () => {
-  const lines = ITEMS.filter(([, n]) => cart[n]).map(([e, n]) => `${e} ${n} x${cart[n]}`);
+  const lines = ITEMS.filter(([, n]) => cart[n]).map(([, n]) => `${n} x${cart[n]}`);
   navigator.clipboard?.writeText(`Big Spender — I spent ${fmt(spent())} of $100B:\n${lines.join('\n')}\nBALLPARK`).then(() => { document.getElementById('share').textContent = 'Copied!'; });
 };
 document.getElementById('reset').onclick = () => { cart = {}; store.set('cart', cart); render(); };

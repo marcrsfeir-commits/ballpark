@@ -14,7 +14,8 @@ const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;'
 const fmtM = m => `${Math.round(m).toLocaleString('en-US')}m`;
 const ease = t => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 const MISS_COLOR = '#5f7894';
-const SHARE_EMOJI = { plankton: '🫧', tooclever: '🐠', schooler: '🐟', rare: '🦑', deepcut: '🐡', krillion: '🦐', miss: '⬛', r1: '🥇', r2: '🥈', r3: '🥉', r4: '🟩', r5: '🟩', r6: '🟩', r7: '🟩', r8: '🟩', also: '🟨' };
+// share grid: plain shapes, never emoji. Deeper tier = fuller circle; survey ranks are digits/squares.
+const SHARE_MARK = { plankton: '○', tooclever: '◔', schooler: '◑', rare: '◕', deepcut: '●', krillion: '◉', miss: '×', r1: '1', r2: '2', r3: '3', r4: '■', r5: '■', r6: '■', r7: '■', r8: '■', also: '□' };
 
 store.load();
 const settings = store.settings;
@@ -370,7 +371,7 @@ async function submit(final) {
     if (final || (run.total > 0 && run.left <= 0)) return land(null, raw);
     run.locked = false;
     $('#echo').textContent = `“${raw}”: not on our list. try again, or `;
-    const ok = h('button', 'claim', 'IT COUNTS ✓');
+    const ok = h('button', 'claim', 'IT COUNTS');
     ok.type = 'button';
     ok.onclick = () => { if (run && run.prompts[run.i] === q && !run.locked) { run.locked = true; land({ answer: raw, tier: CLAIM_TIER, claimed: true }, raw); } };
     $('#echo').append(ok);
@@ -394,7 +395,7 @@ function askDidYouMean(q, raw, hit) {
   no.onclick = () => {
     if (!run || run.prompts[run.i] !== q || run.locked) return;
     echo.textContent = `“${raw}”: not on our list. try again, or `;
-    const ok = h('button', 'claim', 'IT COUNTS ✓');
+    const ok = h('button', 'claim', 'IT COUNTS');
     ok.type = 'button';
     ok.onclick = () => { if (run && run.prompts[run.i] === q && !run.locked) { run.locked = true; land({ answer: raw, tier: CLAIM_TIER, claimed: true }, raw); } };
     echo.append(ok);
@@ -726,9 +727,9 @@ function catchRow(q, a, i) {
 
 function copyResult(r) {
   const label = r.mode === 'daily' ? `#${r.n}` : r.mode === 'endless' ? `∞${r.n}` : r.mode === 'ascent' ? `ASCENT #${r.n}` : `${(lib.pack(r.packId)?.name || r.packId)} ch${r.ch + 1}`;
-  const line = r.answers.map(a => SHARE_EMOJI[a?.tier || 'miss']).join('');
+  const line = r.answers.map(a => SHARE_MARK[a?.tier || 'miss']).join('');
   const depth = r.mode === 'ascent' ? (r.score >= MAX_SCORE ? 'SURFACED' : `-${fmtM(MAX_SCORE * M_PER_POINT - r.score * M_PER_POINT)} to go`) : `-${fmtM(r.score * M_PER_POINT)}`;
-  const text = `KRILLDIVE ${label} 🦐\n${r.score}/${MAX_SCORE} · ${depth}\n${line}`;
+  const text = `KRILLDIVE ${label}\n${r.score}/${MAX_SCORE} · ${depth}\n${line}`;
   const done = () => toast('COPIED — paste it anywhere');
   if (navigator.clipboard?.writeText) navigator.clipboard.writeText(text).then(done, () => fallbackCopy(text, done));
   else fallbackCopy(text, done);

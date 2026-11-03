@@ -15,11 +15,13 @@
   label { display: block; font-weight: 700; margin-bottom: 6px; }
   .box { position: relative; }
   textarea { width: 100%; min-height: 64px; resize: none; padding: 14px 54px 14px 14px; border: 2px solid #1b1b1f; border-radius: 12px; background: #fff;
-    font: 600 20px/1.45 "Segoe UI", "Segoe UI Emoji", system-ui, sans-serif; outline: none; overflow: hidden; word-break: break-all; }
+    font: 600 20px/1.45 "Segoe UI", system-ui, sans-serif; outline: none; overflow: hidden; word-break: break-all; }
   textarea:focus { box-shadow: 0 0 0 4px rgba(27,27,31,.08); }
   .count { position: absolute; right: 12px; top: 14px; font: 700 14px Consolas, monospace; color: #8a8a94; }
   .emoji { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 8px; }
-  .emoji button { border: 1px solid #ddd; background: #fff; border-radius: 8px; font-size: 18px; padding: 3px 7px; cursor: pointer; }
+  .emoji button { border: 1px solid #ddd; background: #fff; border-radius: 8px; font: 700 16px/1 Consolas, monospace; padding: 4px 7px; cursor: pointer; min-height: 32px; display: inline-flex; align-items: center; }
+  .emoji button svg { width: 22px; height: 22px; display: block; }
+  .rule h4 svg { width: 12px; height: 12px; vertical-align: -1px; margin-right: 4px; }
   .emoji span { font-size: 12px; color: #888; align-self: center; margin-right: 4px; }
   .rules { margin-top: 18px; display: grid; gap: 10px; }
   .rule { border-radius: 10px; overflow: hidden; border: 2px solid #e5484d; background: #fff4f4; animation: in .35s ease; }
@@ -57,8 +59,16 @@ const PLANETS = ['mercury','venus','earth','mars','jupiter','saturn','uranus','n
 const OCEANS = ['pacific','atlantic','indian','arctic','southern'];
 const DAYS = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
 const ELEMENTS = 'He Li Be Ne Na Mg Al Si Cl Ar Ca Sc Ti Cr Mn Fe Co Ni Cu Zn Ga Ge As Se Br Kr Rb Sr Zr Nb Mo Tc Ru Rh Pd Ag Cd In Sn Sb Te Xe Cs Ba La Ce Pr Nd Pm Sm Eu Gd Tb Dy Ho Er Tm Yb Lu Hf Ta Re Os Ir Pt Au Hg Tl Pb Bi Po At Rn Fr Ra Ac Th Pa Np Pu Am Cm Bk Cf Es Fm Md No Lr Rf Db Sg Bh Hs Mt Ds Rg Cn Nh Fl Mc Lv Ts Og'.split(' ');
-const MOONS = ['🌑','🌒','🌓','🌔','🌕','🌖','🌗','🌘'];
+const MOONS = ['new moon', 'waxing crescent', 'first quarter', 'waxing gibbous', 'full moon', 'waning gibbous', 'last quarter', 'waning crescent'];
 const moonNow = () => { const age = ((Date.now() - Date.UTC(2000, 0, 6, 18, 14)) / 86400000) % 29.530589; return MOONS[Math.round(age / 29.530589 * 8) % 8]; };
+// a drawn moon in phase k (0 = new, 4 = full); the insert button shows the picture and types the phase's name
+const moonSvg = k => {
+  const r = 10, c = 12, rx = Math.abs(Math.cos(k / 8 * 2 * Math.PI)) * r, wax = k < 4, gib = k > 2 && k < 6;
+  const lit = k === 0 ? '' : k === 4 ? `<circle cx="${c}" cy="${c}" r="${r}" fill="#f5d77e"/>`
+    : `<path d="M${c} ${c - r} A${r} ${r} 0 0 ${wax ? 1 : 0} ${c} ${c + r} A${rx.toFixed(2)} ${r} 0 0 ${wax ? (gib ? 1 : 0) : (gib ? 0 : 1)} ${c} ${c - r}Z" fill="#f5d77e"/>`;
+  return `<svg viewBox="0 0 24 24" aria-label="${MOONS[k]}"><circle cx="${c}" cy="${c}" r="${r}" fill="#2a2a35"/>${lit}</svg>`;
+};
+const FISH = '><>';
 const romanValue = s => { const v = { I: 1, V: 5, X: 10, L: 50, C: 100, D: 500, M: 1000 }; let t = 0; for (let i = 0; i < s.length; i++) { const a = v[s[i]], b = v[s[i + 1]] || 0; t += a < b ? -a : a; } return t; };
 const isPrime = n => { if (n < 2) return false; for (let i = 2; i * i <= n; i++) if (n % i === 0) return false; return true; };
 const runs = (s, re) => s.match(re) || [];
@@ -78,10 +88,10 @@ const RULES = [
   { t: () => 'Your password must include today\'s day of the week.', f: p => p.toLowerCase().includes(DAYS[new Date().getDay()]) },
   { t: 'Your password must include a two-letter symbol from the periodic table.', f: p => ELEMENTS.some(e => p.includes(e)) },
   { t: 'Your password must include a leap year.', f: p => runs(p, /\d+/g).some(n => n.length === 4 && ((+n % 4 === 0 && +n % 100 !== 0) || +n % 400 === 0)) },
-  { t: 'Your password must include the current phase of the moon as an emoji.', f: p => p.includes(moonNow()), emoji: MOONS },
+  { t: 'Your password must include the current phase of the moon, in words.', f: p => p.toLowerCase().includes(moonNow()), emoji: MOONS.map((m, k) => ({ html: moonSvg(k), ins: m })) },
   { t: () => `<span class="swatch" style="background:#${hex}"></span>Your password must include the hex code of this colour. <button class="reroll" id="reroll" title="New colour">↻</button>`, f: p => p.toLowerCase().includes('#' + hex) },
   { t: 'Your password must include the name of an ocean.', f: p => OCEANS.some(m => p.toLowerCase().includes(m)) },
-  { t: 'Your password must include a fish. 🐟 He lives here now.', f: p => p.includes('🐟'), emoji: ['🐟'] },
+  { t: 'Your password must include a fish: <b>&gt;&lt;&gt;</b> He lives here now.', f: p => p.includes(FISH), emoji: [{ html: '&gt;&lt;&gt;', ins: FISH }] },
   { t: 'Your password must include the answer to 12 × 12.', f: p => p.includes('144') },
   { t: 'The length of your password must be a prime number.', f: p => isPrime([...p].length) },
   { t: 'Your password must include its own length.', f: p => runs(p, /\d+/g).includes(String([...p].length)) },
@@ -103,15 +113,15 @@ function check() {
   const html = [];
   for (let i = shown - 1; i >= 0; i--) {
     const r = RULES[i], ok = r.f(p), text = typeof r.t === 'function' ? r.t() : r.t;
-    html.push(`<div class="rule ${ok ? 'ok' : ''}"><h4>${ok ? '✓' : '✗'} Rule ${i + 1}</h4><p>${text}</p></div>`);
+    html.push(`<div class="rule ${ok ? 'ok' : ''}"><h4>${ok ? '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>' : '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/></svg>'}Rule ${i + 1}</h4><p>${text}</p></div>`);
   }
   // keep unsatisfied rules on top, like a nagging IT department
   $('rules').innerHTML = html.sort((a, b) => a.includes('rule ok') - b.includes('rule ok')).join('');
   const rr = $('reroll'); if (rr) rr.onclick = () => { hex = Array.from({ length: 6 }, () => '0123456789abcdef'[Math.floor(Math.random() * 16)]).join(''); store.set('hex', hex); check(); };
   const emojis = RULES.slice(0, shown).flatMap(r => r.emoji || []);
   $('emoji').hidden = !emojis.length;
-  $('emoji').innerHTML = '<span>insert:</span>' + emojis.map(e => `<button type="button">${e}</button>`).join('');
-  $('emoji').querySelectorAll('button').forEach(b => b.onclick = () => insert(b.textContent));
+  $('emoji').innerHTML = '<span>insert:</span>' + emojis.map((e, i) => `<button type="button" data-i="${i}" title="${e.ins.replace(/[<>]/g, '')}">${e.html}</button>`).join('');
+  $('emoji').querySelectorAll('button').forEach(b => b.onclick = () => insert(emojis[+b.dataset.i].ins));
   const all = RULES.every(r => r.f(p));
   $('confirmBox').hidden = !(all && shown === RULES.length);
   grow(pw);
@@ -130,10 +140,10 @@ $('pw2').addEventListener('input', e => {
     const best = store.get('best', null); if (best == null || secs < best) store.set('best', secs);
     Ballpark.report('password', { score: secs, label: `cracked in ${mmss}` });
     $('win').hidden = false;
-    $('win').innerHTML = `<h2>Password accepted. 🎉</h2><div>${[...pw.value].length} characters of pure suffering, done in ${mmss}.</div>
+    $('win').innerHTML = `<h2>Password accepted.</h2><div>${[...pw.value].length} characters of pure suffering, done in ${mmss}.</div>
       <button id="again">New password</button><button id="share">Copy result</button>`;
     $('again').onclick = () => { store.set('draft', ''); store.set('reached', 0); location.reload(); };
-    $('share').onclick = () => navigator.clipboard?.writeText(`Password Panic: beat all ${RULES.length} rules in ${mmss} 🔐\nBALLPARK`).then(() => { $('share').textContent = 'Copied!'; });
+    $('share').onclick = () => navigator.clipboard?.writeText(`Password Panic: beat all ${RULES.length} rules in ${mmss}\nBALLPARK`).then(() => { $('share').textContent = 'Copied!'; });
   }
 });
 check();

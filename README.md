@@ -1,6 +1,6 @@
-# ⚾ BALLPARK
+# BALLPARK
 
-**▶ Play it here: https://marcrsfeir-commits.github.io/ballpark/**
+**Play it here: https://marcrsfeir-commits.github.io/ballpark/**
 
 Thirteen free browser games in one place. No ads, no accounts, no paywalls — everything runs in your browser and saves on your device. Daily puzzles are picked per device, so friends get different sets.
 

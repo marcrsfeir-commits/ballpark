@@ -9,7 +9,7 @@ const LEVELS = window.TROLLEY_LEVELS;
 const N = LEVELS.length;
 const store = Ballpark.store('trolley');
 const SVGNS = 'http://www.w3.org/2000/svg';
-const EMOJI_FONT = '"Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif';
+const TEXT_FONT = '"Segoe UI",system-ui,sans-serif';
 const $ = (s, r = document) => r.querySelector(s);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -167,7 +167,7 @@ function el(name, attrs, parent) {
   return e;
 }
 function txt(str, attrs, parent) {
-  const t = el('text', Object.assign({ 'text-anchor': 'middle', 'dominant-baseline': 'central', 'font-family': EMOJI_FONT }, attrs), parent);
+  const t = el('text', Object.assign({ 'text-anchor': 'middle', 'dominant-baseline': 'central', 'font-family': TEXT_FONT }, attrs), parent);
   t.textContent = str;
   return t;
 }
@@ -181,6 +181,22 @@ function starPoints(r) {
 }
 function starNode(r, parent) {
   return el('polygon', { points: starPoints(r), fill: '#ffd23f', stroke: '#d97f00', 'stroke-width': 1.3, 'stroke-linejoin': 'round' }, parent);
+}
+/* Pictures: a real photo tile (shared/photos via BALLPARK_PIC_URL) or, when there is none, a drawn badge with the
+   label's initials (a plain coloured tile without a label). Never an emoji. Centred on (x, y). */
+function hueOf(s) { let h = 0; for (const c of String(s)) h = (h * 31 + c.codePointAt(0)) % 360; return h; }
+function picNode(key, x, y, size, parent, o = {}) {
+  const g = el('g', { transform: `translate(${fx1(x)} ${fx1(y)})`, ...(o.extra || {}) }, parent);
+  const url = window.BALLPARK_PIC_URL?.(key);
+  if (url) {
+    el('image', { href: url, x: fx1(-size / 2), y: fx1(-size / 2), width: fx1(size), height: fx1(size), preserveAspectRatio: 'xMidYMid slice', 'clip-path': `inset(0 round ${o.round || '18%'})` }, g);
+    return g;
+  }
+  const words = String(o.label || '').replace(/[^\p{L} ]/gu, ' ').trim().split(/\s+/).filter(Boolean);
+  const ini = ((words[0]?.[0] || '') + (words[1]?.[0] || '')).toUpperCase();
+  el('rect', { x: fx1(-size / 2), y: fx1(-size / 2), width: fx1(size), height: fx1(size), rx: fx1(size * (o.round === '50%' ? 0.5 : 0.2)), fill: `hsl(${hueOf(o.label || key)} 55% 46%)`, stroke: '#fff', 'stroke-width': 1.5 }, g);
+  if (ini) txt(ini, { 'font-size': fx1(size * (ini.length > 1 ? 0.4 : 0.5)), 'font-weight': 800, fill: '#fff' }, g);
+  return g;
 }
 
 /* The trolley: a front-facing cartoon tram with worried eyes. Origin (0,0) = bottom centre. */
@@ -223,15 +239,15 @@ function makeTrolley(parent) {
 
 /* ------------------------------------------------------------------ scene themes */
 const THEMES = {
-  day:    { sky: ['#6fc3ff', '#e2f5ff'], hill: ['#76cf72', '#5fbf63'], ground: ['#a4e68f', '#58ae5c'], bed: '#dccaa0', sun: '☀️', deco: [['☁️', 'sky'], ['☁️', 'sky'], ['🌳', 'side'], ['🌳', 'side'], ['🌷', 'side']] },
-  sunset: { sky: ['#ff8a5c', '#ffd8a0'], hill: ['#c58a4a', '#a8723a'], ground: ['#e9b86e', '#c18a45'], bed: '#ecd6ac', sun: '☀️', deco: [['☁️', 'sky'], ['🌴', 'side'], ['🌴', 'side'], ['🎈', 'sky']] },
-  night:  { sky: ['#0d1535', '#2c3b78'], hill: ['#1f3a52', '#18304a'], ground: ['#2f6a55', '#1d4638'], bed: '#7d7a8c', sun: '🌙', stars: true, deco: [['⭐', 'sky'], ['✨', 'sky'], ['🌲', 'side'], ['🌲', 'side'], ['🦉', 'side']] },
-  desert: { sky: ['#74c9ff', '#ffeab4'], hill: ['#e3b36a', '#d39e55'], ground: ['#f6d792', '#dcae5e'], bed: '#cfae7c', sun: '☀️', deco: [['🌵', 'side'], ['🌵', 'side'], ['☁️', 'sky'], ['🦎', 'side']] },
-  beach:  { sky: ['#6fdcff', '#eafcff'], hill: ['#58d2c0', '#3fbfb0'], ground: ['#f7e7a6', '#e9cf79'], bed: '#d8c28a', sun: '☀️', deco: [['🌴', 'side'], ['🌴', 'side'], ['☁️', 'sky'], ['🐚', 'side'], ['⛵', 'sky']] },
-  space:  { sky: ['#05061c', '#2a1458'], hill: ['#46497a', '#383b66'], ground: ['#7a7ea0', '#4d5073'], bed: '#a7abcb', sun: '🪐', stars: true, deco: [['✨', 'sky'], ['🛸', 'sky'], ['☄️', 'sky'], ['🌑', 'side']] },
-  snow:   { sky: ['#a9dcff', '#f1faff'], hill: ['#eaf6ff', '#d7ebfa'], ground: ['#fafdff', '#cfe3f3'], bed: '#b9c9d8', sun: '☀️', deco: [['❄️', 'sky'], ['🌲', 'side'], ['⛄', 'side'], ['❄️', 'sky'], ['🌲', 'side']] },
-  candy:  { sky: ['#ffb8e1', '#fff3b8'], hill: ['#ff9ad0', '#f080c0'], ground: ['#a5f0d2', '#62d6ae'], bed: '#ffe3f1', sun: '🍭', deco: [['🍬', 'side'], ['🧁', 'side'], ['☁️', 'sky'], ['🍩', 'side'], ['🍦', 'side']] },
-  spooky: { sky: ['#241043', '#6c3a96'], hill: ['#3a2a55', '#2c2044'], ground: ['#47365f', '#2a2038'], bed: '#7e7498', sun: '🌕', stars: true, deco: [['🦇', 'sky'], ['🎃', 'side'], ['🕸️', 'side'], ['🦇', 'sky'], ['🌲', 'side']] }
+  day:    { sky: ['#6fc3ff', '#e2f5ff'], hill: ['#76cf72', '#5fbf63'], ground: ['#a4e68f', '#58ae5c'], bed: '#dccaa0', sun: '2600', deco: [['2601', 'sky'], ['2601', 'sky'], ['1f333', 'side'], ['1f333', 'side'], ['1f337', 'side']] },
+  sunset: { sky: ['#ff8a5c', '#ffd8a0'], hill: ['#c58a4a', '#a8723a'], ground: ['#e9b86e', '#c18a45'], bed: '#ecd6ac', sun: '2600', deco: [['2601', 'sky'], ['1f334', 'side'], ['1f334', 'side'], ['1f388', 'sky']] },
+  night:  { sky: ['#0d1535', '#2c3b78'], hill: ['#1f3a52', '#18304a'], ground: ['#2f6a55', '#1d4638'], bed: '#7d7a8c', sun: '1f319', stars: true, deco: [['2b50', 'sky'], ['2728', 'sky'], ['1f332', 'side'], ['1f332', 'side'], ['1f989', 'side']] },
+  desert: { sky: ['#74c9ff', '#ffeab4'], hill: ['#e3b36a', '#d39e55'], ground: ['#f6d792', '#dcae5e'], bed: '#cfae7c', sun: '2600', deco: [['1f335', 'side'], ['1f335', 'side'], ['2601', 'sky'], ['1f98e', 'side']] },
+  beach:  { sky: ['#6fdcff', '#eafcff'], hill: ['#58d2c0', '#3fbfb0'], ground: ['#f7e7a6', '#e9cf79'], bed: '#d8c28a', sun: '2600', deco: [['1f334', 'side'], ['1f334', 'side'], ['2601', 'sky'], ['1f41a', 'side'], ['26f5', 'sky']] },
+  space:  { sky: ['#05061c', '#2a1458'], hill: ['#46497a', '#383b66'], ground: ['#7a7ea0', '#4d5073'], bed: '#a7abcb', sun: '1fa90', stars: true, deco: [['2728', 'sky'], ['1f6f8', 'sky'], ['2604', 'sky'], ['1f311', 'side']] },
+  snow:   { sky: ['#a9dcff', '#f1faff'], hill: ['#eaf6ff', '#d7ebfa'], ground: ['#fafdff', '#cfe3f3'], bed: '#b9c9d8', sun: '2600', deco: [['2744', 'sky'], ['1f332', 'side'], ['26c4', 'side'], ['2744', 'sky'], ['1f332', 'side']] },
+  candy:  { sky: ['#ffb8e1', '#fff3b8'], hill: ['#ff9ad0', '#f080c0'], ground: ['#a5f0d2', '#62d6ae'], bed: '#ffe3f1', sun: '1f36d', deco: [['1f36c', 'side'], ['1f9c1', 'side'], ['2601', 'sky'], ['1f369', 'side'], ['1f366', 'side']] },
+  spooky: { sky: ['#241043', '#6c3a96'], hill: ['#3a2a55', '#2c2044'], ground: ['#47365f', '#2a2038'], bed: '#7e7498', sun: '1f315', stars: true, deco: [['1f987', 'sky'], ['1f383', 'side'], ['1f578', 'side'], ['1f987', 'sky'], ['1f332', 'side']] }
 };
 const DEFAULT_WORDS = ['BONK!', 'BOINK!', 'DONK!', 'BOP!', 'THWACK!'];
 
@@ -294,12 +310,9 @@ function buildScene(L, opts = {}) {
       S.twinkles.push({ c, ph: rnd() * 6.28 });
     }
   }
-  // scenery: real photo tiles where we have one, the emoji otherwise
+  // scenery: round real-photo tiles where we have one, a plain drawn disc otherwise
   const pic = (e, x, y, size, parent, extra = {}) => {
-    const url = window.BALLPARK_PIC_URL?.(e);
-    if (!url) return txt(e, { x, y, 'font-size': size, ...extra }, parent);
-    const g = el('g', { transform: `translate(${fx1(x)} ${fx1(y)})`, ...extra }, parent);
-    el('image', { href: url, x: fx1(-size / 2), y: fx1(-size / 2), width: fx1(size), height: fx1(size), preserveAspectRatio: 'xMidYMid slice', 'clip-path': 'inset(0 round 50%)' }, g);
+    const g = picNode(e, x, y, size, parent, { round: '50%', extra });
     return g;
   };
   const sunSize = Math.min(40, yH * 0.85);
@@ -310,7 +323,7 @@ function buildScene(L, opts = {}) {
       const size = 18 + rnd() * 12;
       const wrap = el('g', {}, svg), node = wrap;
       pic(emoji, 0, 0, size, wrap, { opacity: 0.95 });
-      const c = { node, x: W * (0.06 + rnd() * 0.88), y: yH * (0.22 + rnd() * 0.5), v: 3 + rnd() * 5, drift: emoji === '☁️' || emoji === '🛸' || emoji === '🦇' || emoji === '🎈' || emoji === '☄️' };
+      const c = { node, x: W * (0.06 + rnd() * 0.88), y: yH * (0.22 + rnd() * 0.5), v: 3 + rnd() * 5, drift: emoji === '2601' || emoji === '1f6f8' || emoji === '1f987' || emoji === '1f388' || emoji === '2604' };
       node.setAttribute('transform', `translate(${fx1(c.x)} ${fx1(c.y)})`);
       S.clouds.push(c);
     }
@@ -412,7 +425,7 @@ function buildScene(L, opts = {}) {
   const lh = el('g', {}, lg);
   el('line', { x1: 0, y1: -6, x2: 0, y2: -32, stroke: '#cbd5e1', 'stroke-width': 5, 'stroke-linecap': 'round' }, lh);
   el('line', { x1: 0, y1: -6, x2: 0, y2: -32, stroke: '#64748b', 'stroke-width': 1.5, 'stroke-linecap': 'round' }, lh);
-  if (L.fake) txt('🍌', { x: 0, y: -40, 'font-size': 30 }, lh);
+  if (L.fake) picNode('1f34c', 0, -40, 24, lh, { round: '50%', label: 'banana' });
   else el('circle', { cx: 0, cy: -37, r: 7, fill: '#e53935', stroke: '#7f1d1d', 'stroke-width': 2 }, lh);
   S.leverPos = { x: lx, y: ly };
   S.setLever = a => { S.leverAngle = a; lh.setAttribute('transform', `rotate(${fx1(a)} 0 -6)`); };
@@ -437,11 +450,8 @@ function buildScene(L, opts = {}) {
       const ig = el('g', {}, itemLayer);
       el('ellipse', { cx: p.x, cy: p.y + lay.size * 0.42, rx: lay.size * 0.36, ry: lay.size * 0.09, fill: 'rgba(0,0,0,.18)' }, itemLayer);
       const inner = el('g', {}, ig);
-      const url = window.BALLPARK_PIC_URL?.(e), sz = lay.size * 0.9;
-      if (url) {                                             // real photo, clipped to a rounded tile
-        el('image', { href: url, x: fx1(-sz / 2), y: fx1(-sz / 2), width: fx1(sz), height: fx1(sz), preserveAspectRatio: 'xMidYMid slice', 'clip-path': 'inset(0 round 18%)' }, inner);
-      } else txt(e, { x: 0, y: 0, 'font-size': fx1(lay.size) }, inner);
-      if (hat) txt(hat, { x: fx1(lay.size * 0.1), y: fx1(-lay.size * 0.5), 'font-size': fx1(lay.size * 0.5) }, inner);
+      picNode(e, 0, 0, lay.size * 0.9, inner, { label: side.label });       // real photo tile, or a drawn badge
+      if (hat) picNode(hat, lay.size * 0.1, -lay.size * 0.5, lay.size * 0.45, inner, { round: '50%' });
       const it = { g: ig, x: p.x, y: p.y, dx: 0, dy: 0, rot: 0, sc: 1, seed: (rnd() - 0.5) * 2 };
       it.apply = () => ig.setAttribute('transform', `translate(${fx1(it.x + it.dx)} ${fx1(it.y + it.dy)}) rotate(${fx1(it.rot)}) scale(${it.sc.toFixed(3)})`);
       it.apply();
@@ -537,7 +547,7 @@ function burst(S, x, y, kind) {
   const colors = ['#ff6a3d', '#ffd23f', '#3b6cf5', '#2fc27a', '#ff7ac8', '#ffffff'];
   const make = i => {
     if (kind === 'confetti') return el('rect', { x: -3.5, y: -2.5, width: 7, height: 5, rx: 1, fill: colors[i % colors.length] }, S.fx);
-    if (kind === 'sparkle') return txt('✨', { 'font-size': fx1(14 + Math.random() * 8) }, S.fx);
+    if (kind === 'sparkle') { const s = starNode(5 + Math.random() * 4, S.fx); s.setAttribute('fill', '#fff6b0'); return s; }
     return starNode(6 + Math.random() * 5, S.fx);
   };
   if (reduced()) {
@@ -695,16 +705,16 @@ async function playChoice(L, side) {
 
 /* ------------------------------------------------------------------ profile */
 const PROFILES = {
-  chaos:       { name: 'Chaotic Lever-Puller',       emoji: '🤪', blurb: 'You have never met a lever you did not want to yank. Somewhere, a trolley company has installed a tiny bell that rings whenever you walk in.' },
-  bystander:   { name: 'Professional Bystander',     emoji: '🧍', blurb: 'Hands in pockets, eyes calm. You watched trolley after trolley roll by and judged them all silently. Very zen. Slightly alarming.' },
-  utilitarian: { name: 'Strict Utilitarian',         emoji: '🧮', blurb: 'Numbers first, feelings second. You counted the ducks, the socks and the Saturdays, and picked the bigger good almost every time.' },
-  crowd:       { name: 'Crowd Whisperer',            emoji: '📣', blurb: 'You and the crowd are basically the same person. Suspicious? Maybe. Great at parties? Definitely.' },
-  contrarian:  { name: 'Lovable Contrarian',         emoji: '🦄', blurb: 'You pick what almost nobody else picks. Crowds are for following; you are for surprising everyone, including the trolley.' },
-  reluctant:   { name: 'Reluctant Lever-Toucher',    emoji: '🤏', blurb: 'A lever has to earn your fingerprints. You pull only when it really, truly matters (or when a banana is involved).' },
-  handson:     { name: 'Hands-On Problem Solver',    emoji: '🛠️', blurb: 'If there is a lever, there is a solution. You believe in action, in snacks, and in fixing things before they roll away.' },
-  gut:         { name: 'Lightning Lever-Hand',       emoji: '⚡', blurb: 'You decided before the trolley finished loading. Reading is optional, instincts are free, and the lever never knew what hit it.' },
-  overthinker: { name: 'Professional Overthinker',   emoji: '🧠', blurb: 'You weighed every duck, interrogated every sock, and still had follow-up questions. The trolley waited politely. The trolley is tired.' },
-  balanced:    { name: 'Perfectly Balanced Thinker', emoji: '⚖️', blurb: 'Half lever, half shrug. You weigh every duck, hear every philosopher out, and still find time for snacks. Wise.' }
+  chaos:       { name: 'Chaotic Lever-Puller',       emoji: '1f92a', blurb: 'You have never met a lever you did not want to yank. Somewhere, a trolley company has installed a tiny bell that rings whenever you walk in.' },
+  bystander:   { name: 'Professional Bystander',     emoji: '1f9cd', blurb: 'Hands in pockets, eyes calm. You watched trolley after trolley roll by and judged them all silently. Very zen. Slightly alarming.' },
+  utilitarian: { name: 'Strict Utilitarian',         emoji: '1f9ee', blurb: 'Numbers first, feelings second. You counted the ducks, the socks and the Saturdays, and picked the bigger good almost every time.' },
+  crowd:       { name: 'Crowd Whisperer',            emoji: '1f4e3', blurb: 'You and the crowd are basically the same person. Suspicious? Maybe. Great at parties? Definitely.' },
+  contrarian:  { name: 'Lovable Contrarian',         emoji: '1f984', blurb: 'You pick what almost nobody else picks. Crowds are for following; you are for surprising everyone, including the trolley.' },
+  reluctant:   { name: 'Reluctant Lever-Toucher',    emoji: '1f90f', blurb: 'A lever has to earn your fingerprints. You pull only when it really, truly matters (or when a banana is involved).' },
+  handson:     { name: 'Hands-On Problem Solver',    emoji: '1f6e0', blurb: 'If there is a lever, there is a solution. You believe in action, in snacks, and in fixing things before they roll away.' },
+  gut:         { name: 'Lightning Lever-Hand',       emoji: '26a1', blurb: 'You decided before the trolley finished loading. Reading is optional, instincts are free, and the lever never knew what hit it.' },
+  overthinker: { name: 'Professional Overthinker',   emoji: '1f9e0', blurb: 'You weighed every duck, interrogated every sock, and still had follow-up questions. The trolley waited politely. The trolley is tired.' },
+  balanced:    { name: 'Perfectly Balanced Thinker', emoji: '2696', blurb: 'Half lever, half shrug. You weigh every duck, hear every philosopher out, and still find time for snacks. Wise.' }
 };
 
 function computeStats() {
@@ -783,8 +793,8 @@ function buildLogo() {
     el('path', { d: `M110 30 L110 62 C110 78 ${x2} 76 ${x2} 94 L${x2} 126`, stroke: '#e9d9b0', 'stroke-width': 7, fill: 'none' }, svg);
   };
   track(52, '#7a5230'); track(168, '#7a5230');
-  txt('🐥', { x: 52, y: 108, 'font-size': 30 }, svg);
-  txt('🐥', { x: 168, y: 108, 'font-size': 30 }, svg);
+  picNode('1f425', 52, 106, 28, svg, { round: '50%', label: 'duck' });
+  picNode('1f425', 168, 106, 28, svg, { round: '50%', label: 'duck' });
   const rumble = el('g', { class: 'logo-rumble' }, svg);
   const tr = makeTrolley(rumble);
   tr.root.setAttribute('transform', 'translate(110 62) scale(1.25)');
@@ -900,7 +910,7 @@ function showEnd() {
   const prof = pickProfile(s);
   lastProfile = { s, prof };
   show('end');
-  $('#pEmoji').textContent = prof.emoji;
+  $('#pEmoji').innerHTML = BALLPARK_PIC(prof.emoji, 'bp-pic', prof.name);
   $('#pName').textContent = prof.name;
   $('#pBlurb').textContent = prof.blurb;
   $('#stPull').textContent = `${s.pulls}/${N}`;
@@ -940,14 +950,14 @@ function shareText() {
   const rows = [];
   for (let r = 0; r < 4; r++) {
     let row = '';
-    for (let c = 0; c < 7; c++) row += choices[r * 7 + c] === 1 ? '🟧' : '🟦';
+    for (let c = 0; c < 7; c++) row += choices[r * 7 + c] === 1 ? '\u25A0' : '\u25A1';   // plain squares, never colour emoji
     rows.push(row);
   }
   let url = '';
   try { url = location.origin + location.pathname; } catch { /* ignore */ }
-  return `🚋 TROLLEY TROUBLE: I'm a ${prof.name} ${prof.emoji}\n` +
+  return `TROLLEY TROUBLE: I'm a ${prof.name}\n` +
     `Pulled the lever ${s.pulls}/${N} times · sided with the (simulated) crowd ${Math.round(s.m * 100)}%\n` +
-    rows.join('\n') + '\n🟧 pulled  🟦 did nothing\n' + url;
+    rows.join('\n') + '\n\u25A0 pulled  \u25A1 did nothing\n' + url;
 }
 async function copyText(t) {
   try { if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(t); return true; } } catch { /* fall through */ }
@@ -974,7 +984,8 @@ function setMuted(m) {
   muted = m;
   store.set('muted', muted);
   const b = $('#muteBtn');
-  b.textContent = muted ? '🔇' : '🔊';
+  b.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/>' +
+    (muted ? '<path d="M17 9l5 6M22 9l-5 6"/></svg>' : '<path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>');
   b.setAttribute('aria-pressed', String(muted));
   b.setAttribute('aria-label', muted ? 'Unmute sound' : 'Mute sound');
 }

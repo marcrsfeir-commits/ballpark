@@ -54,21 +54,21 @@ const GAMES = [
     id: 'password', name: 'PASSWORD PANIC', path: 'games/password/', insp: 'inspired by neal.fun',
     blurb: 'Pick a password. Then a planet. Then a leap year. Then a fish. It never ends.',
     bg: 'linear-gradient(160deg,#fbfaf6 0%,#ece9df 100%)', fg: '#1b1b1f', accent: '#e5484d', glow: 'rgba(229,72,77,.15)',
-    art: `<svg viewBox="0 0 100 80" aria-hidden="true"><rect x="8" y="26" width="84" height="30" rx="8" fill="#fff" stroke="#1b1b1f" stroke-width="3"/><text x="16" y="47" font-size="15" font-weight="700" fill="#1b1b1f" font-family="Consolas,monospace">May#🐟144</text><rect x="20" y="62" width="60" height="10" rx="3" fill="#e5484d"/><rect x="20" y="10" width="60" height="10" rx="3" fill="#30a46c"/></svg>`,
+    art: `<svg viewBox="0 0 100 80" aria-hidden="true"><rect x="8" y="26" width="84" height="30" rx="8" fill="#fff" stroke="#1b1b1f" stroke-width="3"/><text x="15" y="46.5" font-size="13" font-weight="700" fill="#1b1b1f" font-family="Consolas,monospace">May#</text><g fill="#f59e0b"><ellipse cx="52" cy="41.5" rx="6" ry="4"/><path d="M57 41.5 l4.5 -4 v8 z"/></g><circle cx="49" cy="40.5" r="1" fill="#1b1b1f"/><text x="64" y="46.5" font-size="13" font-weight="700" fill="#1b1b1f" font-family="Consolas,monospace">144</text><rect x="20" y="62" width="60" height="10" rx="3" fill="#e5484d"/><rect x="20" y="10" width="60" height="10" rx="3" fill="#30a46c"/></svg>`,
   },
   {
     id: 'fuse', name: 'FUSE', path: 'games/fuse/', insp: 'inspired by Infinite Craft',
     blurb: 'Water + Fire = Steam. Start with four elements and fuse your way to thousands of things.',
     bg: 'linear-gradient(160deg,#ffffff 0%,#eef0ff 100%)', fg: '#1d1d22', accent: '#6366f1', glow: 'rgba(99,102,241,.18)',
-    art: `<svg viewBox="0 0 110 80" aria-hidden="true"><rect x="4" y="12" width="44" height="22" rx="6" fill="#fff" stroke="#c9c9d3"/><text x="10" y="28" font-size="12" font-family="Segoe UI Emoji,sans-serif">💧</text><text x="24" y="28" font-size="10" font-weight="700" font-family="Segoe UI,sans-serif" fill="#1d1d22">Water</text>
-      <rect x="60" y="12" width="40" height="22" rx="6" fill="#fff" stroke="#c9c9d3"/><text x="65" y="28" font-size="12" font-family="Segoe UI Emoji,sans-serif">🔥</text><text x="79" y="28" font-size="10" font-weight="700" font-family="Segoe UI,sans-serif" fill="#1d1d22">Fire</text>
-      <rect x="28" y="48" width="52" height="24" rx="6" fill="#eef0ff" stroke="#6366f1" stroke-width="2"/><text x="34" y="65" font-size="12" font-family="Segoe UI Emoji,sans-serif">💨</text><text x="49" y="65" font-size="10" font-weight="700" font-family="Segoe UI,sans-serif" fill="#1d1d22">Steam</text></svg>`,
+    art: `<svg viewBox="0 0 110 80" aria-hidden="true"><rect x="4" y="12" width="44" height="22" rx="6" fill="#fff" stroke="#c9c9d3"/><path d="M16 16.5 q-5 6.5 -5 9.5 a5 5 0 0 0 10 0 q0 -3 -5 -9.5z" fill="#3b82f6"/><text x="24" y="28" font-size="10" font-weight="700" font-family="Segoe UI,sans-serif" fill="#1d1d22">Water</text>
+      <rect x="60" y="12" width="40" height="22" rx="6" fill="#fff" stroke="#c9c9d3"/><path d="M71 31 a5 5 0 0 1 -5 -5 c0 -4 4 -5 3 -9.5 c4 2 7 5.5 7 9.5 a5 5 0 0 1 -5 5z" fill="#f97316"/><path d="M71 31 a2.5 2.5 0 0 1 -2.5 -2.5 c0 -2 2 -2.5 2 -4.5 c2 1 3 2.6 3 4.5 a2.5 2.5 0 0 1 -2.5 2.5z" fill="#fde047"/><text x="79" y="28" font-size="10" font-weight="700" font-family="Segoe UI,sans-serif" fill="#1d1d22">Fire</text>
+      <rect x="28" y="48" width="52" height="24" rx="6" fill="#eef0ff" stroke="#6366f1" stroke-width="2"/><g stroke="#94a3b8" stroke-width="2" fill="none" stroke-linecap="round"><path d="M34 56 h7 a2.5 2.5 0 1 0 -2.5 -2.5"/><path d="M34 60 h10"/><path d="M34 64 h6 a2.5 2.5 0 1 1 -2.5 2.5"/></g><text x="49" y="65" font-size="10" font-weight="700" font-family="Segoe UI,sans-serif" fill="#1d1d22">Steam</text></svg>`,
   },
   {
     id: 'auction', name: 'GOING ONCE', path: 'games/auction/', insp: 'inspired by neal.fun',
     blurb: 'Ruby slippers, a T. rex, Lennon\'s tooth. Guess what famous lots really sold for.',
     bg: 'linear-gradient(160deg,#f5efe3 0%,#e7dcc4 100%)', fg: '#2a2118', accent: '#2a2118', onAccent: '#f5d77e', glow: 'rgba(201,162,74,.3)',
-    art: `<svg viewBox="0 0 100 80" aria-hidden="true"><rect x="22" y="6" width="56" height="56" rx="3" fill="url(#gf)"/><rect x="29" y="13" width="42" height="42" fill="#fffdf7"/><text x="50" y="44" font-size="24" text-anchor="middle" font-family="Segoe UI Emoji,sans-serif">👠</text><defs><linearGradient id="gf" x1="0" x2="1"><stop offset="0" stop-color="#c9a24a"/><stop offset=".5" stop-color="#f5d77e"/><stop offset="1" stop-color="#b8892c"/></linearGradient></defs><text x="82" y="76" font-size="20" font-family="Segoe UI Emoji,sans-serif">🔨</text></svg>`,
+    art: `<svg viewBox="0 0 100 80" aria-hidden="true"><rect x="22" y="6" width="56" height="56" rx="3" fill="url(#gf)"/><rect x="29" y="13" width="42" height="42" fill="#fffdf7"/><path d="M35 27 q3 12 13 14 l14 3 q5 1 5 5 v1 H50 q-7 0 -11 -6 l-1.5 9 h-3 z" fill="#b91c1c"/><path d="M38 30 q2 7 8 9" stroke="#fca5a5" stroke-width="1.5" fill="none"/><defs><linearGradient id="gf" x1="0" x2="1"><stop offset="0" stop-color="#c9a24a"/><stop offset=".5" stop-color="#f5d77e"/><stop offset="1" stop-color="#b8892c"/></linearGradient></defs><g transform="rotate(-35 89 66)"><rect x="81" y="56" width="17" height="8" rx="2" fill="#6b4423"/><rect x="88" y="64" width="3" height="15" rx="1" fill="#8b5a2b"/></g></svg>`,
   },
   {
     id: 'lifelist', name: 'BEEN THERE', path: 'games/lifelist/', insp: 'inspired by neal.fun',
@@ -80,13 +80,26 @@ const GAMES = [
     id: 'trolley', name: 'TROLLEY TROUBLE', path: 'games/trolley/', insp: 'inspired by neal.fun',
     blurb: 'Pull the lever or don\'t. 28 ridiculous dilemmas, one questionable conscience.',
     bg: 'linear-gradient(160deg,#fefce8 0%,#fde68a 100%)', fg: '#292524', accent: '#292524', onAccent: '#fde68a', glow: 'rgba(250,204,21,.3)',
-    art: `<svg viewBox="0 0 110 80" aria-hidden="true"><path d="M2 60 H50 L100 30 M50 60 H108" stroke="#292524" stroke-width="3" fill="none"/><rect x="10" y="44" width="26" height="14" rx="3" fill="#ef4444"/><circle cx="16" cy="60" r="3" fill="#292524"/><circle cx="30" cy="60" r="3" fill="#292524"/><line x1="50" y1="60" x2="58" y2="44" stroke="#292524" stroke-width="3"/><circle cx="58" cy="43" r="3.5" fill="#ef4444"/><text x="86" y="27" font-size="14" font-family="Segoe UI Emoji,sans-serif">🦆</text><text x="94" y="56" font-size="14" font-family="Segoe UI Emoji,sans-serif">🧦</text></svg>`,
+    art: `<svg viewBox="0 0 110 80" aria-hidden="true"><path d="M2 60 H50 L100 30 M50 60 H108" stroke="#292524" stroke-width="3" fill="none"/><rect x="10" y="44" width="26" height="14" rx="3" fill="#ef4444"/><circle cx="16" cy="60" r="3" fill="#292524"/><circle cx="30" cy="60" r="3" fill="#292524"/><line x1="50" y1="60" x2="58" y2="44" stroke="#292524" stroke-width="3"/><circle cx="58" cy="43" r="3.5" fill="#ef4444"/><g fill="#facc15"><ellipse cx="92" cy="22" rx="7" ry="4.5"/><circle cx="86.5" cy="15.5" r="3.6"/><path d="M98 20 l4 -3 v4z"/></g><path d="M83 15 l-3.5 1.2 l3.5 1.4z" fill="#f97316"/><circle cx="86" cy="14.5" r=".8" fill="#292524"/><path d="M98 40 h7 v9 l-1 4 q-1 3 -5 3 h-5 q-3 0 -3 -3 q0 -3 3 -3 h4z" fill="#ef4444"/><rect x="98" y="40" width="7" height="3" fill="#fff"/></svg>`,
   },
   {
     id: 'robot', name: 'NOT A ROBOT', path: 'games/robot/', insp: 'inspired by neal.fun',
     blurb: 'Prove you\'re human. Then prove it again. And again. The captcha is getting suspicious.',
     bg: 'linear-gradient(160deg,#f8fafc 0%,#e2e8f0 100%)', fg: '#0f172a', accent: '#2563eb', glow: 'rgba(37,99,235,.18)',
-    art: `<svg viewBox="0 0 110 80" aria-hidden="true"><rect x="6" y="20" width="98" height="40" rx="4" fill="#fff" stroke="#cbd5e1" stroke-width="2"/><rect x="16" y="30" width="20" height="20" rx="3" fill="#fff" stroke="#94a3b8" stroke-width="2"/><path d="M19 40 l5 5 l9 -11" stroke="#22c55e" stroke-width="3" fill="none"/><text x="44" y="45" font-size="10" font-weight="700" font-family="Segoe UI,sans-serif" fill="#0f172a">I'm not a robot</text><text x="86" y="16" font-size="16" font-family="Segoe UI Emoji,sans-serif">🤖</text></svg>`,
+    art: `<svg viewBox="0 0 110 80" aria-hidden="true"><rect x="6" y="20" width="98" height="40" rx="4" fill="#fff" stroke="#cbd5e1" stroke-width="2"/><rect x="16" y="30" width="20" height="20" rx="3" fill="#fff" stroke="#94a3b8" stroke-width="2"/><path d="M19 40 l5 5 l9 -11" stroke="#22c55e" stroke-width="3" fill="none"/><text x="42" y="44.5" font-size="9" font-weight="700" font-family="Segoe UI,sans-serif" fill="#0f172a">I'm not a robot</text><line x1="94" y1="5" x2="94" y2="1.5" stroke="#64748b" stroke-width="1.6"/><circle cx="94" cy="1.8" r="1.5" fill="#ef4444"/><rect x="86" y="5" width="16" height="12" rx="3" fill="#64748b"/><circle cx="90.8" cy="10.5" r="1.8" fill="#e0f2fe"/><circle cx="97.2" cy="10.5" r="1.8" fill="#e0f2fe"/></svg>`,
+  },
+  {
+    id: 'sandbox', name: 'SANDLOT', path: 'games/sandbox/', insp: 'original physics sandbox',
+    blurb: 'Sand, water, lava, acid, little walkers and bombs. Then lightning, viruses, black holes and a nuke.',
+    bg: 'linear-gradient(160deg,#1b2233 0%,#0b0e16 75%)', accent: '#f2c14e', onAccent: '#1b1405', glow: 'rgba(242,193,78,.3)',
+    art: `<svg viewBox="0 0 110 80" aria-hidden="true" shape-rendering="crispEdges">
+      <rect x="0" y="70" width="110" height="10" fill="#70727c"/>${[0, 1, 2, 3, 4, 5, 6, 7, 8].map(i => `<rect x="${2 + i * 4}" y="${70 - [2, 5, 8, 10, 11, 10, 8, 5, 2][i] * 2}" width="4" height="${[2, 5, 8, 10, 11, 10, 8, 5, 2][i] * 2}" fill="${i % 2 ? '#d9b874' : '#e6c682'}"/>`).join('')}
+      <rect x="44" y="56" width="4" height="14" fill="#70727c"/><rect x="74" y="56" width="4" height="14" fill="#70727c"/><rect x="48" y="60" width="26" height="10" fill="#2c76e2"/><rect x="48" y="60" width="26" height="2" fill="#5b9cf0"/>
+      <rect x="84" y="62" width="10" height="8" fill="#b9844a"/><rect x="84" y="62" width="10" height="1" fill="#6e4622"/>
+      <rect x="99" y="56" width="2" height="2" fill="#eec49e"/><rect x="98" y="58" width="4" height="2" fill="#eec49e"/><rect x="99" y="60" width="2" height="4" fill="#e65050"/><rect x="98" y="64" width="2" height="6" fill="#343e70"/><rect x="101" y="64" width="2" height="6" fill="#343e70"/>
+      <path d="M66 4 L58 24 H66 L60 42 L76 18 H68 L74 4 Z" fill="#fde047"/>
+      <rect x="20" y="20" width="4" height="4" fill="#ff7a1a"/><rect x="24" y="16" width="4" height="4" fill="#ffb347"/><rect x="16" y="16" width="4" height="4" fill="#ffd27a"/><rect x="20" y="12" width="4" height="4" fill="#fff1c2"/><rect x="28" y="22" width="3" height="3" fill="#ff7a1a"/><rect x="13" y="24" width="3" height="3" fill="#ff9a3a"/>
+      <rect x="86" y="26" width="3" height="3" fill="#b434e2"/><rect x="90" y="30" width="3" height="3" fill="#d070ff"/><rect x="83" y="31" width="3" height="3" fill="#8a2ab0"/><rect x="88" y="35" width="3" height="3" fill="#b434e2"/></svg>`,
   },
 ];
 
@@ -112,7 +125,7 @@ function render() {
     a.className = 'card';
     a.href = g.path;
     a.style.cssText = `--bg:${g.bg};--fg:${g.fg || '#fff'};--accent:${g.accent};--on-accent:${g.onAccent || (g.fg ? '#fff' : '#0b0b10')};--glow:${g.glow}`;
-    a.innerHTML = `${playedToday ? '<span class="tick" title="Played today">✓</span>' : ''}
+    a.innerHTML = `${playedToday ? '<span class="tick" title="Played today"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>' : ''}
       <div class="art">${g.art}</div>
       <h2>${g.name}</h2>
       <p>${g.blurb}</p>
@@ -131,7 +144,7 @@ function render() {
     <div class="meta"><span class="status">${done ? `${done} PLAYED TODAY` : 'PLAY A GAME FIRST'}</span><button class="play" type="button">COPY ▸</button></div>`;
   card.querySelector('button').onclick = () => {
     const text = `BALLPARK · ${t}\n${lines.join('\n')}`;
-    navigator.clipboard?.writeText(text).then(() => { card.querySelector('button').textContent = 'COPIED ✓'; });
+    navigator.clipboard?.writeText(text).then(() => { card.querySelector('button').textContent = 'COPIED'; });
   };
   wrap.append(card);
   document.getElementById('todayCount').textContent = `${done} / ${GAMES.length}`;
@@ -156,7 +169,7 @@ async function offlineBadge() {
     await navigator.serviceWorker.ready;
     for (let i = 0; i < 40; i++) {                       // wait for the install to finish caching
       const keys = await caches.keys();
-      if (keys.some(k => k.startsWith('ballpark-'))) { el.textContent = '✓ PLAYABLE OFFLINE'; el.hidden = false; return; }
+      if (keys.some(k => k.startsWith('ballpark-'))) { el.innerHTML = '<svg viewBox="0 0 16 16" width="11" height="11" aria-hidden="true" style="vertical-align:-1px;margin-right:4px"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>PLAYABLE OFFLINE'; el.hidden = false; return; }
       await new Promise(r => setTimeout(r, 500));
     }
   } catch { /* storage blocked (private mode) — the site still works online */ }

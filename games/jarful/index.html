@@ -11,15 +11,16 @@
 <body data-bp-pos="tl">
 <main class="card">
   <header>
-    <span class="brand">≋ JARFUL</span>
+    <span class="brand"><svg class="logo" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3h10l-1 11H4z" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="6" cy="11" r="1.5" fill="var(--accent)"/><circle cx="9.6" cy="11.4" r="1.5" fill="currentColor"/><circle cx="8" cy="8.4" r="1.5" fill="var(--accent)"/></svg>JARFUL</span>
     <nav id="modes"><button data-mode="daily" class="on">Daily</button><button data-mode="overunder">Over/Under</button><button data-mode="fill">Fill To</button><button data-mode="practice">Practice</button></nav>
     <span id="dots" class="dots"></span>
   </header>
   <div class="line"><i id="lineFill"></i></div>
   <div id="view" class="view">
     <div id="overlay" class="overlay" hidden></div>
-    <span class="spin">⟲ drag to spin</span>
-    <button id="mute" class="mute" aria-label="Toggle sound">🔊</button>
+    <span class="spin"><svg class="ic" viewBox="0 0 12 12" aria-hidden="true"><path d="M9.8 4.2A4.2 4.2 0 1 0 10.2 7" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M10.6 1.4v3.4H7.2z" fill="currentColor"/></svg> drag to spin</span>
+    <div id="glnote" class="glnote" hidden>Graphics reset, restoring the jar. The clock is paused.</div>
+    <button id="mute" class="mute" aria-label="Toggle sound"></button>
   </div>
   <footer id="panel">
     <div class="labels"><span id="ask">HOW MANY?</span><span id="timer">:15</span></div>

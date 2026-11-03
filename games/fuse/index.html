@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Fuse · BALLPARK</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ctext x='8' y='13' font-size='13' text-anchor='middle'%3E%E2%9C%A8%3C/text%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='6' cy='8' r='4.5' fill='%236366f1'/%3E%3Ccircle cx='10' cy='8' r='4.5' fill='%23f59e0b' fill-opacity='.85'/%3E%3C/svg%3E">
 <style>
   [hidden] { display: none !important; }
   * { box-sizing: border-box; }
@@ -18,7 +18,7 @@
   .tools { position: absolute; bottom: 14px; right: 14px; display: flex; gap: 6px; }
   .tools button { border: 1px solid #ddd; background: #fff; border-radius: 10px; padding: 7px 11px; font: 600 13px "Segoe UI", sans-serif; cursor: pointer; }
   .item { position: absolute; display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border: 1px solid #d6d6dc; border-radius: 9px; background: #fff;
-    font: 600 16px "Segoe UI", "Segoe UI Emoji", system-ui, sans-serif; white-space: nowrap; cursor: grab; box-shadow: 0 1px 2px rgba(0,0,0,.04); transition: box-shadow .12s, transform .12s; touch-action: none; }
+    font: 600 16px "Segoe UI", system-ui, sans-serif; white-space: nowrap; cursor: grab; box-shadow: 0 1px 2px rgba(0,0,0,.04); transition: box-shadow .12s, transform .12s; touch-action: none; }
   .item .e { font-size: 18px; }
   .item:hover { border-color: #9a9aa6; }
   .item.drag { cursor: grabbing; box-shadow: 0 8px 20px rgba(0,0,0,.14); transform: scale(1.04); z-index: 1000; }
@@ -39,6 +39,7 @@
   .toast { position: absolute; left: 50%; top: 16px; transform: translateX(-50%); padding: 9px 14px; border-radius: 10px; background: #1d1d22; color: #fff; font-size: 14px; z-index: 2000; pointer-events: none; }
   .first { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); text-align: center; color: #a0a0aa; font-size: 15px; pointer-events: none; }
   @media (max-width: 720px) { .app { grid-template-columns: 1fr; grid-template-rows: 1fr 38%; } .side { border-left: 0; border-top: 1px solid #e6e6ea; } .brand h1 { font-size: 20px; } }
+  .tools #mute { display: inline-flex; align-items: center; }
   .e .ph { width: 1.6em; height: 1.6em; border-radius: 6px; object-fit: cover; vertical-align: middle; display: inline-block; }
 </style>
 </head>
@@ -47,7 +48,7 @@
   <div class="board" id="board">
     <div class="brand"><h1>Fuse</h1><p>Drag things together to make new things.</p></div>
     <div class="first" id="first">Drag an element from the list onto the board,<br>then drop one on top of another. (Or tap two of them.)</div>
-    <div class="tools"><button id="clear">Clear board</button><button id="mute">🔊</button></div>
+    <div class="tools"><button id="clear">Clear board</button><button id="mute" aria-label="Sound on"></button></div>
     <div id="toast" class="toast" hidden></div>
   </div>
   <aside class="side">
@@ -57,6 +58,7 @@
   </aside>
 </div>
 <script src="../../shared/bp.js"></script>
+<script src="../../shared/pic.js"></script>
 <script type="module" src="game.js"></script>
 </body>
 </html>
