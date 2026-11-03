@@ -196,6 +196,7 @@
     g[i] = 0; dat[i] = 0;
     return true;
   }
+  const thin = t => KIND[t] === K_GAS || KIND[t] === K_FIRE;
   function updParticles() {
     const grav = 0.11 * gdir;
     for (let p = pn - 1; p >= 0; p--) {
@@ -209,7 +210,7 @@
         if (PX[p] < 0 || PY[p] < 0 || PX[p] >= W || PY[p] >= H) killP(p);
         continue;
       }
-      const k = KIND[t];
+      const k = KIND[t], heavy = k !== K_GAS && k !== K_FIRE;
       vy += k === K_GAS || k === K_FIRE ? -grav * .4 : grav;
       vx *= .995; vy *= .995;
       for (const w of wells) { const dx = w.x - PX[p], dy = w.y - PY[p], d = Math.sqrt(dx * dx + dy * dy) + .5; if (d < 60) { const f = 1.6 / (d + 3); vx += dx / d * f - dy / d * f * .6; vy += dy / d * f + dx / d * f * .6; } }
@@ -224,7 +225,7 @@
           dead = true; break;
         }
         const j = (ny | 0) * W + (nx | 0);
-        if (g[j] !== 0 || mask[j]) { settled = true; break; }
+        if ((g[j] !== 0 && !(heavy && thin(g[j]))) || mask[j]) { settled = true; break; } // debris flies through smoke and flames
         x = nx; y = ny;
       }
       if (!dead && !settled && sp < .25) { // slowed down: settle if resting on something
@@ -235,7 +236,7 @@
       if (dead) { killP(p); continue; }
       if (settled) {
         const i = (y | 0) * W + (x | 0);
-        if (g[i] === 0 && !mask[i]) set(i, t);
+        if ((g[i] === 0 || (heavy && thin(g[i]))) && !mask[i]) set(i, t);
         else { const up = i - (gdir || 1) * W; if (up >= 0 && up < N && g[up] === 0 && !mask[up]) set(up, t); }
         killP(p); continue;
       }
@@ -491,17 +492,18 @@
         gas(x, y, i, .55); break;
       }
       case VIRUS: {
-        let life = dat[i] - (rnd() < .6 ? 1 : 0);
+        let life = dat[i] - (rnd() < .4 ? 1 : 0);
         if (life <= 0) { set(i, rnd() < .55 ? SLIME : DUST, 0); return; }
         dat[i] = life;
-        if (rnd() < .5) {
-          const k = rn4(x, y);
+        for (let a = rnd() < .35 ? 2 : 1; a > 0; a--) {
+          if (rnd() > .85) continue;
+          const k = rn8(x, y);
           if (k >= 0) {
             const tk = g[k];
-            if (tk === FIRE || tk === LAVA || tk === BURN) { set(i, FIRE); return; }
+            if (tk === FIRE || tk === LAVA || tk === BURN || tk === PLASMA) { if (rnd() < .35) { set(i, FIRE); return; } continue; }
             if (tk && tk !== VIRUS && tk !== SLIME && tk !== DUST && tk !== BOLT && tk !== SMOKE && tk !== STEAM) {
-              const imm = tk === METAL || tk === GLASS || tk === CLONE ? .03 : 1;
-              if (rnd() < imm) set(k, VIRUS, 90 + rndi(60));
+              const imm = tk === CLONE ? .02 : tk === METAL || tk === GLASS ? .1 : 1;
+              if (rnd() < imm) set(k, VIRUS, 130 + rndi(90));
             }
           }
         }
@@ -744,17 +746,18 @@
         if (t === WATER) { if (rnd() < .3) set(i, STEAM); else { const d = Math.sqrt(d2) + .5; launch(i, dx / d * 2, dy / d * 2 - 1); } continue; }
         const hard = KIND[t] === K_SOLID;
         if (hard && (t === CLONE || (d2 > inner && rnd() > power * .6) || rnd() > .55 + power * .4)) { if (FLAM[t] > 0) ignite(i); continue; }
-        const d = Math.sqrt(d2) + .5, sp = (1.2 + rnd() * 2.6) * (1.25 - d / r) * Math.min(2, .7 + r / 14);
-        if (rnd() < .45 && launch(i, dx / d * sp + (rnd() - .5), dy / d * sp - rnd() * 1.2)) continue;
+        const d = Math.sqrt(d2) + .5, sp = (1.8 + rnd() * 3.6) * (1.3 - d / r) * Math.min(2.6, .8 + r / 10);
+        if (rnd() < .8 && launch(i, dx / d * sp * 1.15 + (rnd() - .5), (dy / d * .45 - .85 - rnd() * .5) * sp * (gdir || 1))) continue; // ejecta fans up and out of the crater
         if (FLAM[t] > 0 && rnd() < .5) ignite(i);
         else if (t !== CLONE) set(i, rnd() < .35 ? FIRE : 0, rnd() < .35 ? 8 + rndi(10) : 0);
       }
     }
-    const reach = r * 2.6;
+    shockwave(cx, cy, r, power);
+    const reach = r * 3.2;
     for (const b of bodies) {
       const dx = b.x - cx, dy = b.y - cy, d = Math.hypot(dx, dy) + .5;
       if (d > reach) continue;
-      const k = (1 - d / reach) * (1.2 + r * .18);
+      const k = (1 - d / reach) * (1.6 + r * .24);
       b.vx += dx / d * k; b.vy += dy / d * k - k * .3;
       if (isBomb(b)) b.fuse = Math.min(b.fuse, 4 + rndi(6));
       else hurtBody(b, k * 14);
@@ -762,7 +765,7 @@
     for (const c of creatures) {
       const dx = c.x - cx, dy = c.y - 3 - cy, d = Math.hypot(dx, dy) + .5;
       if (d > reach) continue;
-      const k = (1 - d / reach) * (1 + r * .15);
+      const k = (1 - d / reach) * (1.4 + r * .2);
       c.vx += dx / d * k; c.vy += dy / d * k - k * .4;
       if (d < r * 1.3 && c.st === 'ok') kill(c, 'blown up', true);
     }
@@ -770,13 +773,33 @@
       const dx = p.x - cx, dy = p.y - cy, d = Math.hypot(dx, dy) + .5; if (d > reach) continue;
       const k = (1 - d / reach) * (1.6 + r * .12); p.ox -= dx / d * k; p.oy -= dy / d * k + k * .3; rg.hp -= k * 2;
     }
-    for (let p = 0; p < pn; p++) { const dx = PX[p] - cx, dy = PY[p] - cy, d2 = dx * dx + dy * dy; if (d2 < reach * reach) { const d = Math.sqrt(d2) + .5, k = (1 - d / reach) * 2; PVX[p] += dx / d * k; PVY[p] += dy / d * k; } }
+    for (let p = 0; p < pn; p++) { const dx = PX[p] - cx, dy = PY[p] - cy, d2 = dx * dx + dy * dy; if (d2 < reach * reach) { const d = Math.sqrt(d2) + .5, k = (1 - d / reach) * 3.5; PVX[p] += dx / d * k; PVY[p] += dy / d * k; } }
     for (let n = 0; n < r * 3; n++) { const a = rnd() * 6.283, s = rnd() * r * .25; addP(cx, cy, Math.cos(a) * s, Math.sin(a) * s, 0, 10 + rndi(16), firePal[40 + rndi(24)]); }
     if (!quiet) {
       stats.explosions++;
       shake = Math.max(shake, Math.min(10, r * .5));
       flash = Math.max(flash, Math.min(.5, r / 50));
       sfx(r > 14 ? 'bigboom' : 'boom');
+    }
+  }
+  // the blast front past the crater: loose matter (powders, liquids, gas) is thrown outward,
+  // solids near the rim crack loose, and the force falls off with distance
+  function shockwave(cx, cy, r, power) {
+    if (r < 3) return;
+    const R = Math.min(r * (2.3 + power * .4), 120), R2 = R * R, r2 = r * r, big = Math.min(2.4, .8 + r / 12);
+    for (let dy = -R; dy <= R; dy++) {
+      const y = cy + dy; if (y < 0 || y >= H) continue;
+      for (let dx = -R; dx <= R; dx++) {
+        const x = cx + dx; if (x < 0 || x >= W) continue;
+        const d2 = dx * dx + dy * dy; if (d2 <= r2 || d2 > R2) continue;
+        const i = y * W + x, t = g[i]; if (!t || mask[i] || t === VOID || t === CLONE || t === BOLT) continue;
+        const d = Math.sqrt(d2), f = 1 - (d - r) / (R - r); // 1 at the crater edge, 0 at the front
+        const kd = KIND[t], loose = kd === K_POWDER || kd === K_LIQ || kd === K_GAS || kd === K_FIRE;
+        const p = loose ? f * .85 : f * f * .32 * power;
+        if (rnd() > p) continue;
+        const sp = (1.2 + rnd() * 2.4) * big * (.4 + f);
+        launch(i, dx / d * sp + (rnd() - .5) * .6, (dy / d * .4 - .7 - rnd() * .6 * f) * sp * (gdir || 1));
+      }
     }
   }
   function nuke(cx, cy) {
@@ -796,7 +819,8 @@
       }
     }
     for (const c of creatures) if (c.st === 'ok' && Math.hypot(c.x - cx, c.y - cy) < 90) { kill(c, 'nuked', true); c.vx += Math.sign(c.x - cx) * 2; c.vy -= 2; }
-    for (const b of bodies) { const dx = b.x - cx, dy = b.y - cy, d = Math.hypot(dx, dy) + 1; if (d < 120) { b.vx += dx / d * 5; b.vy += dy / d * 5 - 2; hurtBody(b, 60); } }
+    for (const b of bodies) { const dx = b.x - cx, dy = b.y - cy, d = Math.hypot(dx, dy) + 1; if (d < 160) { const f = 8 * (1 - d / 200); b.vx += dx / d * f; b.vy += dy / d * f - 3; hurtBody(b, 60); } }
+    pushAll(cx, cy, 170, 7);
     fx.push({ kind: 'ring', x: cx, y: cy, r: 2, max: 110 }, { kind: 'cloud', x: cx, y: cy, t: 0 });
     flash = 1; shake = 18;
     sfx('nuke');
@@ -1168,7 +1192,7 @@
         } else if (KIND[tF] === K_LIQ && KIND[tM] === K_LIQ) { if ((c.breath -= 2) <= 0) kill(c, 'drowned', false); }
         else c.breath = Math.min(240, c.breath + 3);
         if (c.burn) {
-          c.burn++; c.hp -= .55;
+          c.burn++; c.hp -= c.zombie ? .22 : .55;
           if (inLiq) { c.burn = 0; if (iH >= 0 && g[iH] === 0) set(iH, STEAM); }
           else if (rnd() < .45) { const y = fy - (c.h + 1) * s; if (y >= 0 && y < H && g[y * W + fx] === 0) set(y * W + fx, FIRE, 8 + rndi(12)); }
           if (rnd() < .03) c.dir = -c.dir;
@@ -1176,18 +1200,26 @@
         }
         if (c.inf) {
           c.inf++;
-          if (c.inf > 160 && !c.zombie) c.zombie = true;
+          if (c.inf > 70 && !c.zombie) c.zombie = true;
           if (c.zombie) {
-            let near = null, nd = 50;
+            let near = null, nd = 110;
             for (const o of creatures) {
-              if (o === c || o.st !== 'ok' || o.inf) continue;
+              if (o === c) continue;
               const dx = Math.abs(o.x - c.x), dy = Math.abs(o.y - c.y);
-              if (dx < 3 && dy < 4) infect(o);
-              else if (dy < 10 && dx < nd) { nd = dx; near = o; }
+              if (o.st !== 'ok') { // corpses nearby get back up
+                if (o.kind === 'walker' && !o.gone && dx < 5 && dy < 6 && rnd() < .015) { o.st = 'ok'; o.hp = 100; o.burn = 0; o.char = false; o.cause = ''; o.inf = 200; o.zombie = true; stats.lost--; stats.infected++; }
+                continue;
+              }
+              if (o.inf) continue;
+              if (dx < 4 && dy < 5) { if (o.kind === 'robot') { o.hp -= .6; if (o.hp <= 0) kill(o, 'mauled', true); } else infect(o); }
+              else if (dy < 18 && dx < nd) { nd = dx; near = o; }
             }
-            if (near && c.grounded && rnd() < .05) c.dir = near.x > c.x ? 1 : -1; // shamble toward the nearest healthy one
-            if (rnd() < .004 && iF >= 0) { const k = iF + s * W; if (k >= 0 && k < N && g[k] && g[k] !== VIRUS) set(k, VIRUS); }
-            if (c.inf > 2400) { c.hp = 0; c.cause = 'virus'; }
+            if (near && c.grounded) {
+              if (rnd() < .2) c.dir = near.x > c.x ? 1 : -1; // hunt the nearest healthy one
+              if (nd < 14 && rnd() < .04) { c.vy = -1.6 * s; c.vx = c.dir * .9; c.grounded = false; } // lunge
+            }
+            if (rnd() < .02 && iF >= 0) { const k = iF + s * W; if (k >= 0 && k < N && g[k] && g[k] !== VIRUS && g[k] !== VOID) set(k, VIRUS, 130 + rndi(90)); }
+            if (c.inf > 9000) { c.hp = 0; c.cause = 'virus'; }
           }
         }
         if (c.hp <= 0) kill(c, c.cause || (c.burn ? 'burned' : 'dissolved'), false);
@@ -1226,7 +1258,7 @@
       if (alive && !c.frozen && c.kind === 'bird') { stepBird(c, fx, fy); moveCreature(c, 1); continue; }
       if (alive && !c.frozen && c.kind === 'fish' && tF === WATER) { stepFish(c, fx, fy); moveCreature(c, s); continue; }
       if (alive && c.grounded && !c.frozen) {
-        const spd = c.kind === 'walker' ? (c.burn ? .42 : c.zombie ? .12 : .16) : c.kind === 'robot' ? .13 : c.kind === 'ant' ? .11 : .2;
+        const spd = c.kind === 'walker' ? (c.burn ? .42 : c.zombie ? .24 : .16) : c.kind === 'robot' ? .13 : c.kind === 'ant' ? .11 : .2;
         // look ahead for hazards
         if (!c.burn && rnd() < .3) {
           const ax = fx + c.dir * 2;
@@ -2809,7 +2841,7 @@
   function onPress(quiet) {
     const x = ptr.x | 0, y = ptr.y | 0;
     if (!quiet) { ptr.ax = ptr.x; ptr.ay = ptr.y; markUsed(tool.id); if (!NOUNDO[tool.id]) pushUndo(); }
-    if (tool.body) { const b = makeBody(tool.body, ptr.x, ptr.y); if (b) { launch(b); if (!quiet || ptr.held % 4 === 0) sfx('pop'); } return; }
+    if (tool.body) { const b = makeBody(tool.body, ptr.x, ptr.y); if (b) { flingSpawn(b); if (!quiet || ptr.held % 4 === 0) sfx('pop'); } return; }
     if (tool.spawn) { spawnCreature(quiet); return; }
     if (tool.wp) { weaponPress(tool.wp); return; }
     switch (tool.id) {
@@ -2850,10 +2882,10 @@
     if (x < 1 || x >= W - 1 || y < 1 || y >= H) return;
     if (solidAt(x, y)) return;
     const c = makeCreature(tool.spawn === 'zombie' ? 'walker' : tool.spawn, x, y);
-    if (c) { launch(c); if (tool.spawn === 'zombie') { c.inf = 200; c.zombie = true; stats.infected++; } if (!quiet || ptr.held % 4 === 0) sfx('blip'); }
+    if (c) { flingSpawn(c); if (tool.spawn === 'zombie') { c.inf = 200; c.zombie = true; stats.infected++; } if (!quiet || ptr.held % 4 === 0) sfx('blip'); }
   }
   // launch speed: fling along the drag, or spray upward when the pointer is still
-  function launch(o) {
+  function flingSpawn(o) {
     if (!rapidSpd || !ptr.rapid) return;
     const k = rapidSpd * .35, mv = Math.hypot(ptr.vx, ptr.vy);
     let dx = 0, dy = -1; if (mv > .15) { dx = ptr.vx / mv; dy = ptr.vy / mv; }
