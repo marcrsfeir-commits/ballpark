@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0c0f16">
-<meta name="description" content="Sandlot: a falling-sand physics sandbox. Paint sand, water, lava and acid, spawn walkers and bombs, then hit it all with lightning, viruses and black holes.">
+<meta name="description" content="Sandlot: a falling-sand physics sandbox with 90+ tools. Paint sand, water, lava and nitro, spawn walkers, birds and robots, then hit it all with tornadoes, lasers, portals and black holes.">
 <title>Sandlot · BALLPARK</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%230c0f16'/%3E%3Crect x='2' y='11' width='12' height='3' fill='%23e3c27a'/%3E%3Crect x='4' y='9' width='6' height='2' fill='%23e3c27a'/%3E%3Crect x='10' y='8' width='4' height='3' fill='%233b82f6'/%3E%3Crect x='6' y='3' width='2' height='2' fill='%23ff7a1a'/%3E%3Crect x='7' y='5' width='2' height='2' fill='%23ffb347'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="style.css">
@@ -21,6 +21,7 @@
 
   <div class="stage" id="stage">
     <canvas id="world" aria-label="Sandbox world. Drag to use the selected tool."></canvas>
+    <div class="cellinfo" id="cellinfo" hidden></div>
     <div class="tip" id="tip"></div>
     <div class="paused-badge" id="pausedBadge" hidden>PAUSED</div>
   </div>
@@ -35,7 +36,13 @@
   </div>
 
   <nav class="tabs" id="tabs" role="tablist"></nav>
-  <div class="tools" id="tools"></div>
+  <div class="tools" id="tools">
+    <div class="toolhead">
+      <input class="search" id="search" type="search" placeholder="Search tools" aria-label="Search tools" autocomplete="off" spellcheck="false">
+      <div class="subopts" id="subopts" hidden></div>
+    </div>
+    <div class="toollist" id="toolList"></div>
+  </div>
 </div>
 
 <div class="modal" id="snap" hidden>
@@ -49,6 +56,9 @@
       <button class="btn" id="snapClose" type="button">Close</button>
     </div>
   </div>
+</div>
+<div class="modal" id="settings" hidden>
+  <div class="sheet" id="settingsBody" role="dialog" aria-modal="true" aria-label="Settings"></div>
 </div>
 <div class="toast" id="toast" hidden></div>
 <script src="../../shared/bp.js"></script>
