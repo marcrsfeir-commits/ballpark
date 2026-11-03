@@ -18,6 +18,7 @@
   .grid { width: min(1060px, calc(100vw - 24px)); margin: 18px auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
   .item { background: #fff; border-radius: 14px; padding: 16px 14px 14px; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,.05); }
   .item .e { font-size: 54px; line-height: 1.1; }
+  .item .e .bp-pic { width: 96px; height: 96px; border-radius: 12px; }
   .item h3 { margin: 6px 0 2px; font-size: 16px; }
   .item .price { color: #16a34a; font-weight: 800; font-size: 17px; }
   .item .ctl { display: grid; grid-template-columns: 1fr 70px 1fr; gap: 6px; margin-top: 12px; }
@@ -42,6 +43,7 @@
 <section class="receipt"><h2>RECEIPT</h2><div id="receipt"></div>
   <div class="btns"><button id="share">Copy receipt</button><button id="reset">Start over</button></div></section>
 <script src="../../shared/bp.js"></script>
+<script src="../../shared/pic.js"></script>
 <script>
 // BIG SPENDER — spend a fictional $100B fortune on things with (roughly) real price tags.
 const BUDGET = 100e9;
@@ -61,7 +63,7 @@ let cart = store.get('cart', {});
 const fmt = n => '$' + Math.round(n).toLocaleString('en-US');
 const spent = () => ITEMS.reduce((s, [, name, price]) => s + (cart[name] || 0) * price, 0);
 const grid = document.getElementById('grid');
-grid.innerHTML = ITEMS.map(([e, name, price], i) => `<div class="item"><div class="e">${e}</div><h3>${name}</h3><div class="price">${fmt(price)}</div>
+grid.innerHTML = ITEMS.map(([e, name, price], i) => `<div class="item"><div class="e">${BALLPARK_PIC(e)}</div><h3>${name}</h3><div class="price">${fmt(price)}</div>
   <div class="ctl"><button class="sell" data-i="${i}" data-d="-1">Sell</button><input data-i="${i}" inputmode="numeric" value="0" aria-label="${name} quantity"><button class="buy" data-i="${i}" data-d="1">Buy</button></div></div>`).join('');
 let shown = BUDGET - spent();
 function setQty(i, q) {
@@ -83,7 +85,7 @@ function render() {
   });
   const pct = (100 * (BUDGET - left) / BUDGET);
   document.getElementById('pct').textContent = left <= 0 ? 'You spent it ALL. Congratulations?' : `${pct < 0.01 && pct > 0 ? '<0.01' : pct.toFixed(pct < 1 ? 2 : 1)}% spent`;
-  const rows = ITEMS.filter(([, n]) => cart[n]).map(([e, n, p]) => `<div class="row"><span>${e} ${n}</span><span>x${cart[n].toLocaleString('en-US')}</span><span>${fmt(cart[n] * p)}</span></div>`);
+  const rows = ITEMS.filter(([, n]) => cart[n]).map(([e, n, p]) => `<div class="row"><span>${BALLPARK_PIC(e)} ${n}</span><span>x${cart[n].toLocaleString('en-US')}</span><span>${fmt(cart[n] * p)}</span></div>`);
   document.getElementById('receipt').innerHTML = rows.length ? rows.join('') + `<div class="row total"><span>TOTAL</span><span></span><span>${fmt(BUDGET - left)}</span></div>` : '<p class="empty">Nothing bought yet. Go on, treat yourself.</p>';
   if (rows.length) Ballpark.report('spender', { score: Math.round(pct), max: 100, label: `${pct.toFixed(pct < 1 ? 2 : 0)}% of $100B spent` });
   animateMoney(left);

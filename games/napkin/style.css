@@ -76,3 +76,4 @@ details p { margin: 10px 0 2px; font-size: 14px; line-height: 1.5; }
 .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); padding: 10px 16px; border-radius: 12px; background: #222; color: #fff; font-size: 14px; z-index: 30; }
 @media (max-width: 480px) { .card { padding: 18px 16px 18px; } .qtext.has-pic { padding-right: 0; } .polaroid { display: none; } .verdict { grid-template-columns: 1fr; } .field input { font-size: 24px; } }
 @media (prefers-reduced-motion: reduce) { .card, .hist i { animation: none; } }
+.polaroid .bp-pic.big { display: block; width: 88px; height: 88px; border-radius: 2px; }

@@ -256,7 +256,22 @@ export function matchAnswer(q, input) {
     else if (d === bestD && best !== i) tie = true;
   }
   if (best === null || tie) return null;
-  return { ...entries[best], exact: false };
+  return { ...entries[best], exact: false, typo: true };
+}
+
+// Closest listed answer to a miss, for "did you mean …?" (looser than matchAnswer, never auto-accepted).
+export function suggestAnswer(q, input) {
+  const { entries, keys } = indexPrompt(q);
+  const k = norm(input);
+  if (k.length < 3) return null;
+  const max = k.length >= 8 ? 3 : 2;
+  let best = null, bestD = max + 1;
+  for (const [key, i] of keys) {
+    if (Math.abs(key.length - k.length) > max) continue;
+    const d = damerau(k, key, max);
+    if (d < bestD) { bestD = d; best = i; }
+  }
+  return best === null ? null : entries[best];
 }
 
 export function revealList(q) {

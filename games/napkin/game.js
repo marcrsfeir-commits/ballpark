@@ -81,7 +81,7 @@ function render() {
 
 function renderQuestion(q) {
   app.innerHTML = `<section class="card">${header(q)}
-    <div class="qtext ${q.e ? 'has-pic' : ''}">${q.q}${q.e ? `<div class="polaroid" aria-hidden="true">${q.e}</div>` : ''}</div>
+    <div class="qtext ${q.e ? 'has-pic' : ''}">${q.q}${q.e ? `<div class="polaroid" aria-hidden="true">${BALLPARK_PIC(q.e, 'bp-pic big')}</div>` : ''}</div>
     <label class="field"><input id="guess" inputmode="decimal" autocomplete="off" placeholder="your guess" aria-label="Your guess"><span class="unit">${q.unit}</span></label>
     <div class="preview" id="preview"></div>
     <div class="row"><button class="calcbtn" id="calcBtn" title="Calculator" aria-label="Calculator">🧮</button><button class="lock" id="lock">LOCK IT IN ✓</button></div>

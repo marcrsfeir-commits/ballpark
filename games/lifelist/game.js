@@ -45,12 +45,12 @@
     let rows = '';
     sec.items.forEach((it, i) => {
       const id = sec.key + String(i + 1).padStart(2, '0');
-      rows += `<label class="row" data-id="${id}"><span class="emo" aria-hidden="true">${it[0]}</span>` +
+      rows += `<label class="row" data-id="${id}"><span class="emo" aria-hidden="true">${BALLPARK_PIC(it[0])}</span>` +
         `<span class="txt">${esc(it[1])}</span><input type="checkbox" id="c-${id}">` +
         `<span class="box" aria-hidden="true"><svg viewBox="0 0 24 24"><path pathLength="1" d="M5 12.5l4.5 4.5L19 7.5"/></svg></span></label>`;
     });
     el.innerHTML =
-      `<div class="sec-head"><span class="sec-emoji" aria-hidden="true">${sec.emoji}</span>` +
+      `<div class="sec-head"><span class="sec-emoji" aria-hidden="true">${BALLPARK_PIC(sec.emoji)}</span>` +
       `<div class="sec-title"><h2>${esc(sec.name)}</h2><p>${esc(sec.sub)}</p></div><span class="sec-count"></span></div>` +
       `<div class="sec-bar"><i></i></div><div class="rows">${rows}</div>`;
     listEl.append(el);
@@ -77,7 +77,7 @@
     barEl.setAttribute('aria-valuenow', n);
     barEl.setAttribute('aria-valuetext', `${n} of ${MAX} things done`);
     const ri = rankIndex(n), r = RANKS[ri], nx = RANKS[ri + 1];
-    rankEmoji.textContent = r.emoji;
+    rankEmoji.innerHTML = BALLPARK_PIC(r.emoji);
     rankName.textContent = r.name;
     rankNext.textContent = nx ? `· ${nx.at - n} more for ${nx.name} ${nx.emoji}` : '· every last one!';
     SECTIONS.forEach(sec => {

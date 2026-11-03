@@ -284,3 +284,5 @@ select { font: 10px var(--mono); background: #0d1a2e; color: #cfe3f7; border: 1p
   #logo { animation: none; }
   .prompt-card, .result-card, .mid-btn { transition: none; animation: none; }
 }
+#echo .claim.no { background: #3d5a78; color: #f6f3ff; }
+#echo b { color: #f6f3ff; }

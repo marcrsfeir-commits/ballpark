@@ -294,13 +294,22 @@ function buildScene(L, opts = {}) {
       S.twinkles.push({ c, ph: rnd() * 6.28 });
     }
   }
+  // scenery: real photo tiles where we have one, the emoji otherwise
+  const pic = (e, x, y, size, parent, extra = {}) => {
+    const url = window.BALLPARK_PIC_URL?.(e);
+    if (!url) return txt(e, { x, y, 'font-size': size, ...extra }, parent);
+    const g = el('g', { transform: `translate(${fx1(x)} ${fx1(y)})`, ...extra }, parent);
+    el('image', { href: url, x: fx1(-size / 2), y: fx1(-size / 2), width: fx1(size), height: fx1(size), preserveAspectRatio: 'xMidYMid slice', 'clip-path': 'inset(0 round 50%)' }, g);
+    return g;
+  };
   const sunSize = Math.min(40, yH * 0.85);
-  txt(th.sun, { x: rnd() < 0.5 ? W * 0.14 : W * 0.86, y: yH * 0.52, 'font-size': sunSize }, svg);
+  pic(th.sun, rnd() < 0.5 ? W * 0.14 : W * 0.86, yH * 0.52, sunSize, svg);
   S.clouds = [];
   th.deco.forEach(([emoji, kind]) => {
     if (kind === 'sky') {
       const size = 18 + rnd() * 12;
-      const node = txt(emoji, { x: 0, y: 0, 'font-size': size, opacity: 0.95 }, svg);
+      const wrap = el('g', {}, svg), node = wrap;
+      pic(emoji, 0, 0, size, wrap, { opacity: 0.95 });
       const c = { node, x: W * (0.06 + rnd() * 0.88), y: yH * (0.22 + rnd() * 0.5), v: 3 + rnd() * 5, drift: emoji === '☁️' || emoji === '🛸' || emoji === '🦇' || emoji === '🎈' || emoji === '☄️' };
       node.setAttribute('transform', `translate(${fx1(c.x)} ${fx1(c.y)})`);
       S.clouds.push(c);
@@ -314,7 +323,7 @@ function buildScene(L, opts = {}) {
     const left = rnd() < 0.5;
     const x = left ? W * (0.05 + rnd() * 0.08) : W * (0.87 + rnd() * 0.08);
     const y = yH + 22 + rnd() * (H * 0.36);
-    txt(emoji, { x: fx1(x), y: fx1(y), 'font-size': fx1(22 + rnd() * 12) }, svg);
+    pic(emoji, x, y, 22 + rnd() * 12, svg);
   });
 
   // layers (z-order): track < tunnel < trolley < lever < items < fx
@@ -428,7 +437,10 @@ function buildScene(L, opts = {}) {
       const ig = el('g', {}, itemLayer);
       el('ellipse', { cx: p.x, cy: p.y + lay.size * 0.42, rx: lay.size * 0.36, ry: lay.size * 0.09, fill: 'rgba(0,0,0,.18)' }, itemLayer);
       const inner = el('g', {}, ig);
-      txt(e, { x: 0, y: 0, 'font-size': fx1(lay.size) }, inner);
+      const url = window.BALLPARK_PIC_URL?.(e), sz = lay.size * 0.9;
+      if (url) {                                             // real photo, clipped to a rounded tile
+        el('image', { href: url, x: fx1(-sz / 2), y: fx1(-sz / 2), width: fx1(sz), height: fx1(sz), preserveAspectRatio: 'xMidYMid slice', 'clip-path': 'inset(0 round 18%)' }, inner);
+      } else txt(e, { x: 0, y: 0, 'font-size': fx1(lay.size) }, inner);
       if (hat) txt(hat, { x: fx1(lay.size * 0.1), y: fx1(-lay.size * 0.5), 'font-size': fx1(lay.size * 0.5) }, inner);
       const it = { g: ig, x: p.x, y: p.y, dx: 0, dy: 0, rot: 0, sc: 1, seed: (rnd() - 0.5) * 2 };
       it.apply = () => ig.setAttribute('transform', `translate(${fx1(it.x + it.dx)} ${fx1(it.y + it.dy)}) rotate(${fx1(it.rot)}) scale(${it.sc.toFixed(3)})`);

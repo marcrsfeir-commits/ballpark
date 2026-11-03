@@ -39,6 +39,7 @@
   .end table { margin: 14px auto 0; border-collapse: collapse; font: 14px "Segoe UI", sans-serif; text-align: left; }
   .end td { padding: 5px 8px; border-bottom: 1px solid rgba(255,255,255,.12); } .end td:last-child { text-align: right; color: #f5d77e; font-weight: 700; }
   @media (max-width: 480px) { .bid { flex-direction: column; } .bid button { padding: 12px; } }
+  .bp-pic.big { width: 1em; height: 1em; border-radius: 10px; }
 </style>
 </head>
 <body data-bp-pos="br">
@@ -53,6 +54,7 @@
   <section id="sold" class="sold" hidden></section>
 </main>
 <script src="../../shared/bp.js"></script>
+<script src="../../shared/pic.js"></script>
 <script type="module">
 import { LOTS } from './lots.js';
 const BP = window.Ballpark, store = BP.store('auction');
@@ -74,7 +76,7 @@ let r = 0, total = 0; const results = [];
 function show() {
   const L = LOTS[game[r]];
   seen[game[r]] = ++tick; store.set('seen', seen); store.set('tick', tick);
-  $('lotNo').textContent = r + 1; $('em').textContent = L.e; $('em').style.animation = 'none'; void $('em').offsetWidth; $('em').style.animation = '';
+  $('lotNo').textContent = r + 1; $('em').innerHTML = BALLPARK_PIC(L.e, 'bp-pic big'); $('em').style.animation = 'none'; void $('em').offsetWidth; $('em').style.animation = '';
   const [what, where] = L.d.split(' · ');
   $('house').textContent = (where || '').toUpperCase(); $('name').textContent = L.n; $('desc').textContent = what;
   $('sold').hidden = true; $('bidForm').hidden = false; $('guess').value = ''; $('preview').textContent = ''; $('guess').focus();
@@ -102,7 +104,7 @@ function end() {
   $('bidForm').hidden = true; $('em').textContent = total >= 750 ? '🏆' : total >= 500 ? '🧐' : '💸';
   $('house').textContent = 'AUCTION CLOSED'; $('name').textContent = `${total} / 1000`; $('desc').textContent = total >= 750 ? 'You could run an auction house.' : total >= 500 ? 'A seasoned collector.' : 'Maybe leave the paddle at home.';
   $('sold').hidden = false; $('sold').className = 'sold end';
-  $('sold').innerHTML = `<table>${results.map(x => `<tr><td>${x.L.e} ${x.L.n}</td><td>${fmt(x.L.p)}</td><td>${x.pts}</td></tr>`).join('')}</table>
+  $('sold').innerHTML = `<table>${results.map(x => `<tr><td>${BALLPARK_PIC(x.L.e)} ${x.L.n}</td><td>${fmt(x.L.p)}</td><td>${x.pts}</td></tr>`).join('')}</table>
     <div class="you" style="margin-top:12px">Best ever: ${best}</div><button class="next" id="again">NEW AUCTION</button> <button class="next" id="share">COPY SCORE</button>`;
   $('again').onclick = () => location.reload();
   $('share').onclick = () => navigator.clipboard?.writeText(`Going Once: ${total}/1000 🔨\n${results.map(x => x.pts >= 80 ? '🟩' : x.pts >= 50 ? '🟨' : '🟥').join('')}\nBALLPARK`).then(() => { $('share').textContent = 'COPIED'; });

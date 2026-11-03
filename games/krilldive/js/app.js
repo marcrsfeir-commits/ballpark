@@ -4,7 +4,7 @@ import * as S from './sprites.js';
 import { pixelText, setPixelText } from './font.js';
 import * as A from './audio.js';
 import {
-  TIERS, TIER_ORDER, ROUNDS, M_PER_POINT, MAX_SCORE, BEARING, bearingFor, Library, matchAnswer, revealList, norm, game, ASCENT, pts, dir, startDepth, tierInfo, iconKey, BOARD_ORDER,
+  TIERS, TIER_ORDER, ROUNDS, M_PER_POINT, MAX_SCORE, BEARING, bearingFor, Library, matchAnswer, suggestAnswer, revealList, norm, game, ASCENT, pts, dir, startDepth, tierInfo, iconKey, BOARD_ORDER,
   store, todayKey, diveNumberFor, dateForDive, judgeStatus, warmJudge, askJudge,
 } from './engine.js';
 
@@ -363,7 +363,10 @@ async function submit(final) {
       phase = 'answer';
     }
   }
+  if (hit?.typo && !final && norm(raw) !== norm(hit.answer)) return askDidYouMean(q, raw, hit);
   if (!hit) {
+    const near = !final && suggestAnswer(q, raw);
+    if (near) return askDidYouMean(q, raw, near);
     if (final || (run.total > 0 && run.left <= 0)) return land(null, raw);
     run.locked = false;
     $('#echo').textContent = `“${raw}”: not on our list. try again, or `;
@@ -377,6 +380,29 @@ async function submit(final) {
     return;
   }
   land(hit, raw);
+}
+
+// "Did you mean “X”?" — yes lands X, no sends it back for another try (or IT COUNTS).
+function askDidYouMean(q, raw, hit) {
+  run.locked = false;
+  const echo = $('#echo'), inp = $('#answer');
+  echo.textContent = 'did you mean ';
+  echo.append(h('b', '', `“${esc(hit.answer)}”`), '? ');
+  const yes = h('button', 'claim', 'YES'), no = h('button', 'claim no', 'NO');
+  yes.type = no.type = 'button';
+  yes.onclick = () => { if (run && run.prompts[run.i] === q && !run.locked) { run.locked = true; land({ ...hit, typo: false, exact: false }, raw); } };
+  no.onclick = () => {
+    if (!run || run.prompts[run.i] !== q || run.locked) return;
+    echo.textContent = `“${raw}”: not on our list. try again, or `;
+    const ok = h('button', 'claim', 'IT COUNTS ✓');
+    ok.type = 'button';
+    ok.onclick = () => { if (run && run.prompts[run.i] === q && !run.locked) { run.locked = true; land({ answer: raw, tier: CLAIM_TIER, claimed: true }, raw); } };
+    echo.append(ok);
+    inp.select(); inp.focus();
+  };
+  echo.append(yes, no);
+  A.sfx.nope();
+  yes.focus();
 }
 
 function land(hit, raw) {
