@@ -161,6 +161,15 @@ addEventListener('pageshow', render);
 addEventListener('storage', render);
 
 // Offline: sw.js precaches every game; show a badge once this device has the full copy.
+// a new version took over: reload when the player is idle (never mid-click) so the fresh code is used
+if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+  let lastInput = Date.now();
+  for (const ev of ['pointerdown', 'keydown', 'touchstart']) addEventListener(ev, () => { lastInput = Date.now(); }, { passive: true });
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    const t = setInterval(() => { if (document.hidden || Date.now() - lastInput > 8000) { clearInterval(t); location.reload(); } }, 1000);
+  });
+}
+
 async function offlineBadge() {
   const el = document.getElementById('offline');
   if (!el || !('serviceWorker' in navigator)) return;

@@ -30,18 +30,33 @@ const VERSION = '${version}';
 const FILES = ${JSON.stringify([...new Set(urls)])};
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(VERSION).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
+  // one file failing (flaky network) must not throw the whole update away: cache what arrives, skip the rest
+  e.waitUntil(caches.open(VERSION).then(async c => {
+    for (let i = 0; i < FILES.length; i += 40) await Promise.allSettled(FILES.slice(i, i + 40).map(f => c.add(f)));
+  }).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys()
     .then(keys => Promise.all(keys.filter(k => k.startsWith('ballpark-') && k !== VERSION).map(k => caches.delete(k))))
     .then(() => self.clients.claim()));
 });
-// Cache first (instant + offline), refreshed in the background when online. POSTs (local Fuse API) pass straight through.
+// Code and data (pages, js, css, json) are network first so a push shows up on the next load; the cache is the
+// offline fallback. Images, audio and fonts are cache first (instant), refreshed in the background.
+// POSTs (local Fuse API) pass straight through.
+const CODE = /(\\/|\\.html|\\.js|\\.mjs|\\.css|\\.json)$/;
 self.addEventListener('fetch', e => {
   const req = e.request, url = new URL(req.url);
   if (req.method !== 'GET' || url.origin !== location.origin || url.pathname.includes('/api/')) return;
   e.respondWith(caches.open(VERSION).then(async cache => {
+    if (req.mode === 'navigate' || CODE.test(url.pathname)) {
+      const net = await Promise.race([fetch(req, { cache: 'no-cache' }).catch(() => null), new Promise(r => setTimeout(() => r(null), 4000))]);
+      if (net && net.ok) { cache.put(req, net.clone()); return net; }
+      const old = await cache.match(req, { ignoreSearch: true });
+      if (old) return old;
+      if (net) return net;
+      if (req.mode === 'navigate') return (await cache.match('./index.html')) || Response.error();
+      return Response.error();
+    }
     const hit = await cache.match(req, { ignoreSearch: true });
     const net = fetch(req).then(res => { if (res.ok) cache.put(req, res.clone()); return res; }).catch(() => null);
     if (hit) return hit;
