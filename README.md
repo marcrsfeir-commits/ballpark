@@ -6,7 +6,7 @@ Thirteen free browser games in one place. No ads, no accounts, no paywalls — e
 
 | Game | What you do | Inspired by |
 |---|---|---|
-| **KRILLDIVE** | Name the rarest answer you can — obvious answers float, rare ones sink you to the 7,000 m trench. 20 themed packs, 420 prompts, endless mode, archive. | Krillion |
+| **KRILLDIVE** | Name the rarest answer you can — obvious answers float, rare ones sink you to the 7,000 m trench. 28 themed packs, 574 prompts, endless mode, archive. | Krillion |
 | **JARFUL** | Objects pour into a 3D jar (real physics). Guess how many in 15 seconds. Daily, Over/Under, Fill To and Practice. | Amountle |
 | **NAPKIN** | Three huge estimates a day ("how many tennis balls fill an Olympic pool?"), scored by ratio. Calculator + archive. | Fermi.gg |
 | **ODD HUE** | Six blocks, one is a shade off. Classic, 60-second Rush and Daily. | HSL Color Game |
