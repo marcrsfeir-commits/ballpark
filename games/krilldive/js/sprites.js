@@ -413,6 +413,197 @@ export function packArt(id) {
         px(g, 14, 13, '#5a3a1c'); px(g, 15, 13, '#5a3a1c');
         break;
       }
+      case 'art': { // framed landscape
+        g.fillStyle = '#e0a93a'; g.fillRect(2, 2, 26, 22);
+        snap(g, w, h); shade(g, w, h, '#ffe08a', '#8a5f17');
+        g.fillStyle = '#8fd3ff'; g.fillRect(5, 5, 20, 16);
+        g.fillStyle = '#4caf6a'; poly(g, [5, 21, 5, 15, 11, 10, 17, 16, 21, 13, 25, 17, 25, 21]);
+        g.fillStyle = '#ffd23f'; ell(g, 20, 8.5, 2, 2);
+        snap(g, w, h);
+        pline(g, 11, 10, 17, 16, '#2f7d48');
+        break;
+      }
+      case 'cars': { // low sports car, side on
+        g.fillStyle = '#ff3d2e'; poly(g, [1, 18, 2, 13, 9, 12, 13, 7, 21, 7, 25, 12, 29, 13, 29, 18]);
+        snap(g, w, h); shade(g, w, h, '#ff9a8f', '#9c1a10');
+        g.fillStyle = '#bfe8ff'; poly(g, [14, 8, 19, 8, 22, 12, 12, 12]);
+        g.fillStyle = '#1b1f2a'; ell(g, 8, 19, 3.6, 3.6); ell(g, 23, 19, 3.6, 3.6);
+        snap(g, w, h);
+        g.fillStyle = '#9aa3b5'; g.fillRect(7, 18, 2, 2); g.fillRect(22, 18, 2, 2);
+        px(g, 28, 14, '#ffe9a6'); px(g, 1, 14, '#ff9a8f');
+        break;
+      }
+      case 'cartoons': { // comic "POW" burst
+        g.fillStyle = '#ffd23f';
+        const pts = []; for (let i = 0; i < 16; i++) { const r = i % 2 ? 7 : 13, a = i * Math.PI / 8; pts.push(15 + Math.cos(a) * r, 13 + Math.sin(a) * r * .9); }
+        poly(g, pts);
+        snap(g, w, h); shade(g, w, h, '#fff1a8', '#c4831a');
+        g.fillStyle = '#ff3f6c'; g.fillRect(14, 6, 3, 9); g.fillRect(14, 17, 3, 3);
+        break;
+      }
+      case 'earth': { // volcano under a smoky sky
+        g.fillStyle = '#7a5a3a'; poly(g, [0, 26, 11, 9, 19, 9, 30, 26]);
+        snap(g, w, h); shade(g, w, h, '#a8835a', null);
+        g.fillStyle = '#ff6a1f'; poly(g, [11, 9, 19, 9, 17, 14, 14, 12, 12, 16]);
+        g.fillStyle = '#9ccc4a'; poly(g, [0, 26, 5, 19, 9, 22, 13, 20, 18, 23, 24, 19, 30, 24, 30, 26]);
+        g.fillStyle = '#9aa3b5'; ell(g, 13, 4, 3, 2.5); ell(g, 18, 3, 3.5, 3); ell(g, 22, 5, 2.5, 2);
+        snap(g, w, h);
+        px(g, 15, 7, '#ffd23f'); px(g, 12, 6, '#ffd23f'); px(g, 18, 7, '#ff6a1f');
+        break;
+      }
+      case 'fashion': { // dress on a hanger
+        g.fillStyle = '#D6336C'; poly(g, [11, 8, 19, 8, 18, 13, 25, 25, 5, 25, 12, 13]);
+        snap(g, w, h); shade(g, w, h, '#ff8fb5', '#8a1640');
+        pline(g, 12, 13, 18, 13, '#ffd23f');
+        pline(g, 5, 7, 15, 3, '#cfd6e6'); pline(g, 15, 3, 25, 7, '#cfd6e6'); pline(g, 15, 3, 15, 1, '#cfd6e6'); px(g, 16, 0, '#cfd6e6');
+        break;
+      }
+      case 'football': { // goal, net and ball
+        g.fillStyle = '#f2f4f8'; g.fillRect(2, 3, 26, 2); g.fillRect(2, 3, 2, 21); g.fillRect(26, 3, 2, 21);
+        for (let x = 7; x < 26; x += 4) pline(g, x, 5, x, 23, '#8a93a8');
+        for (let y = 9; y < 24; y += 4) pline(g, 4, y, 25, y, '#8a93a8');
+        g.fillStyle = '#00c853'; g.fillRect(0, 24, 30, 2);
+        g.fillStyle = '#ffffff'; ell(g, 15, 19, 4, 4);
+        snap(g, w, h);
+        g.fillStyle = '#1b1f2a'; g.fillRect(14, 18, 2, 2); px(g, 12, 17, '#1b1f2a'); px(g, 18, 21, '#1b1f2a');
+        break;
+      }
+      case 'heroes': { // shield with a lightning bolt
+        g.fillStyle = '#ff2d55'; poly(g, [4, 2, 26, 2, 26, 12, 15, 25, 4, 12]);
+        snap(g, w, h); shade(g, w, h, '#ff8fa5', '#8a0f2a');
+        g.fillStyle = '#ffd23f'; poly(g, [17, 4, 10, 14, 15, 14, 12, 22, 21, 10, 16, 10]);
+        snap(g, w, h);
+        break;
+      }
+      case 'holidays': { // gift box with a bow
+        g.fillStyle = '#E4572E'; g.fillRect(4, 11, 22, 14); g.fillRect(2, 7, 26, 5);
+        snap(g, w, h); shade(g, w, h, '#ff9a7a', '#8a2a10');
+        g.fillStyle = '#ffd23f'; g.fillRect(13, 7, 4, 18); g.fillRect(2, 12, 26, 1);
+        ell(g, 11, 4, 4, 2.5); ell(g, 19, 4, 4, 2.5);
+        snap(g, w, h);
+        g.fillStyle = '#c4831a'; g.fillRect(14, 4, 2, 3);
+        break;
+      }
+      case 'home': { // house
+        g.fillStyle = '#e8b04a'; g.fillRect(6, 12, 18, 13);
+        g.fillStyle = '#c0392b'; poly(g, [2, 13, 15, 2, 28, 13]);
+        g.fillRect(20, 3, 3, 6);
+        snap(g, w, h); shade(g, w, h, null, '#7a1f15');
+        g.fillStyle = '#6b3f1d'; g.fillRect(13, 17, 5, 8);
+        g.fillStyle = '#bfe8ff'; g.fillRect(8, 15, 4, 4); g.fillRect(19, 15, 3, 4);
+        px(g, 17, 21, '#ffd23f');
+        break;
+      }
+      case 'jobs': { // briefcase
+        g.fillStyle = '#8a5a2b'; g.fillRect(2, 8, 26, 16);
+        snap(g, w, h); shade(g, w, h, '#c08a52', '#4a2e12');
+        pline(g, 10, 8, 10, 4, '#4a2e12'); pline(g, 10, 4, 20, 4, '#4a2e12'); pline(g, 20, 4, 20, 8, '#4a2e12');
+        pline(g, 2, 14, 27, 14, '#4a2e12');
+        g.fillStyle = '#ffd23f'; g.fillRect(13, 12, 4, 4);
+        break;
+      }
+      case 'mideast': { // palm tree over a dune at sunset
+        g.fillStyle = '#ffb347'; ell(g, 22, 9, 5, 5);
+        g.fillStyle = '#e8b04a'; g.beginPath(); g.ellipse(15, 28, 18, 8, 0, Math.PI, 0); g.fill();
+        snap(g, w, h); shade(g, w, h, '#ffd9a3', null);
+        for (let y = 9; y < 23; y++) px(g, 10 + Math.round((23 - y) * .15), y, '#7a4a12'), px(g, 11 + Math.round((23 - y) * .15), y, '#5a3410');
+        g.fillStyle = '#2e8b57';
+        poly(g, [12, 8, 3, 7, 1, 11]); poly(g, [12, 8, 21, 6, 24, 10]); poly(g, [12, 8, 6, 2, 3, 3]); poly(g, [12, 8, 17, 1, 20, 3]); poly(g, [12, 8, 8, 14, 6, 13]); poly(g, [12, 8, 17, 13, 19, 12]);
+        snap(g, w, h);
+        break;
+      }
+      case 'myths': { // thunder hammer
+        g.fillStyle = '#9aa7c7'; g.fillRect(5, 2, 20, 12); g.fillRect(4, 3, 22, 10);
+        snap(g, w, h); shade(g, w, h, '#dfe6ff', '#4a5578');
+        g.fillStyle = '#7a4a12'; g.fillRect(13, 14, 4, 9);
+        for (const y of [15, 18, 21]) pline(g, 13, y, 16, y + 1, '#4a2e12');
+        g.fillStyle = '#5f6bff'; g.fillRect(12, 23, 6, 3);
+        g.fillStyle = '#c4cde8'; g.fillRect(9, 5, 12, 6); pline(g, 9, 8, 20, 8, '#6a77a0');
+        pline(g, 28, 0, 26, 5, '#ffd23f'); pline(g, 26, 5, 29, 6, '#ffd23f'); pline(g, 29, 6, 27, 11, '#ffd23f');
+        pline(g, 2, 0, 1, 4, '#ffd23f'); pline(g, 1, 4, 3, 5, '#ffd23f'); pline(g, 3, 5, 1, 9, '#ffd23f');
+        break;
+      }
+      case 'ocean': { // curling wave
+        g.fillStyle = '#2ea8d8'; g.beginPath(); g.moveTo(0, 26); g.lineTo(0, 16); g.quadraticCurveTo(6, 2, 18, 4); g.quadraticCurveTo(27, 6, 25, 14);
+        g.quadraticCurveTo(21, 8, 15, 11); g.quadraticCurveTo(12, 16, 18, 19); g.lineTo(30, 19); g.lineTo(30, 26); g.closePath(); g.fill();
+        snap(g, w, h); shade(g, w, h, '#e6f7ff', '#155a7a');
+        for (let x = 0; x < 30; x++) px(g, x, 22 + Math.round(Math.sin(x * .8)), '#7fd3ff');
+        px(g, 24, 13, '#ffffff'); px(g, 25, 12, '#ffffff'); px(g, 22, 9, '#ffffff');
+        break;
+      }
+      case 'outdoors': { // sun, cloud, rain
+        g.fillStyle = '#ffd23f'; ell(g, 20, 7, 6, 6);
+        snap(g, w, h); shade(g, w, h, '#fff1a8', '#c4831a');
+        g.fillStyle = '#eef3fb'; ell(g, 9, 13, 6, 5); ell(g, 16, 11, 6, 6); ell(g, 21, 14, 5, 4); g.fillRect(4, 13, 21, 5);
+        snap(g, w, h); shade(g, w, h, null, '#9aa7c0');
+        for (const x of [7, 12, 17, 22]) pline(g, x, 20, x - 1, 23, '#4fc3f7');
+        break;
+      }
+      case 'plants': { // potted plant
+        g.fillStyle = '#c9683a'; poly(g, [8, 17, 22, 17, 20, 26, 10, 26]); g.fillRect(7, 16, 16, 3);
+        snap(g, w, h); shade(g, w, h, '#f0a07a', '#7a3a1a');
+        g.fillStyle = '#4ade80'; ell(g, 9, 9, 5, 2.6, -0.6); ell(g, 21, 8, 5, 2.6, 0.6); ell(g, 15, 5, 2.6, 5); ell(g, 11, 13, 4, 2, -0.3); ell(g, 19, 13, 4, 2, 0.3);
+        snap(g, w, h); shade(g, w, h, '#b7f7cf', '#1f7a43');
+        pline(g, 15, 16, 15, 6, '#1f7a43');
+        break;
+      }
+      case 'school': { // pencil
+        g.fillStyle = '#E8A317'; poly(g, [3, 21, 21, 3, 26, 8, 8, 26]);
+        snap(g, w, h); shade(g, w, h, '#ffd76a', '#8a5a0a');
+        g.fillStyle = '#ffb3c2'; poly(g, [21, 3, 24, 0, 30, 6, 26, 8]);
+        g.fillStyle = '#9aa3b5'; poly(g, [20, 4, 22, 2, 27, 7, 25, 9]);
+        g.fillStyle = '#f2d2a0'; poly(g, [3, 21, 8, 26, 1, 28]);
+        snap(g, w, h);
+        px(g, 1, 25, '#2b2b3d'); px(g, 2, 25, '#2b2b3d'); px(g, 1, 24, '#2b2b3d');
+        break;
+      }
+      case 'space': { // ringed planet
+        g.strokeStyle = '#c49a1a'; g.lineWidth = 1.6; g.beginPath(); g.ellipse(15, 13, 14, 4, -0.3, Math.PI + 0.15, -0.15); g.stroke();
+        snap(g, w, h);
+        g.fillStyle = '#7c6cf0'; ell(g, 15, 13, 8, 8);
+        snap(g, w, h); shade(g, w, h, '#c4bcff', '#3a2a9a');
+        pline(g, 8, 10, 22, 10, '#a99cff'); pline(g, 8, 15, 22, 15, '#5a4ad0');
+        g.strokeStyle = '#ffd23f'; g.lineWidth = 1.6; g.beginPath(); g.ellipse(15, 13, 14, 4, -0.3, 0.15, Math.PI - 0.15); g.stroke();
+        snap(g, w, h);
+        px(g, 3, 3, '#ffffff'); px(g, 26, 2, '#ffffff'); px(g, 27, 22, '#ffffff'); px(g, 4, 21, '#cfd6ff');
+        break;
+      }
+      case 'tech': { // smartphone
+        g.fillStyle = '#2a2e40'; g.fillRect(8, 1, 14, 24);
+        snap(g, w, h); shade(g, w, h, '#5a6080', '#12141e');
+        g.fillStyle = '#22C3A6'; g.fillRect(10, 4, 10, 16);
+        g.fillStyle = '#b8fff0'; g.fillRect(11, 5, 3, 3); g.fillRect(15, 5, 3, 3); g.fillRect(11, 9, 3, 3); g.fillRect(15, 9, 3, 3);
+        g.fillStyle = '#9aa3b5'; g.fillRect(13, 22, 4, 1);
+        break;
+      }
+      case 'toys': { // teddy bear face
+        g.fillStyle = '#b8794a'; ell(g, 7, 6, 4, 4); ell(g, 23, 6, 4, 4); ell(g, 15, 14, 11, 10);
+        snap(g, w, h); shade(g, w, h, '#e0a878', '#6a3e1e');
+        g.fillStyle = '#f0c9a0'; ell(g, 15, 17, 5, 4); ell(g, 7, 6, 2, 2); ell(g, 23, 6, 2, 2);
+        snap(g, w, h);
+        g.fillStyle = '#1b1f2a'; g.fillRect(10, 11, 2, 2); g.fillRect(18, 11, 2, 2); g.fillRect(14, 15, 3, 2);
+        px(g, 15, 18, '#6a3e1e');
+        break;
+      }
+      case 'world': { // two speech bubbles: languages
+        g.fillStyle = '#2BB3A3'; g.fillRect(1, 2, 17, 11); poly(g, [4, 12, 4, 17, 9, 12]);
+        snap(g, w, h); shade(g, w, h, '#8ff0e3', '#126b60');
+        g.fillStyle = '#ffd23f'; g.fillRect(12, 10, 17, 11); poly(g, [25, 20, 26, 25, 20, 20]);
+        snap(g, w, h); shade(g, w, h, '#fff1a8', '#c4831a');
+        pline(g, 6, 10, 9, 4, '#ffffff'); pline(g, 9, 4, 12, 10, '#ffffff'); pline(g, 7, 8, 11, 8, '#ffffff');
+        for (const x of [16, 20, 24]) { px(g, x, 15, '#7a4a12'); px(g, x + 1, 15, '#7a4a12'); }
+        break;
+      }
+      case 'dinos': { // long-neck sauropod
+        g.fillStyle = '#9ccc65'; ell(g, 13, 16, 8, 5);
+        poly(g, [17, 13, 21, 4, 24, 4, 21, 15]); ell(g, 24, 4, 3.5, 2);
+        poly(g, [6, 15, 0, 21, 7, 18]);
+        g.fillRect(7, 18, 3, 7); g.fillRect(16, 18, 3, 7);
+        snap(g, w, h); shade(g, w, h, '#d6f5a8', '#4a7a22');
+        px(g, 25, 3, '#1b1f2a');
+        for (const [x, y] of [[10, 13], [13, 12], [16, 14]]) px(g, x, y, '#6aa83a');
+        break;
+      }
       default: {
         const k = krill('krill', 0);
         g.drawImage(k, 0, 2);
