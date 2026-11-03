@@ -74,13 +74,14 @@
 
   // Offline support: the hub's service worker (sw.js at the site root) caches every game.
   // Registering here too means opening any game directly also makes the whole site available offline.
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('../../sw.js', { scope: '../../' }).catch(() => {});
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('../../sw.js', { scope: '../../', updateViaCache: 'none' }).then(r => r.update()).catch(() => {});
 
   // a new version took over: reload when the player is idle (never mid-click) so the fresh code is used
   if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
     let lastInput = Date.now();
     for (const ev of ['pointerdown', 'keydown', 'touchstart']) addEventListener(ev, () => { lastInput = Date.now(); }, { passive: true });
     navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (performance.now() < 20000) { location.reload(); return; } // just opened or reloaded: switch to the new version now
       const t = setInterval(() => { if (document.hidden || Date.now() - lastInput > 8000) { clearInterval(t); location.reload(); } }, 1000);
     });
   }

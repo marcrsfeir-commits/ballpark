@@ -166,15 +166,19 @@ if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
   let lastInput = Date.now();
   for (const ev of ['pointerdown', 'keydown', 'touchstart']) addEventListener(ev, () => { lastInput = Date.now(); }, { passive: true });
   navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (performance.now() < 20000) { location.reload(); return; } // just opened or reloaded: switch to the new version now
     const t = setInterval(() => { if (document.hidden || Date.now() - lastInput > 8000) { clearInterval(t); location.reload(); } }, 1000);
   });
 }
+
+// subtle build label in the footer
+fetch('version.json', { cache: 'no-store' }).then(r => r.json()).then(v => { const el = document.getElementById('ver'); if (el) el.textContent = `v${v.v} · ${v.built}`; }).catch(() => {});
 
 async function offlineBadge() {
   const el = document.getElementById('offline');
   if (!el || !('serviceWorker' in navigator)) return;
   try {
-    await navigator.serviceWorker.register('sw.js');
+    const reg = await navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }); reg.update().catch(() => {});
     await navigator.serviceWorker.ready;
     for (let i = 0; i < 40; i++) {                       // wait for the install to finish caching
       const keys = await caches.keys();

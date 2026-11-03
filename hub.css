@@ -61,3 +61,4 @@ a { color: inherit; }
 .foot .small { font-size: 11.5px; opacity: .75; }
 @media (max-width: 520px) { .board { padding: 22px 12px 14px; } .tag { letter-spacing: .12em; } }
 @media (prefers-reduced-motion: reduce) { .card { transition: none; } }
+.foot .ver { font: 10px/1 ui-monospace, Menlo, Consolas, monospace; opacity: .38; letter-spacing: .04em; margin: 18px 0 4px; }
