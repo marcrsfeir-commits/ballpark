@@ -24,6 +24,10 @@ for (const [k, v] of Object.entries(live)) { if (v) { RECIPES.set(k, v.n); EMOJI
 const BASICS = [['Water', '💧'], ['Fire', '🔥'], ['Wind', '🌬️'], ['Earth', '🌍']];
 let found = store.get('found', null) || BASICS.map(([n, e]) => ({ n, e, t: 0 }));
 let sortMode = store.get('sort', 'newest'), fresh = new Set(), muted = store.get('muted', false);
+// Real photos for things that have one (photos/<slug>.webp, from Wikipedia — credits in photos/credits.json).
+const PHOTO = new Set(await fetch('photos/index.json').then(r => r.json()).catch(() => []));
+const slug = n => n.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+const icon = (n, e) => (PHOTO.has(slug(n)) ? `<img class="ph" src="photos/${slug(n)}.webp" alt="" loading="lazy" draggable="false">` : e);
 const emojiOf = n => EMOJI.get(n) || found.find(f => f.n === n)?.e || '✨';
 
 // ---------- sidebar ----------
@@ -31,7 +35,7 @@ function renderList() {
   const q = $('search').value.trim().toLowerCase();
   const items = found.filter(f => !q || f.n.toLowerCase().includes(q));
   items.sort(sortMode === 'az' ? (a, b) => a.n.localeCompare(b.n) : (a, b) => b.t - a.t);
-  list.innerHTML = items.map(f => `<div class="item ${fresh.has(f.n) ? 'new' : ''}" data-n="${f.n.replace(/"/g, '&quot;')}"><span class="e">${f.e}</span>${f.n}</div>`).join('');
+  list.innerHTML = items.map(f => `<div class="item ${fresh.has(f.n) ? 'new' : ''}" data-n="${f.n.replace(/"/g, '&quot;')}"><span class="e">${icon(f.n, f.e)}</span>${f.n}</div>`).join('');
   $('count').textContent = `${found.length} discovered`;
   $('sort').textContent = 'Sort: ' + (sortMode === 'az' ? 'A–Z' : 'newest');
 }
@@ -43,7 +47,7 @@ function spawn(n, x, y, cls = 'pop', clamp = true) {
   const el = document.createElement('div');
   el.className = 'item ' + cls;
   el.dataset.n = n;
-  el.innerHTML = `<span class="e">${emojiOf(n)}</span>${n}`;
+  el.innerHTML = `<span class="e">${icon(n, emojiOf(n))}</span>${n}`;
   board.append(el);
   const r = board.getBoundingClientRect();
   const lx = x - el.offsetWidth / 2, ly = y - el.offsetHeight / 2;

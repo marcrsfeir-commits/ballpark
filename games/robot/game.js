@@ -269,12 +269,14 @@ function L_check(root, api) {
 }
 
 /* 2 - select every fish (sharks count, dolphins do not) */
-const SEA = { '\u{1F41F}': 'fish', '\u{1F420}': 'tropical fish', '\u{1F421}': 'blowfish', '\u{1F988}': 'shark', '\u{1F42C}': 'dolphin', '\u{1F433}': 'whale', '\u{1F419}': 'octopus', '\u{1F980}': 'crab', '\u{1F991}': 'squid', '\u{1F422}': 'turtle', '\u{1F990}': 'shrimp', '\u{1F40A}': 'crocodile', '\u{1F438}': 'frog' };
+// Real photos (photos/<key>.jpg, from Wikipedia — credits in photos/credits.json).
+const photo = key => `<img class="ph" src="photos/${key}.jpg" alt="" draggable="false">`;
+const SEA = { 'fish': 'fish', 'tropical-fish': 'tropical fish', 'blowfish': 'blowfish', 'shark': 'shark', 'dolphin': 'dolphin', 'whale': 'whale', 'octopus': 'octopus', 'crab': 'crab', 'squid': 'squid', 'turtle': 'turtle', 'shrimp': 'shrimp', 'crocodile': 'crocodile', 'frog': 'frog' };
 function L_fish(root, api) {
-  const fish = shuffle(['\u{1F41F}', '\u{1F420}', '\u{1F421}']).slice(0, ri(2, 3)).concat('\u{1F988}');
-  const rest = shuffle(['\u{1F433}', '\u{1F419}', '\u{1F980}', '\u{1F991}', '\u{1F422}', '\u{1F990}', '\u{1F40A}', '\u{1F438}']).slice(0, 9 - fish.length - 1);
-  const cells = shuffle([...fish.map(e => ({ e, ok: true })), ...['\u{1F42C}', ...rest].map(e => ({ e, ok: false }))]);
-  const g = tileGrid(3, cells.map(c => ({ html: c.e, label: SEA[c.e] })));
+  const fish = shuffle(['fish', 'tropical-fish', 'blowfish']).slice(0, ri(2, 3)).concat('shark');
+  const rest = shuffle(['whale', 'octopus', 'crab', 'squid', 'turtle', 'shrimp', 'crocodile', 'frog']).slice(0, 9 - fish.length - 1);
+  const cells = shuffle([...fish.map(e => ({ e, ok: true })), ...['dolphin', ...rest].map(e => ({ e, ok: false }))]);
+  const g = tileGrid(3, cells.map(c => ({ html: photo(c.e), label: SEA[c.e], cls: 'photo' })));
   root.append(g.el);
   S.answer = () => cells.map(c => c.ok);
   api.verify('Verify', () => {
@@ -283,9 +285,9 @@ function L_fish(root, api) {
     const wrong = cells.filter((c, i) => sel.has(i) && !c.ok).map(c => c.e);
     const missed = cells.filter((c, i) => !sel.has(i) && c.ok).map(c => c.e);
     if (!wrong.length && !missed.length) return api.pass(pick(['Every fish accounted for. Even the sneaky shark.', 'Flawless. You’d make a great aquarium inspector.']));
-    if (wrong.some(e => e === '\u{1F42C}' || e === '\u{1F433}')) return api.fail('Dolphins and whales breathe air. They’re mammals, and very offended.');
-    if (wrong.length) return api.fail(`${wrong[0]} is a ${SEA[wrong[0]]}, not a fish. Nice try.`);
-    if (missed.includes('\u{1F988}')) return api.fail('Sharks are fish. Scary ones, but fish.');
+    if (wrong.some(e => e === 'dolphin' || e === 'whale')) return api.fail('Dolphins and whales breathe air. They’re mammals, and very offended.');
+    if (wrong.length) return api.fail(`That's a ${SEA[wrong[0]]}, not a fish. Nice try.`);
+    if (missed.includes('shark')) return api.fail('Sharks are fish. Scary ones, but fish.');
     api.fail('You missed a fish. They’re sneaky like that.');
   });
 }
@@ -353,22 +355,11 @@ function L_text(root, api) {
 }
 
 /* 4 - rotate the picture upright */
-const SCENE = '<svg viewBox="0 0 200 200" aria-hidden="true">' +
-  '<defs><linearGradient id="skyG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3d93ea"/><stop offset="1" stop-color="#d4ecff"/></linearGradient></defs>' +
-  '<rect width="200" height="200" fill="url(#skyG)"/>' +
-  '<circle cx="158" cy="36" r="15" fill="#ffd54a"/><g stroke="#ffd54a" stroke-width="3" stroke-linecap="round"><path d="M158 11v-6M158 61v6M133 36h-6M183 36h6M141 19l-4-4M175 19l4-4"/></g>' +
-  '<ellipse cx="52" cy="40" rx="24" ry="8" fill="#fff"/><ellipse cx="66" cy="34" rx="15" ry="8" fill="#fff"/><ellipse cx="112" cy="62" rx="16" ry="5.500" fill="#fff" opacity=".9"/>' +
-  '<path d="M0 150Q55 112 118 140T200 130V200H0Z" fill="#5cb85c"/><rect y="168" width="200" height="32" fill="#46a047"/>' +
-  '<rect x="26" y="132" width="8" height="34" fill="#7a4a21"/><circle cx="30" cy="122" r="19" fill="#2e8b3d"/><circle cx="22" cy="130" r="11" fill="#379a47"/>' +
-  '<rect x="70" y="108" width="62" height="58" fill="#f3d6a4"/><rect x="117" y="80" width="9" height="20" fill="#a2402f"/>' +
-  '<polygon points="62,110 101,78 140,110" fill="#c0392b"/><rect x="93" y="134" width="15" height="32" fill="#7a4a21"/><circle cx="105" cy="151" r="1.500" fill="#ffd54a"/>' +
-  '<rect x="76" y="120" width="14" height="14" fill="#a9d8ff" stroke="#fff" stroke-width="2"/><rect x="113" y="120" width="14" height="14" fill="#a9d8ff" stroke="#fff" stroke-width="2"/>' +
-  '<g fill="#fff"><rect x="150" y="150" width="4" height="22"/><rect x="164" y="150" width="4" height="22"/><rect x="178" y="150" width="4" height="22"/><rect x="146" y="156" width="40" height="3"/></g>' +
-  '<g><circle cx="48" cy="182" r="3" fill="#ff6b9d"/><circle cx="62" cy="186" r="3" fill="#ffd54a"/><circle cx="154" cy="188" r="3" fill="#ff6b9d"/></g></svg>';
+const SCENE = photo('house-hill');   // a real cottage photo
 function L_rotate(root, api) {
   let rot = pick([60, 75, 90, 105, 120, 135, 150, 165, 195, 210, 225, 240, 255, 270, 285, 300]);
   const pic = h('div', { class: 'pic', html: SCENE });
-  const frame = h('div', { class: 'frame', tabindex: '0', role: 'img', 'aria-label': 'A tilted picture of a house on a hill. Use the left and right arrow keys, or drag, to rotate it upright.' }, pic);
+  const frame = h('div', { class: 'frame', tabindex: '0', role: 'img', 'aria-label': 'A tilted photo of a cottage. Use the left and right arrow keys, or drag, to rotate it upright.' }, pic);
   const set = v => { rot = v; pic.style.transform = `rotate(${rot}deg)`; };
   set(rot);
   const left = h('button', { class: 'ghost', type: 'button', text: '⟲ 15°', 'aria-label': 'Rotate left 15 degrees' });
@@ -403,16 +394,16 @@ function L_rotate(root, api) {
 }
 
 /* 5 - traffic lights, including half of one */
-const ROAD = { '\u{1F697}': 'car', '\u{1F695}': 'taxi', '\u{1F6D1}': 'stop sign', '\u{1F6A7}': 'construction barrier', '\u{1F68F}': 'bus stop sign', '\u{1F333}': 'tree', '\u{1F3E2}': 'office block', '\u{1F6B2}': 'bicycle', '\u{1F415}': 'dog', '\u{1F68C}': 'bus', '\u{1F534}': 'red circle', '\u{1F7E2}': 'green circle', '\u{1F693}': 'police car', '\u{1F6F5}': 'scooter' };
+const ROAD = { 'car': 'car', 'taxi': 'taxi', 'stop-sign': 'stop sign', 'barrier': 'barrier', 'bus-stop': 'bus stop', 'tree': 'tree', 'office': 'office blocks', 'bicycle': 'bicycle', 'dog': 'dog', 'bus': 'bus', 'crosswalk': 'pedestrian crossing', 'fire-hydrant': 'fire hydrant', 'police-car': 'police car', 'scooter': 'scooter' };
 function L_lights(root, api) {
   const good = [
-    { html: '\u{1F6A6}', label: 'traffic light', ok: true },
-    { html: '\u{1F6A6}', label: 'tilted traffic light', ok: true, cls: 'rot' },
-    { html: '\u{1F6A6}', label: 'mirrored traffic light', ok: true, cls: 'mir' },
-    { html: '\u{1F6A5}', label: 'sideways traffic light', ok: true },
-    { html: '\u{1F6A6}', label: 'half a traffic light, cut off by the edge of the square', ok: true, cls: 'half', half: true },
+    { html: photo('traffic-light'), label: 'traffic light', ok: true, cls: 'photo' },
+    { html: photo('traffic-light'), label: 'tilted traffic light', ok: true, cls: 'photo rot' },
+    { html: photo('traffic-light'), label: 'mirrored traffic light', ok: true, cls: 'photo mir' },
+    { html: photo('traffic-light'), label: 'sideways traffic light', ok: true, cls: 'photo side' },
+    { html: photo('traffic-light'), label: 'half a traffic light, cut off by the edge of the square', ok: true, cls: 'photo half', half: true },
   ];
-  const bad = shuffle(Object.keys(ROAD)).slice(0, 11).map(e => ({ html: e, label: ROAD[e], ok: false, name: ROAD[e] }));
+  const bad = shuffle(Object.keys(ROAD)).slice(0, 11).map(e => ({ html: photo(e), label: ROAD[e], ok: false, name: ROAD[e], cls: 'photo' }));
   const cells = shuffle([...good, ...bad]);
   const g = tileGrid(4, cells);
   root.append(g.el);

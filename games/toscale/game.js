@@ -35,11 +35,25 @@ const SHAPES = {
   fridge: [0.42, [[.03,0],[.97,0],[1,.03],[1,1],[0,1],[0,.03]]],
 };
 const cache = new Map();
+// Cut-out photos (photos/<id>.webp, from Wikipedia — see photos/credits.json). Loaded before the first round.
+const PHOTOS = new Map();
+await Promise.all(OBJECTS.filter(o => o.photo).map(o => new Promise(res => {
+  const img = new Image();
+  img.onload = () => { PHOTOS.set(o.id, img); res(); };
+  img.onerror = () => res();                              // missing photo: falls back to the drawn silhouette
+  img.src = `photos/${o.id}.webp`;
+})));
 function silhouette(o, color) {
   const key = o.id + color;
   if (cache.has(key)) return cache.get(key);
   let c;
-  if (o.e) {
+  if (o.photo && PHOTOS.get(o.id)) {                      // real cut-out photo, already trimmed to the object
+    const img = PHOTOS.get(o.id);
+    c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight;
+    const cg = c.getContext('2d');
+    cg.drawImage(img, 0, 0);
+    if (color === '#ffffff') { cg.globalCompositeOperation = 'source-in'; cg.fillStyle = color; cg.fillRect(0, 0, c.width, c.height); }
+  } else if (o.e) {
     const t = document.createElement('canvas'); t.width = t.height = 320;
     const tg = t.getContext('2d', { willReadFrequently: true });
     tg.font = '240px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif';
