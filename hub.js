@@ -89,8 +89,17 @@ const GAMES = [
     art: `<svg viewBox="0 0 110 80" aria-hidden="true"><rect x="6" y="20" width="98" height="40" rx="4" fill="#fff" stroke="#cbd5e1" stroke-width="2"/><rect x="16" y="30" width="20" height="20" rx="3" fill="#fff" stroke="#94a3b8" stroke-width="2"/><path d="M19 40 l5 5 l9 -11" stroke="#22c55e" stroke-width="3" fill="none"/><text x="42" y="44.5" font-size="9" font-weight="700" font-family="Segoe UI,sans-serif" fill="#0f172a">I'm not a robot</text><line x1="94" y1="5" x2="94" y2="1.5" stroke="#64748b" stroke-width="1.6"/><circle cx="94" cy="1.8" r="1.5" fill="#ef4444"/><rect x="86" y="5" width="16" height="12" rx="3" fill="#64748b"/><circle cx="90.8" cy="10.5" r="1.8" fill="#e0f2fe"/><circle cx="97.2" cy="10.5" r="1.8" fill="#e0f2fe"/></svg>`,
   },
   {
+    id: 'downhill', name: 'DOWNHILL', path: 'games/downhill/', insp: 'original endless roller',
+    blurb: 'Real ball physics on a track that curves, tilts and dives. Tunnels, moving blocks, ramps. Gems buy skins.',
+    bg: 'linear-gradient(160deg,#3b0a54 0%,#1a0b2e 60%,#0d0221 100%)', accent: '#ff3d9a', glow: 'rgba(255,61,154,.38)',
+    art: `<svg viewBox="0 0 110 80" aria-hidden="true"><defs><linearGradient id="dhs" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff6a8"/><stop offset=".5" stop-color="#ffb347"/><stop offset="1" stop-color="#ff3d7f"/></linearGradient></defs>
+      <circle cx="55" cy="30" r="20" fill="url(#dhs)"/>${[34, 39, 44].map((y, i) => `<rect x="30" y="${y}" width="50" height="${1.5 + i}" fill="#2a0d40"/>`).join('')}
+      <path d="M48 46 L62 46 L104 80 L6 80 Z" fill="#1a0b2e" stroke="#ff3d9a" stroke-width="2"/><path d="M55 46 L55 80 M51.5 46 L33 80 M58.5 46 L77 80 M20 70 L90 70 M32 58 L78 58" stroke="#ff3d9a" stroke-width="1.5"/>
+      <rect x="66" y="56" width="7" height="6" fill="#ff2a4a" stroke="#ffe14d" stroke-width="1"/><circle cx="46" cy="66" r="6" fill="#20d8ff"/><path d="M42 63 L50 69 M42 69 L50 63" stroke="#fff" stroke-width="1.4"/></svg>`,
+  },
+  {
     id: 'skylane', name: 'SKYLANE', path: 'games/skylane/', insp: 'original endless roller',
-    blurb: 'One smooth road diving down through the night sky. Tap to steer, every new piece of road is a point, gems buy new balls.',
+    blurb: 'One smooth road floating over the clouds. Tap to steer, every new piece of road is a point, and the pace keeps rising.',
     bg: 'linear-gradient(170deg,#0d1d4a 0%,#06102e 55%,#03061a 100%)', accent: '#5ff2ff', glow: 'rgba(95,242,255,.32)',
     art: `<svg viewBox="0 0 110 80" aria-hidden="true"><rect width="110" height="52" fill="#06102e"/><rect y="44" width="110" height="36" fill="#2b4a86"/>
       <circle cx="84" cy="16" r="8" fill="#f4f1e6"/><circle cx="84" cy="16" r="13" fill="#9fb7ff" opacity=".18"/>${[[12, 8], [30, 20], [48, 6], [64, 26], [22, 34]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1" fill="#cfe0ff"/>`).join('')}

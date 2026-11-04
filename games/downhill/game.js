@@ -22,7 +22,9 @@ const L = 2.2, W = 2.2, LANES = 3, HALF = W * LANES / 2, R = 0.46, G = 30, TH = 
 const DRAG = 0.012;           // air drag: a = -k·|v|·v  → terminal speed sqrt(g·sin(slope)/k)
 const ROLL_RES = 0.35;        // rolling resistance (m/s² against motion while touching the ground)
 // steering: a hard push against strong sideways grip, so the ball snaps to ~12 m/s sideways and stops dead on release
-const STEER_G = 150, STEER_AIR = 18, GRIP = 40, GRIP_STEER = 0.4;  // push, push in the air, sideways grip, grip kept while steering
+// SKYLANE-style movement: on the floor the ball holds a set pace down the track and steers with a firm push that
+// settles at ~9 m/s sideways and stops quickly on release. Gravity presses it onto the floor and drives jumps and drops.
+const STEER = 140, GRIP_ON = 15, GRIP_OFF = 30, AIR_STEER = 0.45, PACE_EASE = 2;
 const deg = Math.PI / 180;
 const laneU = j => -HALF + W * (j + 0.5);
 const PTS = { gem: 10, close: 25, airPerSec: 60, floor: 25 };
@@ -354,8 +356,10 @@ const sgn = () => (Math.random() < 0.5 ? -1 : 1);
 const Yv = new THREE.Vector3(0, 1, 0);
 const difficulty = i => Math.min(1, (i * L) / DIFF_DIST);
 // slope steepness at row i sets the cruising speed: ~68 km/h at the top, building gently to ~120 km/h at 4.5 km
-const basePitch = i => -(8.3 + 17.5 * Math.min(1, i * L / SPEED_DIST)) * deg;
-const vTermAt = i => Math.sqrt(G * Math.sin(-basePitch(i)) / DRAG);
+// the track falls away steeply: 16 degrees at the top, 30 by 4.5 km. Speed no longer comes from the slope: it is a
+// set pace that builds smoothly from ~65 km/h to ~120 km/h, so the steeper hill does not make it faster
+const basePitch = i => -(16 + 14 * Math.min(1, i * L / SPEED_DIST)) * deg;
+const vTermAt = i => 18 + 15 * Math.min(1, Math.max(0, i) * L / SPEED_DIST);
 // obstacle spacing is set in seconds, then turned into rows for the speed the ball will have there
 const rowsFor = (sec, min = 2) => Math.max(min, Math.round(sec * vTermAt(gen.i) / L));
 const shiftP = sec => Math.min(0.4, L / (vTermAt(gen.i) * sec)); // chance per row the safe lane moves: about once every sec seconds
@@ -510,7 +514,7 @@ function segRamp(n, d) {
   let climb = 0;
   for (let k = 0; k < 9 && gen.pitch < 16 * deg; k++) { const r = pushRow(FULL()); climb += Math.max(0, r.F.y * L); }
   const last = rows[gen.i - 1], alpha = Math.asin(last.F.y);
-  const vLip = Math.sqrt(Math.max(36, vTerm * vTerm - 2 * G * climb));
+  const vLip = vTerm * 0.97;   // the pace holds up the ramp
   const vSlow = vLip * 0.65, vMid = vLip * 0.85;
   const range = vSlow * vSlow * Math.sin(2 * alpha) / G;
   const gaps = Math.max(1, Math.min(8, Math.floor(0.55 * range / L)));
@@ -770,7 +774,7 @@ function resetWorld() {
   const r = row(3);
   b.ci = 3; b.s = L / 2;
   worldAt(r, L / 2, 0, R, b.p);
-  b.v.copy(r.F).multiplyScalar(17); b.w.set(0, 0, 0);
+  b.v.copy(r.F).multiplyScalar(vTermAt(b.ci)); b.w.set(0, 0, 0);
   b.grounded = true; b.lastGround = b.p.y - R; b.air = 0; b.gN.copy(r.U); b.focusY = b.p.y;
   startS = progress();
   camF.copy(r.F); camU.copy(Yv);
@@ -1049,14 +1053,23 @@ function step(dt) {
   simT += dt;
   const r0 = row(b.ci);
   const dir = steer();
-  b.v.y -= G * dt;                                                   // gravity
-  if (r0) b.v.addScaledVector(r0.R, dir * (b.grounded ? STEER_G : STEER_AIR) * dt);
-  const sp = b.v.length();
-  b.v.addScaledVector(b.v, -DRAG * sp * dt);                        // air drag
-  if (b.grounded && r0) {
-    const lat = b.v.dot(r0.R);                                       // sideways grip (less while you steer)
-    b.v.addScaledVector(r0.R, -lat * Math.min(1, GRIP * dt * (dir ? GRIP_STEER : 1)));
-    if (sp > 0.5) b.v.addScaledVector(b.v, -ROLL_RES * dt / sp);    // rolling resistance
+  if (b.grounded && r0 && b.gN.y > 0.3 && b.gN.dot(r0.U) > 0.9) {
+    // on the floor: work in the track's own frame (the SKYLANE model). Forward speed eases to the pace, sideways is a
+    // firm push against strong grip (a banked track nudges the ball gently downhill), and gravity only presses down.
+    let vf = b.v.dot(r0.F), vr = b.v.dot(r0.R), vu = b.v.dot(r0.U);
+    vf += (vTermAt(b.ci) - vf) * Math.min(1, PACE_EASE * dt);
+    vr += (dir * STEER - vr * (dir ? GRIP_ON : GRIP_OFF) - G * r0.R.y * 0.35) * dt;
+    vu = Math.min(vu, 0) - G * r0.U.y * dt;
+    b.v.copy(r0.F).multiplyScalar(vf).addScaledVector(r0.R, vr).addScaledVector(r0.U, vu);
+  } else {
+    // in the air (or riding a tunnel wall): real gravity and drag, and a little steering
+    b.v.y -= G * dt;
+    if (r0) {
+      const vr = b.v.dot(r0.R);
+      if (dir && dir * vr < 9) b.v.addScaledVector(r0.R, dir * STEER * AIR_STEER * dt);   // air steering up to ~9 m/s sideways
+    }
+    const sp = b.v.length();
+    b.v.addScaledVector(b.v, -DRAG * sp * dt);
   }
   b.p.addScaledVector(b.v, dt);
   trackRow();
@@ -1175,10 +1188,12 @@ const tF = new THREE.Vector3(), tU = new THREE.Vector3(), fh = new THREE.Vector3
 function placeCamera(snap, dt = 0.016) {
   const r = row(b.ci);
   if (r) {
-    tF.copy(r.F);
-    if (b.v.lengthSq() > 9) tF.lerp(dv.copy(b.v).normalize(), 0.3).normalize();
-    tU.copy(Yv).lerp(r.U, 0.4).normalize();
-    const k = snap ? 1 : 1 - Math.exp(-dt * 6);
+    // SKYLANE-style: the camera rides the track itself (blended between rows so it never kinks), not the ball's
+    // velocity, so steering never swings the view and the hill reads as a steady drop ahead
+    const nx = row(b.ci + 1) || r, f = Math.max(0, Math.min(1, b.s / L));
+    tF.copy(r.F).lerp(nx.F, f).normalize();
+    tU.copy(Yv).lerp(dv.copy(r.U).lerp(nx.U, f), 0.55).normalize();
+    const k = snap ? 1 : 1 - Math.exp(-dt * 14);
     camF.lerp(tF, k).normalize();
     camU.lerp(tU, k).normalize();
   }
@@ -1187,9 +1202,9 @@ function placeCamera(snap, dt = 0.016) {
   b.focusY = snap ? fy : b.focusY + (fy - b.focusY) * (1 - Math.exp(-dt * 12));
   focus.set(b.p.x, b.focusY, b.p.z);
   // low and tight behind the ball (it fills about a fifth of the screen height), the way the fast slope rollers frame it
-  camPos.copy(focus).addScaledVector(camF, -2.9).addScaledVector(camU, 1.05);
-  // aim a touch down the slope (more on tall phone screens) so the track ahead fills the view, not the sky
-  camLook.copy(focus).addScaledVector(camF, 12).addScaledVector(camU, -0.45 - 1.1 * Math.max(0, 1 - camera.aspect));
+  camPos.copy(focus).addScaledVector(camF, -3.3).addScaledVector(camU, 1.3);
+  // look at the track 10 m ahead (a touch lower on tall phone screens) so the floor fills the view, not the sky
+  camLook.copy(focus).addScaledVector(camF, 10).addScaledVector(camU, -0.4 - 1.1 * Math.max(0, 1 - camera.aspect));
   camera.position.copy(camPos);
   if (shake > 0) camera.position.add(tmpV.set((Math.random() - 0.5) * 2 * shake, (Math.random() - 0.5) * 2 * shake, 0));
   camera.up.copy(camU);

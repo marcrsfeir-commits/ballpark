@@ -62,13 +62,3 @@ kbd { display: inline-block; min-width: 20px; padding: 1px 5px; margin: 0 1px; b
 @media (prefers-reduced-motion: reduce) {
   .score .v.bump, .toast.show { animation-duration: .01s; }
 }
-
-/* gems + ball shop */
-.gemico { display: inline-block; width: 10px; height: 10px; margin-right: 5px; vertical-align: -1px; background: #ff5fd2; transform: rotate(45deg); box-shadow: 0 0 8px rgba(255,95,210,.8); }
-.gemline { color: #ff8be0; }
-.skingrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 14px 0 16px; }
-.skin { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 6px; border-radius: 14px; border: 1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.05); color: #eef3ff; cursor: pointer; font: 700 13px/1.1 "Segoe UI", system-ui, sans-serif; }
-.skin i { width: 44px; height: 44px; border-radius: 50%; box-shadow: 0 4px 14px rgba(0,0,0,.4); }
-.skin small { font: 700 10px/1 ui-monospace, Consolas, monospace; letter-spacing: 1px; opacity: .75; }
-.skin.on { border-color: #5ff2ff; box-shadow: 0 0 16px rgba(95,242,255,.3) inset; }
-.skin.poor { opacity: .45; cursor: default; }

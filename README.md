@@ -2,7 +2,7 @@
 
 **Play it here: https://marcrsfeir-commits.github.io/ballpark/**
 
-Fifteen free browser games in one place. No ads, no accounts, no paywalls — everything runs in your browser and saves on your device. Daily puzzles are picked per device, so friends get different sets.
+Sixteen free browser games in one place. No ads, no accounts, no paywalls — everything runs in your browser and saves on your device. Daily puzzles are picked per device, so friends get different sets.
 
 | Game | What you do | Inspired by |
 |---|---|---|
@@ -20,7 +20,8 @@ Fifteen free browser games in one place. No ads, no accounts, no paywalls — ev
 | **TROLLEY TROUBLE** | 28 absurd trolley dilemmas and your ethics profile. | neal.fun |
 | **NOT A ROBOT** | A captcha that gets more and more suspicious of you. | neal.fun |
 | **SANDLOT** | Falling-sand physics sandbox: sand, water, lava, acid, walkers, bombs, lightning and a nuke. | original |
-| **SKYLANE** | Roll a ball down one smooth road that dives through the night sky: tap to steer, dodge blocks, cross holes, jump ramps and plunge down steep drops. Gems buy new balls. (Replaces DOWNHILL, whose files stay in games/downhill.) | original |
+| **DOWNHILL** | Physics ball roller: a 3-wide track that curves, tilts and dives — tunnels laced with red killer panels, moving blocks, ramps over gaps. Gems, skins, levels and goals. | original |
+| **SKYLANE** | Roll a pearl down one smooth road floating over the clouds: tap to steer, dodge amber blocks, cross holes and jump ramps while the pace keeps rising. | original |
 
 These are fan remakes — go play the originals too. All prompts, questions, answer lists and art here are original.
 
