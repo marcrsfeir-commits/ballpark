@@ -99,7 +99,7 @@ function setQuality(q) {
 
 // ---------- road ----------
 // samples[k - base] = { p, F, R, U, solid: [[u0,u1],...] (empty = gap), fh (floor height above the road line), piece }
-let samples = [], base = 0, gen, pieces, blocks;
+let samples = [], base = 0, gen, pieces, blocks, gems = [];
 const Yv = new THREE.Vector3(0, 1, 0);
 const deg = Math.PI / 180;
 const rnd = (a, b) => a + Math.random() * (b - a);
@@ -120,7 +120,7 @@ function pushSample(solid = FULL, fh = 0) {
   // smooth heading: the turn rate itself eases toward its target, so curves flow in and out with no kinks
   gen.yr = approach(gen.yr, gen.tyr, 0.0006 * DS);
   gen.yaw += gen.yr * DS;
-  gen.pitch = approach(gen.pitch, gen.tp, 0.004 * DS);
+  gen.pitch = approach(gen.pitch, gen.tp, 0.008 * DS);
   gen.bank = approach(gen.bank, gen.tb, 0.006 * DS);
   const fr = frameFrom(gen.yaw, gen.pitch, gen.bank);
   samples.push({ p: gen.p.clone(), ...fr, solid, fh, piece: gen.piece });
@@ -139,7 +139,8 @@ function startPiece(kind, bend = true) {
     gen.tyr = Math.random() < 0.3 + 0.4 * d ? sgn() * rnd(0.004, 0.01 + 0.012 * d) : 0;
     gen.tb = gen.tyr ? -Math.sign(gen.tyr) * rnd(4, 10 + 6 * d) * deg : 0;
   } else { gen.tyr = 0; gen.tb = 0; }
-  gen.tp = -rnd(7, 11) * deg;
+  // the road keeps falling away: steep from the start, steeper the further you get
+  gen.tp = -(rnd(15, 19) + 7 * d) * deg;
 }
 function straighten() {
   gen.tyr = 0; gen.tb = 0;
@@ -233,18 +234,39 @@ const PIECES = {
     fill(gapLen, () => [[], 0]);
     fill(v * (t + 0.6));         // clear landing
   },
+  dive(d, v) {
+    // the road tips over into a steep plunge, then eases back out; open floor so you can just enjoy the drop
+    startPiece('dive', false);
+    straighten();
+    gen.tp = -rnd(30, 36 + 4 * d) * deg;
+    fill(v * rnd(2.2, 3.2));
+  },
 };
+// gems: a short line of them on open floor, clear of every block
+function placeGems(s0, s1) {
+  if (s1 - s0 < 12 || Math.random() > 0.45) return;
+  const n = Math.round(rnd(3, 6)), s = rnd(s0 + 3, Math.max(s0 + 3, s1 - n * 2.5 - 2));
+  let u = rnd(-HALF + 0.8, HALF - 0.8);
+  for (let i = 0; i < n; i++) {
+    const gs = s + i * 2.5;
+    u = clamp(u + rnd(-0.5, 0.5), -HALF + 0.6, HALF - 0.6);
+    if ([-0.6, 0, 0.6].some(o => floorAt(gs + o, u) === null)) continue;
+    if (blocks.some(b => Math.abs(b.s - gs) < 2.2 && Math.abs(blockU(b) - u) < b.hw + (b.move ? b.move.A + 0.9 : 0.9))) continue;
+    gems.push({ s: gs, u, h: (floorAt(gs, u) ?? 0) + 0.55, taken: false });
+  }
+}
 
 function nextPiece() {
   const s = genS(), d = difficulty(s), v = vTarget(s + 40);
-  if (gen.piece === 0) { startPiece('start', false); gen.tp = -9 * deg; fill(60); return; }
+  if (gen.piece === 0) { startPiece('start', false); gen.tp = -15 * deg; fill(60); return; }
   const table = s < 300
-    ? [['open', 1], ['blocks', 3], ['gates', 2], ['gaps', 2], ['rollers', 2], ['kicker', 1.5], ['holes', 1.5]]
-    : [['open', 0.6], ['blocks', 3], ['gates', 2.5], ['sliders', 2], ['holes', 2], ['narrow', 1.8], ['gaps', 1.5], ['rollers', 1.5], ['kicker', 1.6]];
+    ? [['open', 1], ['blocks', 3], ['gates', 2], ['gaps', 2], ['rollers', 2], ['kicker', 1.5], ['holes', 1.5], ['dive', 1]]
+    : [['open', 0.6], ['blocks', 3], ['gates', 2.5], ['sliders', 2], ['holes', 2], ['narrow', 1.8], ['gaps', 1.5], ['rollers', 1.5], ['kicker', 1.6], ['dive', 1.2]];
   const total = table.reduce((a, [, w]) => a + w, 0);
-  let pick = Math.random() * total;
-  for (const [name, w] of table) { pick -= w; if (pick <= 0) { PIECES[name](d, v); return; } }
-  PIECES.open(d, v);
+  let pick = Math.random() * total, chosen = 'open';
+  for (const [name, w] of table) { pick -= w; if (pick <= 0) { chosen = name; break; } }
+  PIECES[chosen](d, v);
+  placeGems(s, genS());
 }
 
 // fraction-interpolated road point at distance s, sideways u, height h
@@ -325,6 +347,7 @@ function ensureRoad(s) {
   while (chunks.length && chunks[0].k1 < dropK) { const c = chunks.shift(); scene.remove(c.m, c.rm); c.m.geometry.dispose(); c.rm.geometry.dispose(); }
   if (dropK - base > 200) { samples.splice(0, dropK - base); base = dropK; }
   while (blocks.length && blocks[0].s < s - BEHIND) blocks.shift();
+  while (gems.length && gems[0].s < s - BEHIND) gems.shift();
   while (pieces.length > 2 && pieces[1].s < s - BEHIND) pieces.shift();
 }
 
@@ -359,17 +382,48 @@ function drawBlocks() {
 }
 
 // ---------- ball ----------
-function ballTexture() {
+// ball skins, bought with gems (carried over from DOWNHILL's shop)
+const SKINS = [
+  { id: 'pearl', name: 'Pearl', cost: 0, c: ['#ffffff', '#dfe8ff', '#1a2a6c', '#5ff2ff'] },
+  { id: 'ember', name: 'Ember', cost: 30, c: ['#ffd27a', '#ff7a1a', '#5a1a00', '#fff1c2'] },
+  { id: 'mint', name: 'Mint', cost: 60, c: ['#d8fff0', '#7ef0c0', '#0d4a3a', '#ffffff'] },
+  { id: 'violet', name: 'Violet', cost: 100, c: ['#e6d4ff', '#9a6bff', '#2a0d5a', '#ff5fd2'] },
+  { id: 'night', name: 'Night', cost: 160, c: ['#3a4670', '#141a33', '#5ff2ff', '#ffffff'] },
+  { id: 'gold', name: 'Gold', cost: 250, c: ['#fff6c8', '#e8b230', '#6a4400', '#ffffff'] },
+];
+let gemsWallet = store.get('gems', 0), owned = store.get('owned', ['pearl']), skin = store.get('skin', 'pearl');
+if (!SKINS.some(k => k.id === skin)) skin = 'pearl';
+function ballTexture(cols) {
+  const [top, bot, band, glow] = cols;
   const c = document.createElement('canvas'); c.width = 512; c.height = 256;
   const g = c.getContext('2d');
-  const gr = g.createLinearGradient(0, 0, 0, 256); gr.addColorStop(0, '#ffffff'); gr.addColorStop(1, '#dfe8ff');
+  const gr = g.createLinearGradient(0, 0, 0, 256); gr.addColorStop(0, top); gr.addColorStop(1, bot);
   g.fillStyle = gr; g.fillRect(0, 0, 512, 256);
-  g.fillStyle = '#1a2a6c'; g.fillRect(0, 112, 512, 32);
-  g.fillStyle = '#5ff2ff'; g.fillRect(0, 121, 512, 14);
-  for (let i = 0; i < 4; i++) { g.fillStyle = '#1a2a6c'; g.beginPath(); g.arc(64 + i * 128, 60, 16, 0, 7); g.fill(); g.beginPath(); g.arc(64 + i * 128, 196, 16, 0, 7); g.fill(); }
+  g.fillStyle = band; g.fillRect(0, 112, 512, 32);
+  g.fillStyle = glow; g.fillRect(0, 121, 512, 14);
+  for (let i = 0; i < 4; i++) { g.fillStyle = band; g.beginPath(); g.arc(64 + i * 128, 60, 16, 0, 7); g.fill(); g.beginPath(); g.arc(64 + i * 128, 196, 16, 0, 7); g.fill(); }
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
 }
-const ballMesh = new THREE.Mesh(new THREE.SphereGeometry(R, 48, 32), new THREE.MeshStandardMaterial({ map: ballTexture(), roughness: 0.18, metalness: 0.1 }));
+const ballMesh = new THREE.Mesh(new THREE.SphereGeometry(R, 48, 32), new THREE.MeshStandardMaterial({ map: ballTexture(SKINS.find(k => k.id === skin).c), roughness: 0.18, metalness: 0.1 }));
+function applySkin(id) {
+  skin = id; store.set('skin', id);
+  ballMesh.material.map.dispose(); ballMesh.material.map = ballTexture(SKINS.find(k => k.id === id).c); ballMesh.material.needsUpdate = true;
+}
+// gem meshes
+const gemMesh = new THREE.InstancedMesh(new THREE.OctahedronGeometry(0.28), new THREE.MeshBasicMaterial({ color: new THREE.Color('#ff5fd2').multiplyScalar(1.5), toneMapped: false }), 200);
+gemMesh.frustumCulled = false; gemMesh.count = 0; scene.add(gemMesh);
+const gemQ = new THREE.Quaternion(), gemS = new THREE.Vector3(1, 1.4, 1), gemP = new THREE.Vector3();
+function drawGems() {
+  let n = 0;
+  gemQ.setFromAxisAngle(Yv, simT * 2.4);
+  for (const gm of gems) {
+    if (gm.s > ball.s + AHEAD - 20 || n >= 200) break;
+    if (gm.taken || gm.s < ball.s - 4) continue;
+    roadPoint(gm.s, gm.u, gm.h + Math.sin(simT * 3 + gm.s) * 0.08, gemP);
+    M4.compose(gemP, gemQ, gemS); gemMesh.setMatrixAt(n++, M4);
+  }
+  gemMesh.count = n; gemMesh.instanceMatrix.needsUpdate = true;
+}
 scene.add(ballMesh);
 const shadow = new THREE.Mesh(new THREE.CircleGeometry(R * 1.05, 24), new THREE.MeshBasicMaterial({ color: '#0a1230', transparent: true, opacity: 0.4, depthWrite: false }));
 scene.add(shadow);
@@ -407,6 +461,7 @@ function tone(f, dur, type = 'sine', vol = 0.1, slide, delay = 0) {
 }
 const sfx = {
   piece: () => tone(1046, 0.06, 'triangle', 0.05),
+  gem: () => { tone(1568, 0.08, 'sine', 0.06); tone(2093, 0.1, 'sine', 0.05, null, 0.05); },
   pace: () => { tone(523, 0.12, 'triangle', 0.07); tone(784, 0.18, 'triangle', 0.07, null, 0.1); },
   land: v => tone(110, 0.12, 'sine', Math.min(0.2, 0.04 + v * 0.02), 55),
   crash: () => { tone(180, 0.45, 'sawtooth', 0.1, 40); tone(90, 0.6, 'square', 0.05, 30); },
@@ -452,14 +507,14 @@ function steerDir() {
 }
 
 // ---------- run ----------
-let state = 'menu', score = 0, best = store.get('best', 0), lastPiece = 0, pace = 1, dieT = 0, lastDeath = null, shake = 0;
+let runGems = 0, state = 'menu', score = 0, best = store.get('best', 0), lastPiece = 0, pace = 1, dieT = 0, lastDeath = null, shake = 0;
 function resetWorld() {
   for (const c of chunks) { scene.remove(c.m, c.rm); c.m.geometry.dispose(); c.rm.geometry.dispose(); }
-  chunks.length = 0; samples = []; base = 0; builtK = 0; pieces = []; blocks = []; simT = 0;
-  gen = { k: 0, p: new THREE.Vector3(), yaw: 0, yr: 0, tyr: 0, pitch: -9 * deg, tp: -9 * deg, bank: 0, tb: 0, piece: 0, safe: 0 };
+  chunks.length = 0; samples = []; base = 0; builtK = 0; pieces = []; blocks = []; gems = []; simT = 0;
+  gen = { k: 0, p: new THREE.Vector3(), yaw: 0, yr: 0, tyr: 0, pitch: -12 * deg, tp: -15 * deg, bank: 0, tb: 0, piece: 0, safe: 0 };
   Object.assign(ball, { s: 6, u: 0, y: 0, vs: vTarget(0), vu: 0, vy: 0, grounded: true, overFloor: true, air: 0 });
   ensureRoad(ball.s);
-  score = 0; lastPiece = pieceAt(ball.s).id; pace = 1;
+  score = 0; runGems = 0; lastPiece = pieceAt(ball.s).id; pace = 1;
   ballMesh.visible = true; parts.length = 0; shake = 0;
   ballMesh.quaternion.identity();
   placeCamera(1, true);
@@ -483,6 +538,7 @@ function endRun(kind) {
     burst(ballMesh.position, reduceMotion ? 20 : 60, ['#ffffff', '#5ff2ff', '#ffb347']);
     if (!reduceMotion) shake = 0.5;
   } else if (kind === 'fall') sfx.fall();
+  gemsWallet += runGems; store.set('gems', gemsWallet);
   const isBest = score > best;
   best = Math.max(best, score); store.set('best', best);
   const runs = store.get('runs', 0) + 1; store.set('runs', runs);
@@ -491,7 +547,7 @@ function endRun(kind) {
   const todayBest = tb.date === t ? Math.max(tb.score || 0, score) : score;
   store.set('today', { date: t, score: todayBest });
   if (window.Ballpark) Ballpark.report(ID, { score: todayBest, label: `${todayBest} pieces` });
-  lastResult = { score, isBest, kind, dist: Math.round(ball.s - 6), pace };
+  lastResult = { score, isBest, kind, dist: Math.round(ball.s - 6), pace, gems: runGems };
 }
 let lastResult = null;
 function showOver() {
@@ -500,7 +556,7 @@ function showOver() {
   const r = lastResult;
   $('overTitle').textContent = r.kind === 'crash' ? 'CRASHED' : r.kind === 'fall' ? 'OFF THE EDGE' : 'RUN ENDED';
   $('finalScore').textContent = r.score;
-  $('overDetail').textContent = `${r.dist} m · pace ${r.pace}`;
+  $('overDetail').textContent = `${r.dist} m · pace ${r.pace} · +${r.gems} gems`;
   $('bestOver').textContent = r.isBest && r.score > 0 ? 'NEW BEST' : `BEST ${best}`;
   $('bestOver').classList.toggle('new', r.isBest && r.score > 0);
   showPanel('over');
@@ -509,9 +565,9 @@ function showOver() {
 function pause() { if (state !== 'play') return; state = 'paused'; if (hum) hum.gain.value = 0; showPanel('paused'); $('resume').focus({ preventScroll: true }); }
 function resume() { if (state !== 'paused') return; state = 'play'; showPanel(null); clock = performance.now(); }
 function toMenu() { state = 'menu'; $('hud').hidden = true; $('pauseBtn').hidden = true; resetWorld(); refreshMenu(); showPanel('start'); }
-function showPanel(id) { for (const p of ['start', 'over', 'paused']) $(p).hidden = p !== id; }
-function refreshMenu() { $('bestMenu').textContent = best ? `BEST ${best} PIECES` : 'NO RUNS YET'; }
-function updateHud() { $('score').textContent = score; $('speed').textContent = `${Math.round(ball.vs * 3.6)} km/h`; $('pace').textContent = `PACE ${pace}`; }
+function showPanel(id) { for (const p of ['start', 'over', 'paused', 'skins']) $(p).hidden = p !== id; }
+function refreshMenu() { $('bestMenu').textContent = best ? `BEST ${best} PIECES` : 'NO RUNS YET'; $('wallet').textContent = gemsWallet; }
+function updateHud() { $('score').textContent = score; $('speed').textContent = `${Math.round(ball.vs * 3.6)} km/h`; $('pace').textContent = `PACE ${pace}`; $('runGems').textContent = runGems; }
 function toast(text) {
   const t = $('toast'); t.textContent = text; t.classList.remove('show'); void t.offsetWidth; t.classList.add('show');
 }
@@ -551,6 +607,12 @@ function step(dt) {
     }
   }
   if (b.y < -5) return endRun('fall');
+  // gems
+  for (const gm of gems) {
+    if (gm.s > b.s + 1) break;
+    if (gm.taken || gm.s < b.s - 1) continue;
+    if (Math.abs(gm.s - b.s) < 0.75 && Math.abs(gm.u - b.u) < 0.8 && b.y < gm.h + 0.5) { gm.taken = true; runGems++; sfx.gem(); }
+  }
   // blocks: sphere against box in road coordinates
   for (const bk of blocks) {
     if (bk.s > b.s + 2) break;
@@ -590,7 +652,7 @@ function placeCamera(dt, snap) {
   roadFrame(b.s + 40, lF, lR, lU);
   const fh = tmp.set(lF.x, 0, lF.z).normalize();
   // moon hangs off to one side, low over the clouds (not behind the score)
-  moon.position.copy(camera.position).addScaledVector(fh, 700).addScaledVector(lR.set(-fh.z, 0, fh.x), 330); moon.position.y += 95; moon.lookAt(camera.position);
+  moon.position.copy(camera.position).addScaledVector(fh, 700).addScaledVector(lR.set(-fh.z, 0, fh.x), 440); moon.position.y += 95; moon.lookAt(camera.position);
   moonHalo.position.copy(moon.position).addScaledVector(fh, 2); moonHalo.lookAt(camera.position);
   clouds.position.set(camera.position.x, camera.position.y - 70, camera.position.z);
   clouds.material.map.offset.set(camera.position.x / 2400 * 10 % 1, -camera.position.z / 2400 * 10 % 1);
@@ -646,6 +708,7 @@ function frame(now) {
     shadow.scale.setScalar(k); shadow.material.opacity = 0.4 * k;
   }
   drawBlocks();
+  drawGems();
   // shards
   let n = 0;
   for (let i = parts.length - 1; i >= 0; i--) {
@@ -676,6 +739,23 @@ $('resume').addEventListener('click', resume);
 $('quit').addEventListener('click', () => { state = 'play'; endRun('quit'); dieT = 1; });
 $('pauseBtn').addEventListener('click', () => { pause(); $('pauseBtn').blur(); });
 $('mute').addEventListener('click', () => { audioInit(); setMute(!muted); $('mute').blur(); });
+// skins shop
+function renderSkins() {
+  $('wallet2').textContent = gemsWallet;
+  const grid = $('skinGrid'); grid.replaceChildren();
+  for (const k of SKINS) {
+    const has = owned.includes(k.id), b = document.createElement('button');
+    b.type = 'button'; b.className = 'skin' + (k.id === skin ? ' on' : '') + (!has && gemsWallet < k.cost ? ' poor' : '');
+    b.innerHTML = `<i style="background:radial-gradient(circle at 35% 30%, ${k.c[0]}, ${k.c[1]} 60%, ${k.c[2]})"></i><span>${k.name}</span><small>${k.id === skin ? 'IN USE' : has ? 'USE' : k.cost + ' gems'}</small>`;
+    b.addEventListener('click', () => {
+      if (!has) { if (gemsWallet < k.cost) return; gemsWallet -= k.cost; store.set('gems', gemsWallet); owned = [...owned, k.id]; store.set('owned', owned); sfx.pace(); }
+      applySkin(k.id); renderSkins();
+    });
+    grid.append(b);
+  }
+}
+$('openSkins').addEventListener('click', () => { renderSkins(); showPanel('skins'); });
+$('skinsBack').addEventListener('click', () => { refreshMenu(); showPanel('start'); });
 $('quality').addEventListener('click', () => setQuality(quality === 'high' ? 'low' : 'high'));
 $('share').addEventListener('click', async () => {
   const r = lastResult; if (!r) return;
@@ -698,7 +778,7 @@ requestAnimationFrame(frame);
 // test hook (automated checks only)
 window.__skylane = {
   get state() { return state; }, get score() { return score; }, get simT() { return simT; }, get lastDeath() { return lastDeath; },
-  ball, start: startRun, floorAt, pieceAt, blockU, setQuality,
+  ball, start: startRun, get gems() { return gems; }, get runGems() { return runGems; }, floorAt, pieceAt, blockU, setQuality,
   blocksNear: (s0, s1) => blocks.filter(bk => bk.s >= s0 && bk.s <= s1),
   fast(sec) { for (let k = 0; k < sec / SUB && state === 'play'; k++) { step(SUB); if (k % 24 === 0) ensureRoad(ball.s); } ensureRoad(ball.s); const pc = pieceAt(ball.s); if (pc.id > lastPiece) { score += pc.id - lastPiece; lastPiece = pc.id; } return state; },
 };

@@ -14,7 +14,7 @@
 
 <div class="hud" id="hud" hidden>
   <div class="score"><span class="v" id="score">0</span><span class="k">PIECES</span></div>
-  <div class="side"><span id="pace">PACE 1</span><span id="speed">0 km/h</span></div>
+  <div class="side"><span class="gemline"><i class="gemico"></i><b id="runGems">0</b></span><span id="pace">PACE 1</span><span id="speed">0 km/h</span></div>
 </div>
 <div class="toast" id="toast" aria-live="polite"></div>
 
@@ -28,11 +28,19 @@
 
 <section class="panel" id="start">
   <h1>SKYLANE</h1>
-  <p class="sub">One smooth road over the clouds. Roll as far as you can: every new piece of road is a point, and the pace keeps rising.</p>
+  <p class="sub">One smooth road diving down through the night sky. Every new piece of road is a point, gems buy new balls, and the pace keeps rising.</p>
   <button class="big" id="go" type="button">ROLL</button>
   <p class="best" id="bestMenu"></p>
-  <div class="row"><button class="small" id="quality" type="button">GRAPHICS <b id="qualityLabel">HIGH</b></button></div>
+  <p class="best"><i class="gemico"></i><b id="wallet">0</b> gems</p>
+  <div class="row"><button class="small" id="openSkins" type="button">BALLS</button><button class="small" id="quality" type="button">GRAPHICS <b id="qualityLabel">HIGH</b></button></div>
   <p class="how"><kbd>&larr;</kbd><kbd>&rarr;</kbd> or <kbd>A</kbd><kbd>D</kbd> to steer &middot; on a phone, hold the left or right side &middot; <kbd>P</kbd> pause</p>
+</section>
+
+<section class="panel" id="skins" hidden>
+  <h2>BALLS</h2>
+  <p class="best"><i class="gemico"></i><b id="wallet2">0</b> gems</p>
+  <div class="skingrid" id="skinGrid"></div>
+  <button class="small" id="skinsBack" type="button">Back</button>
 </section>
 
 <section class="panel" id="paused" hidden>
