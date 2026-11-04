@@ -77,7 +77,7 @@ kbd { display: inline-block; min-width: 22px; padding: 1px 5px; margin: 0 1px; b
 .lvl .bar { flex: 1; height: 8px; border-radius: 99px; background: rgba(255,255,255,.12); overflow: hidden; min-width: 40px; }
 .lvl .bar i { display: block; height: 100%; width: 0; border-radius: 99px; background: linear-gradient(90deg, #ff3d9a, #ffd166); transition: width .9s cubic-bezier(.2,.8,.2,1); }
 .lvl .xp { flex: none; font: 700 10.5px/1 "Cascadia Mono", Consolas, monospace; color: #c7b3ea; }
-.lvl.big { margin: 16px 0 4px; }
+.lvl.over-lvl { margin: 16px 0 4px; }
 .wallet { display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; background: rgba(61,245,192,.1); border: 1px solid rgba(61,245,192,.35);
   font: 900 15px/1 "Segoe UI", system-ui, sans-serif; color: #6dffd2; font-variant-numeric: tabular-nums; }
 .gemico { display: inline-block; width: 14px; height: 14px; background: linear-gradient(135deg, #e8fff7, #3df5c0 55%, #0a9b7c); clip-path: polygon(50% 0, 100% 40%, 50% 100%, 0 40%); }

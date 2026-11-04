@@ -90,7 +90,7 @@ const GAMES = [
   },
   {
     id: 'downhill', name: 'DOWNHILL', path: 'games/downhill/', insp: 'original endless roller',
-    blurb: 'A ball, a slope and a sunset. Dodge blocks, jump gaps, and keep rolling as it speeds up.',
+    blurb: 'Real ball physics on a track that curves, tilts and dives. Tunnels, moving blocks, ramps. Gems buy skins.',
     bg: 'linear-gradient(160deg,#3b0a54 0%,#1a0b2e 60%,#0d0221 100%)', accent: '#ff3d9a', glow: 'rgba(255,61,154,.38)',
     art: `<svg viewBox="0 0 110 80" aria-hidden="true"><defs><linearGradient id="dhs" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff6a8"/><stop offset=".5" stop-color="#ffb347"/><stop offset="1" stop-color="#ff3d7f"/></linearGradient></defs>
       <circle cx="55" cy="30" r="20" fill="url(#dhs)"/>${[34, 39, 44].map((y, i) => `<rect x="30" y="${y}" width="50" height="${1.5 + i}" fill="#2a0d40"/>`).join('')}

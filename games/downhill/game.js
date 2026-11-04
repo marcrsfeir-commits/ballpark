@@ -1,5 +1,5 @@
-// DOWNHILL — an endless roller. The ball speeds up on a sloped, procedurally built track:
-// holes, blocks, narrow paths, drops and ramps over gaps. Gems and tricks give points; gems buy skins;
+// DOWNHILL — an endless physics roller. A ball rolls down a three-wide track that curves, tilts and dives:
+// holes, red killer tiles, blocks, moving blocks, tunnels laced with red panels, drops and ramps over gaps. Gems and tricks give points; gems buy skins;
 // points are XP that level you up (which unlocks skins and trails); goals pay out bonus gems.
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
@@ -15,12 +15,17 @@ const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const coarse = matchMedia('(pointer: coarse)').matches;
 
 // ---------- world constants ----------
-const L = 2, W = 1.7, LANES = 5, R = 0.42, G = 34, SLOPE = 0.5, TH = 0.4, AHEAD = 100;
-const V0 = 14, ACC = 0.011, VMAX = 44;
-const speedAt = p => Math.min(VMAX, V0 + ACC * Math.max(0, p));
-const laneX = l => (l - (LANES - 1) / 2) * W;
-const laneOf = x => Math.floor((x + LANES * W / 2) / W);
+// The track is a chain of rows. Each row has its own frame (origin O, forward F, right R, up U), so the track can
+// curve (yaw), tilt (bank) and climb or dive (pitch). Everything that collides is a 2D segment in the row's
+// cross-section (u = sideways, h = up) stretched along the row's length — floor tiles, tunnel walls, ceilings.
+const L = 2.2, W = 2.2, LANES = 3, HALF = W * LANES / 2, R = 0.46, G = 30, TH = 0.4, AHEAD = 110, BEHIND = 10;
+const DRAG = 0.0115;          // air drag: a = -k·|v|·v  → terminal speed sqrt(g·sin(slope)/k)
+const ROLL_RES = 0.35;        // rolling resistance (m/s² against motion while touching the ground)
+const STEER_G = 24, STEER_AIR = 8, GRIP = 2.6;  // steering push, push in the air, sideways tyre-like grip
+const deg = Math.PI / 180;
+const laneU = j => -HALF + W * (j + 0.5);
 const PTS = { gem: 10, close: 25, airPerSec: 60 };
+const DIFF_DIST = 3200;       // distance (m) at which difficulty is maxed
 
 const ZONES = [
   { name: 'SUNSET STRIP', tile: '#ff3d9a', sky: ['#0d0221', '#3b0a54', '#ff5e7e'], fog: '#6e1a5a', ridge: '#2a0838', rim: '#ff6fb5' },
@@ -29,7 +34,7 @@ const ZONES = [
   { name: 'LIME STATIC',  tile: '#8dff3d', sky: ['#020a06', '#0d3324', '#59c28a'], fog: '#153f2d', ridge: '#03150c', rim: '#cbff85' },
   { name: 'ULTRAVIOLET',  tile: '#a45cff', sky: ['#05010f', '#26105a', '#c45cff'], fog: '#33166a', ridge: '#0e0424', rim: '#d0a3ff' },
 ];
-const ZONE_ROWS = 300; // 600 m per zone
+const ZONE_ROWS = 280; // ~600 m per zone
 const zoneOf = i => Math.floor(Math.max(0, i) / ZONE_ROWS) % ZONES.length;
 
 // ---------- save data ----------
@@ -211,30 +216,36 @@ function tileTextures() {
   return [td, te];
 }
 const [tileDiffuse, tileEmissive] = tileTextures();
-const MAXI = 900;
+const MAXI = 1800;
 const tileMat = new THREE.MeshStandardMaterial({ map: tileDiffuse, emissiveMap: tileEmissive, emissive: 0xffffff, emissiveIntensity: 2.0, roughness: 0.22, metalness: 0.7, envMapIntensity: 0.45 });
 // per-instance colour also tints the glowing border
 tileMat.onBeforeCompile = sh => {
   sh.fragmentShader = sh.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n#ifdef USE_COLOR\n\ttotalEmissiveRadiance *= vColor.rgb;\n#endif');
 };
 tileMat.customProgramCacheKey = () => 'tile-tinted-emissive';
-const tileMesh = new THREE.InstancedMesh(new RoundedBoxGeometry(W * 0.95, TH, 1, 3, 0.08), tileMat, MAXI);
+const tileGeo = new RoundedBoxGeometry(1, TH, 1, 3, 0.08);
+const tileMesh = new THREE.InstancedMesh(tileGeo, tileMat, MAXI);
 tileMesh.frustumCulled = false; tileMesh.receiveShadow = true;
 scene.add(tileMesh);
 
-function blockTexture() {
+function dangerTexture() {
   const c = document.createElement('canvas'); c.width = c.height = 256;
   const g = c.getContext('2d');
   g.fillStyle = '#c0102c'; g.fillRect(0, 0, 256, 256);
-  g.fillStyle = '#ffd23d';
+  g.fillStyle = '#ff5a3d';
   for (let i = -256; i < 512; i += 72) { g.beginPath(); g.moveTo(i, 0); g.lineTo(i + 34, 0); g.lineTo(i + 290, 256); g.lineTo(i + 256, 256); g.fill(); }
-  g.strokeStyle = '#1a0008'; g.lineWidth = 16; g.strokeRect(8, 8, 240, 240);
+  g.strokeStyle = '#ff9a8a'; g.lineWidth = 10; g.strokeRect(8, 8, 240, 240);
   return texOf(c);
 }
-const OB = { w: W * 0.78, h: 1.1, d: L * 0.55 };
-const blockTex = blockTexture();
-const blockMesh = new THREE.InstancedMesh(new RoundedBoxGeometry(OB.w, OB.h, OB.d, 3, 0.1),
-  new THREE.MeshStandardMaterial({ map: blockTex, emissiveMap: blockTex, emissive: 0xffffff, emissiveIntensity: 0.45, roughness: 0.35, metalness: 0.2 }), MAXI);
+const dangerTex = dangerTexture();
+const dangerMat = new THREE.MeshStandardMaterial({ map: dangerTex, emissiveMap: dangerTex, emissive: 0xffffff, emissiveIntensity: 1.15, roughness: 0.3, metalness: 0.3 });
+// red killer surfaces: floor tiles and tunnel panels
+const redMesh = new THREE.InstancedMesh(tileGeo, dangerMat, MAXI);
+redMesh.frustumCulled = false; redMesh.receiveShadow = true;
+scene.add(redMesh);
+// killer blocks (static and moving)
+const OB = { w: W * 0.78, h: 1.15, d: L * 0.5 };
+const blockMesh = new THREE.InstancedMesh(new RoundedBoxGeometry(OB.w, OB.h, OB.d, 3, 0.1), dangerMat, 400);
 blockMesh.frustumCulled = false; blockMesh.castShadow = true; blockMesh.receiveShadow = true;
 scene.add(blockMesh);
 
@@ -316,160 +327,237 @@ const row = i => rows[i];
 const rnd = (a, b) => a + Math.random() * (b - a);
 const irnd = (a, b) => Math.floor(rnd(a, b + 1));
 const clampLane = l => Math.max(0, Math.min(LANES - 1, l));
-const ALL = () => [1, 1, 1, 1, 1];
+const sgn = () => (Math.random() < 0.5 ? -1 : 1);
+const Yv = new THREE.Vector3(0, 1, 0);
+const difficulty = i => Math.min(1, (i * L) / DIFF_DIST);
+const basePitch = d => -(9 + 13 * d) * deg;
 
-function pushRow(tiles, obs, dy = -SLOPE, gemLane = -1) {
-  const r = { y0: gen.y, y1: gen.y + dy, tiles, obs: obs || [0, 0, 0, 0, 0], gems: [] };
-  rows[gen.i++] = r;
-  gen.y = r.y1;
-  if (gen.gemLeft > 0 && gemLane >= 0 && tiles[gemLane] && !r.obs[gemLane]) {
-    r.gems.push({ l: gemLane, y: (r.y0 + r.y1) / 2 + 0.75, taken: false });
+// tunnel cross-section, counter-clockwise so each panel's inward normal is on its left
+const TW = 1.3, TT = 3.4, TC = 4.7;
+const TUNNEL = [
+  [[HALF, 0], [HALF + TW, TW]],            // 0 right lower slant
+  [[HALF + TW, TW], [HALF + TW, TT]],      // 1 right wall
+  [[HALF + TW, TT], [HALF, TC]],           // 2 right upper slant
+  [[HALF, TC], [-HALF, TC]],               // 3 ceiling
+  [[-HALF, TC], [-HALF - TW, TT]],         // 4 left upper slant
+  [[-HALF - TW, TT], [-HALF - TW, TW]],    // 5 left wall
+  [[-HALF - TW, TW], [-HALF, 0]],          // 6 left lower slant
+];
+
+function frameFrom(yaw, pitch, bank) {
+  const F = new THREE.Vector3(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), -Math.cos(yaw) * Math.cos(pitch));
+  const R0 = new THREE.Vector3().crossVectors(F, Yv).normalize();
+  const U0 = new THREE.Vector3().crossVectors(R0, F).normalize();
+  const R = R0.clone().multiplyScalar(Math.cos(bank)).addScaledVector(U0, Math.sin(bank));
+  const U = U0.clone().multiplyScalar(Math.cos(bank)).addScaledVector(R0, -Math.sin(bank));
+  return { F, R, U };
+}
+const approach = (v, t, step) => (v < t ? Math.min(t, v + step) : Math.max(t, v - step));
+function stepAngles() {
+  gen.yawRate = approach(gen.yawRate, gen.tYaw, 0.22 * deg);
+  gen.yaw += gen.yawRate;
+  gen.bank = approach(gen.bank, gen.tBank, 1.1 * deg);
+  gen.pitch = approach(gen.pitch, gen.tPitch, gen.pitchStep);
+}
+function worldAt(r, s, u, h, out = new THREE.Vector3()) {
+  return out.copy(r.O).addScaledVector(r.F, s).addScaledVector(r.R, u).addScaledVector(r.U, h);
+}
+
+// floor: one entry per lane, 0 = hole, 1 = tile, 2 = red killer tile
+function pushRow(floor, extra = {}) {
+  const fr = frameFrom(gen.yaw, gen.pitch, gen.bank);
+  const r = { i: gen.i, kind: gen.kind, O: gen.O.clone(), ...fr, segs: [], blocks: extra.blocks || [], gems: [], tunnel: !!extra.tunnel };
+  for (let j = 0; j < LANES; j++) if (floor[j]) r.segs.push({ a: [-HALF + W * j, 0], b: [-HALF + W * (j + 1), 0], kill: floor[j] === 2, floor: true });
+  if (extra.tunnel) TUNNEL.forEach((sg, k) => r.segs.push({ a: sg[0], b: sg[1], kill: !!extra.tunnel[k], wall: true }));
+  const gl = extra.gemLane ?? -1;
+  if (gen.gemLeft > 0 && gl >= 0 && floor[gl] === 1 && !r.blocks.some(bk => !bk.move && bk.lane === gl)) {
+    r.gems.push({ pos: worldAt(r, L / 2, laneU(gl), 0.85), taken: false });
     gen.gemLeft--;
   }
+  rows[gen.i++] = r;
+  gen.O.addScaledVector(fr.F, L);
+  stepAngles();
   return r;
 }
 function walkSafe(p) {
   const old = gen.safe;
-  if (Math.random() < p) gen.safe = clampLane(gen.safe + (Math.random() < 0.5 ? -1 : 1));
+  if (Math.random() < p) gen.safe = clampLane(gen.safe + sgn());
   return [old, gen.safe];
 }
-function segFull(n) {
-  for (let k = 0; k < n; k++) { if (Math.random() < 0.12) walkSafe(1); pushRow(ALL(), null, -SLOPE, gen.safe); }
+const FULL = () => [1, 1, 1];
+
+function pickBend(d) {
+  gen.tYaw = Math.random() < 0.22 + 0.45 * d ? sgn() * rnd(0.5, 1.1 + 1.7 * d) * deg : 0;
+  gen.tBank = Math.random() < 0.22 + 0.45 * d ? sgn() * rnd(4, 7 + 13 * d) * deg : 0;
+  // usually the track leans into a curve (kinder); later on it sometimes leans the wrong way
+  if (gen.tYaw && gen.tBank && Math.random() > d * 0.6) gen.tBank = -Math.abs(gen.tBank) * Math.sign(gen.tYaw);
+  gen.tPitch = basePitch(d); gen.pitchStep = 2.5 * deg;
+}
+function segPlain(n) {
+  for (let k = 0; k < n; k++) { if (Math.random() < 0.1) walkSafe(1); pushRow(FULL(), { gemLane: gen.safe }); }
 }
 function segHoles(n, d) {
-  const pHole = 0.18 + 0.32 * d;
+  const pHole = 0.22 + 0.3 * d;
   for (let k = 0; k < n; k++) {
-    const [a, b] = walkSafe(0.35);
-    pushRow([0, 1, 2, 3, 4].map(l => (l === a || l === b || Math.random() > pHole) ? 1 : 0), null, -SLOPE, b);
+    const [a, b2] = walkSafe(0.35);
+    const fl = [0, 1, 2].map(l => (l === a || l === b2 || Math.random() > pHole) ? 1 : (d > 0.15 && Math.random() < 0.4 ? 2 : 0));
+    pushRow(fl, { gemLane: b2 });
   }
 }
 function segBlocks(n, d) {
-  const pOb = 0.22 + 0.33 * d;
+  const pOb = 0.45 + 0.3 * d, every = d < 0.35 ? 3 : 2;
   for (let k = 0; k < n; k++) {
-    if (k % 2) { pushRow(ALL(), null, -SLOPE, gen.safe); continue; }
-    const [a, b] = walkSafe(0.5);
-    pushRow(ALL(), [0, 1, 2, 3, 4].map(l => (l !== a && l !== b && Math.random() < pOb) ? 1 : 0), -SLOPE, b);
+    if (k % every) { pushRow(FULL(), { gemLane: gen.safe }); continue; }
+    const [a, b2] = walkSafe(0.35 + 0.15 * d);
+    const blocks = [];
+    for (let l = 0; l < LANES; l++) if (l !== a && l !== b2 && Math.random() < pOb) blocks.push({ s: L / 2, u: laneU(l), lane: l });
+    pushRow(FULL(), { blocks, gemLane: b2 });
+  }
+}
+function segMovers(n, d) {
+  // the blocks sweep side to side as a readable wave (each one a little behind the one before)
+  const every = d < 0.5 ? 4 : 3, ph = rnd(0, Math.PI * 2), lag = rnd(0.35, 0.8) * sgn(), w = 1.2 + 1.6 * d;
+  for (let k = 0; k < n; k++) {
+    const blocks = [];
+    if (k % every === 0) blocks.push({ s: L / 2, u: 0, lane: -1, move: { A: W, w, ph: ph + k * lag } });
+    pushRow(FULL(), { blocks, gemLane: k % every ? gen.safe : -1 });
   }
 }
 function segNarrow(n, d) {
-  const width = d < 0.45 ? 3 : 2;
+  const width = d < 0.5 ? 2 : (Math.random() < 0.5 ? 1 : 2);
   for (let k = 0; k < n; k++) {
-    const [a, b] = walkSafe(0.28);
-    const lo = Math.min(a, b), hi = Math.max(a, b), t = [0, 0, 0, 0, 0];
-    for (let l = lo; l <= hi; l++) t[l] = 1;
-    let extra = width - (hi - lo + 1), left = lo, right = hi;
-    while (extra-- > 0) { if ((Math.random() < 0.5 && left > 0) || right >= LANES - 1) t[--left] = 1; else t[++right] = 1; }
-    pushRow(t, null, -SLOPE, b);
+    const [a, b2] = walkSafe(width === 1 ? 0.2 : 0.3);
+    const fl = [0, 0, 0];
+    fl[a] = fl[b2] = 1;
+    if (width === 2 && a === b2) fl[clampLane(a + (a === 2 ? -1 : a === 0 ? 1 : sgn()))] = 1;
+    pushRow(fl, { gemLane: b2 });
   }
 }
-function segZigzag(n, d) {
-  let start = clampLane(Math.min(gen.safe, LANES - 2));
-  const every = d < 0.5 ? 4 : 3;
+function segTunnel(n, d) {
+  const ph = irnd(0, 4), lace = 2 + Math.round(d * 2), pSlant = 0.12 + 0.38 * d;
+  let slantL = false, slantR = false;
   for (let k = 0; k < n; k++) {
-    const t = [0, 0, 0, 0, 0];
-    t[start] = t[start + 1] = 1;
-    if (k % every === every - 1) {
-      start += start === 0 ? 1 : start === LANES - 2 ? -1 : (Math.random() < 0.5 ? -1 : 1);
-      t[start] = t[start + 1] = 1;
-    }
-    pushRow(t, null, -SLOPE, start);
+    const edge = k === 0 || k === n - 1;
+    if (Math.random() < 0.25) slantL = Math.random() < pSlant;
+    if (Math.random() < 0.25) slantR = Math.random() < pSlant;
+    const wallKill = !edge && (k + ph) % 5 < lace;        // walls laced with red panels
+    const kill = [slantR && !edge, wallKill, wallKill && d > 0.4, false, wallKill && d > 0.4, wallKill, slantL && !edge];
+    const blocks = [];
+    if (d > 0.25 && k > 2 && k < n - 2 && k % 4 === 0) { const l = clampLane(gen.safe + sgn()); if (l !== gen.safe) blocks.push({ s: L / 2, u: laneU(l), lane: l }); }
+    if (k % 3 === 0) walkSafe(0.4);
+    pushRow(FULL(), { tunnel: kill, blocks, gemLane: gen.safe });
   }
-  gen.safe = start + (Math.random() < 0.5 ? 0 : 1);
 }
-function segDrop() {
-  segFull(2);
-  gen.y -= rnd(1.6, 2.6);
-  segFull(5);
+function segDrop(n, d) {
+  segPlain(2);
+  gen.O.y -= rnd(1.8, 3.2);
+  segPlain(6);
 }
-function segRamp() {
-  segFull(2);
-  const RISE = 0.75;
-  for (let k = 0; k < 3; k++) pushRow(ALL(), null, RISE, -1);
-  const v = speedAt(gen.i * L), vy = v * RISE / L, D = 1.4;
-  const t = (vy + Math.sqrt(vy * vy + 2 * G * D)) / G;
-  const gaps = Math.max(1, Math.min(6, Math.floor((v * t) / L) - 2));
-  const top = gen.y, launchP = gen.i * L, gl = gen.safe;
+function segRamp(n, d) {
+  // straighten out first so the jump is fair
+  gen.tYaw = 0; gen.tBank = 0;
+  for (let k = 0; k < 24 && (Math.abs(gen.bank) > 1 * deg || Math.abs(gen.yawRate) > 0.05 * deg); k++) pushRow(FULL(), { gemLane: gen.safe });
+  gen.bank = 0; gen.yawRate = 0;
+  // how fast will the ball be going here?  terminal speed for this slope
+  const vTerm = Math.sqrt(G * Math.sin(-basePitch(d)) / DRAG);
+  gen.tPitch = 17 * deg; gen.pitchStep = 5 * deg;
+  let climb = 0;
+  for (let k = 0; k < 9 && gen.pitch < 16 * deg; k++) { const r = pushRow(FULL()); climb += Math.max(0, r.F.y * L); }
+  const last = rows[gen.i - 1], alpha = Math.asin(last.F.y);
+  const vLip = Math.sqrt(Math.max(36, vTerm * vTerm - 2 * G * climb));
+  const vSlow = vLip * 0.65, vMid = vLip * 0.85;
+  const range = vSlow * vSlow * Math.sin(2 * alpha) / G;
+  const gaps = Math.max(1, Math.min(6, Math.floor(0.55 * range / L)));
+  const traj = (x, v) => x * Math.tan(alpha) - G * x * x / (2 * v * v * Math.cos(alpha) ** 2);
+  const lipY = gen.O.y;
+  gen.pitch = 0; gen.tPitch = 0;
   for (let k = 0; k < gaps; k++) {
-    const r = pushRow([0, 0, 0, 0, 0], null, 0, -1);
-    const tt = ((gen.i - 0.5) * L - launchP) / v;   // when the ball passes this row's middle
-    r.gems.push({ l: gl, y: top + R + vy * tt - G * tt * tt / 2, taken: false });
+    const r = pushRow([0, 0, 0]);
+    const p = worldAt(r, L / 2, laneU(gen.safe), 0);
+    p.y = lipY + R + traj((k + 0.5) * L, vMid);
+    r.gems.push({ pos: p, taken: false });
   }
-  gen.y = top - D;
-  rows[gen.i - 1].y1 = gen.y;
-  segFull(4);
+  gen.O.y = lipY + traj(gaps * L, vSlow) - 1.0;
+  gen.pitch = gen.tPitch = basePitch(d); gen.pitchStep = 2.5 * deg;
+  segPlain(9);
 }
 function nextSegment() {
-  const p = gen.i * L, d = Math.min(1, p / 2600);
+  const p = gen.i * L, d = difficulty(gen.i);
   gen.gemLeft = Math.random() < 0.6 ? irnd(4, 8) : 0;
-  if (p < 60) return segFull(6);
-  segFull(Math.max(1, Math.round(4 - 3 * d)));
+  if (gen.i < 24) { gen.tPitch = basePitch(0); gen.kind = 'start'; return segPlain(24 - gen.i); }
+  pickBend(d);
+  gen.kind = 'breather';
+  segPlain(Math.max(1, Math.round(4 - 3 * d)));
+  const opts = p < 260
+    ? [[segHoles, 0.32], [segBlocks, 0.32], [segMovers, 0.18], [segRamp, 0.18]]
+    : [[segHoles, 0.16], [segBlocks, 0.16], [segMovers, 0.15], [segTunnel, 0.17], [segNarrow, 0.12], [segRamp, 0.15], [segDrop, 0.09]];
   const pick = Math.random();
-  const opts = p < 200
-    ? [[segHoles, 0.45], [segBlocks, 0.43], [segRamp, 0.12]]
-    : [[segHoles, 0.21], [segBlocks, 0.24], [segNarrow, 0.15], [segZigzag, 0.13], [segRamp, 0.17], [segDrop, 0.1]];
   let acc = 0;
-  for (const [fn, w] of opts) { acc += w; if (pick <= acc) return fn(irnd(8, 14 + Math.round(8 * d)), d); }
-  segHoles(10, d);
+  const n = irnd(8, 14 + Math.round(10 * d));
+  for (const [fn, w] of opts) { acc += w; if (pick <= acc) gen.kind = fn.name; if (pick <= acc) return fn === segTunnel ? fn(n + 6, d) : fn(n, d); }
+  segHoles(n, d);
 }
-function ensureTrack(cur) {
-  while (gen.i < cur + AHEAD + 8) nextSegment();
-  for (const k in rows) if (+k < cur - 12) delete rows[k];
-}
-function groundAt(x, p) {
-  const i = Math.floor(p / L), r = row(i);
-  if (!r) return null;
-  const lane = laneOf(x);
-  if (lane < 0 || lane >= LANES || !r.tiles[lane]) return null;
-  const f = (p - i * L) / L;
-  return { y: r.y0 + (r.y1 - r.y0) * f, dy: (r.y1 - r.y0) / L };
+function ensureTrack(ci) {
+  while (gen.i < ci + AHEAD + 10) nextSegment();
+  for (const k in rows) if (+k < ci - BEHIND - 4) delete rows[k];
 }
 
 // ---------- drawing the track ----------
-const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), Q0 = new THREE.Quaternion(), S = new THREE.Vector3(), P = new THREE.Vector3(), X = new THREE.Vector3(1, 0, 0), Y = new THREE.Vector3(0, 1, 0);
-const C = new THREE.Color();
-let drawnFrom = -1, zoneShown = -1;
-function drawTrack(cur) {
-  if (cur === drawnFrom) return;
-  drawnFrom = cur;
-  let nt = 0, nb = 0;
-  for (let i = cur - 8; i < cur + AHEAD; i++) {
-    const r = row(i);
-    if (!r) continue;
-    const dy = r.y1 - r.y0, ang = Math.atan2(dy, L), len = Math.hypot(L, dy);
-    Q.setFromAxisAngle(X, ang);
-    const ym = (r.y0 + r.y1) / 2, zc = -(i + 0.5) * L, z = ZONES[zoneOf(i)];
-    for (let l = 0; l < LANES; l++) {
-      if (!r.tiles[l] || nt >= MAXI) continue;
-      P.set(laneX(l), ym - Math.cos(ang) * TH / 2, zc - Math.sin(ang) * TH / 2);
-      M.compose(P, Q, S.set(1, 1, len * 0.97));
-      tileMesh.setMatrixAt(nt, M);
-      tileMesh.setColorAt(nt, C.set(z.tile).multiplyScalar((l + i) % 2 ? 1 : 0.8));
-      nt++;
-      if (r.obs[l] && nb < MAXI) {
-        M.compose(P.set(laneX(l), ym + OB.h / 2, zc), Q0, S.set(1, 1, 1));
-        blockMesh.setMatrixAt(nb++, M);
-      }
-    }
-  }
-  tileMesh.count = nt; blockMesh.count = nb;
-  tileMesh.instanceMatrix.needsUpdate = true;
-  if (tileMesh.instanceColor) tileMesh.instanceColor.needsUpdate = true;
-  blockMesh.instanceMatrix.needsUpdate = true;
+const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), Q0 = new THREE.Quaternion(), S = new THREE.Vector3(), P = new THREE.Vector3();
+const X = new THREE.Vector3(1, 0, 0), Y = new THREE.Vector3(0, 1, 0), Z3 = new THREE.Vector3(0, 0, 1);
+const C = new THREE.Color(), vx = new THREE.Vector3(), vy = new THREE.Vector3(), vz = new THREE.Vector3();
+let drawnFrom = -1, zoneShown = -1, simT = 0;
+function panelMatrix(r, a, b2) {
+  const du = b2[0] - a[0], dh = b2[1] - a[1], len = Math.hypot(du, dh);
+  vx.copy(r.R).multiplyScalar(du / len).addScaledVector(r.U, dh / len);
+  vz.copy(r.F).negate();
+  vy.crossVectors(vz, vx);                       // the panel's inward-facing normal
+  worldAt(r, L / 2, (a[0] + b2[0]) / 2, (a[1] + b2[1]) / 2, P).addScaledVector(vy, -TH / 2);
+  M.makeBasis(vx, vy, vz).scale(S.set(len * 0.96, 1, L * 0.97)).setPosition(P);
+  return M;
 }
-function drawGems(cur, t) {
-  let n = 0;
-  for (let i = cur - 2; i < cur + AHEAD && n < 400; i++) {
+function drawTrack(ci) {
+  if (ci === drawnFrom) return;
+  drawnFrom = ci;
+  let nt = 0, nr = 0;
+  for (let i = ci - BEHIND; i < ci + AHEAD; i++) {
     const r = row(i);
     if (!r) continue;
+    const z = ZONES[zoneOf(i)];
+    r.segs.forEach((sg, k) => {
+      if (sg.kill) { if (nr < MAXI) redMesh.setMatrixAt(nr++, panelMatrix(r, sg.a, sg.b)); return; }
+      if (nt >= MAXI) return;
+      tileMesh.setMatrixAt(nt, panelMatrix(r, sg.a, sg.b));
+      tileMesh.setColorAt(nt, C.set(z.tile).multiplyScalar(sg.wall ? 0.55 : (k + i) % 2 ? 1 : 0.78));
+      nt++;
+    });
+  }
+  tileMesh.count = nt; redMesh.count = nr;
+  tileMesh.instanceMatrix.needsUpdate = true; redMesh.instanceMatrix.needsUpdate = true;
+  if (tileMesh.instanceColor) tileMesh.instanceColor.needsUpdate = true;
+}
+const blockU = bk => bk.move ? bk.u + bk.move.A * Math.sin(simT * bk.move.w + bk.move.ph) : bk.u;
+function drawDynamic(ci, t) {
+  let nb = 0, ng = 0;
+  for (let i = ci - 3; i < ci + AHEAD; i++) {
+    const r = row(i);
+    if (!r) continue;
+    for (const bk of r.blocks) {
+      if (nb >= 400) break;
+      worldAt(r, bk.s, blockU(bk), OB.h / 2, P);
+      M.makeBasis(r.R, r.U, vz.copy(r.F).negate()).setPosition(P);
+      blockMesh.setMatrixAt(nb++, M);
+    }
     for (const g of r.gems) {
-      if (g.taken) continue;
+      if (g.taken || ng >= 400) continue;
       Q.setFromAxisAngle(Y, t * 2.4 + i);
-      M.compose(P.set(laneX(g.l), g.y + Math.sin(t * 3 + i) * 0.08, -(i + 0.5) * L), Q, S.set(1, 1.35, 1));
-      gemMesh.setMatrixAt(n++, M);
+      P.copy(g.pos); P.y += Math.sin(t * 3 + i) * 0.08;
+      M.compose(P, Q, S.set(1, 1.35, 1));
+      gemMesh.setMatrixAt(ng++, M);
     }
   }
-  gemMesh.count = n;
-  gemMesh.instanceMatrix.needsUpdate = true;
+  blockMesh.count = nb; gemMesh.count = ng;
+  blockMesh.instanceMatrix.needsUpdate = true; gemMesh.instanceMatrix.needsUpdate = true;
 }
 
 // ---------- audio ----------
@@ -550,8 +638,8 @@ const ui = {
 };
 const fmt = n => Math.round(n).toLocaleString();
 let state = 'menu';
-const b = { x: 0, y: 0, p: 0, vx: 0, vy: 0, v: V0, grounded: true, lastGround: 0, air: 0 };
-let run, startP = 0, dieT = 0, shake = 0, nextMilestone = 500, lastResult = null, gameT = 0;
+const b = { p: new THREE.Vector3(), v: new THREE.Vector3(), w: new THREE.Vector3(), gN: new THREE.Vector3(0, 1, 0), ci: 0, s: 0, grounded: true, lastGround: 0, air: 0, focusY: 0 };
+let lastDeath = null, run, startS = 0, dieT = 0, shake = 0, nextMilestone = 500, lastResult = null, gameT = 0;
 
 function setLevelBar(numEl, barEl, xpEl, xp) {
   const li = levelInfo(xp);
@@ -592,18 +680,23 @@ function popAt(text, cls, wx, wy, wz) {
 
 // ---------- run lifecycle ----------
 function resetWorld() {
-  rows = {}; gen = { i: 0, y: 0, safe: 2, gemLeft: 0 };
+  rows = {}; simT = 0;
+  gen = { i: 0, O: new THREE.Vector3(), yaw: 0, yawRate: 0, tYaw: 0, pitch: basePitch(0), tPitch: basePitch(0), pitchStep: 2.5 * deg, bank: 0, tBank: 0, safe: 1, gemLeft: 0 };
   drawnFrom = -1;
-  b.p = L * 2.5; startP = b.p;
-  ensureTrack(Math.floor(b.p / L));
-  const g = groundAt(0, b.p);
-  Object.assign(b, { x: 0, y: g.y + R, vx: 0, vy: 0, v: V0, grounded: true, lastGround: g.y, air: 0 });
+  ensureTrack(3);
+  const r = row(3);
+  b.ci = 3; b.s = L / 2;
+  worldAt(r, L / 2, 0, R, b.p);
+  b.v.copy(r.F).multiplyScalar(9); b.w.set(0, 0, 0);
+  b.grounded = true; b.lastGround = b.p.y - R; b.air = 0; b.gN.copy(r.U); b.focusY = b.p.y;
+  startS = progress();
+  camF.copy(r.F); camU.copy(Yv);
   ball.visible = true; parts.length = 0; trail.hist.length = 0;
   run = { bonus: 0, gems: 0, close: 0, maxAir: 0, combo: 0, comboT: 0, passed: new Set(), maxZone: 0 };
   nextMilestone = 500;
   applyZone(0, true);
   placeCamera(true);
-  drawTrack(Math.floor(b.p / L));
+  drawTrack(b.ci);
 }
 function applyZone(z, silent) {
   zoneShown = z;
@@ -614,7 +707,7 @@ function applyZone(z, silent) {
   ridges[0].material.color.set(Z.ridge).lerp(C.set(Z.rim), 0.35);
   ridges[1].material.color.set(Z.ridge);
   floor.material.color.set(Z.tile).multiplyScalar(0.6);
-  if (!silent) { toast(Z.name, `ZONE ${Math.floor(b.p / L / ZONE_ROWS) + 1}`); sfx.ding(); }
+  if (!silent) { toast(Z.name, `ZONE ${Math.floor(b.ci / ZONE_ROWS) + 1}`); sfx.ding(); }
 }
 function startRun() {
   audioInit();
@@ -631,20 +724,21 @@ function addCombo() { run.combo++; run.comboT = 2.6; }
 
 function endRun(kind) {
   if (state !== 'play') return;
+  lastDeath = { kind, seg: row(b.ci)?.kind, at: Math.round(progress()), speed: +b.v.length().toFixed(1) };
   state = 'dying'; dieT = 0;
   if (rollGain) rollGain.gain.value = 0;
   ui.mult.hidden = true;
   if (kind === 'crash') {
     sfx.crash();
     ball.visible = false;
-    const at = new THREE.Vector3(b.x, b.y, -b.p);
+    const at = b.p.clone();
     burst(at, 60, '#9ff4ff', 12, 7, 1.3, 2.2); burst(at, 40, '#ff3d9a', 10, 6, 1.1, 1.6);
     if (!reduceMotion) shake = 0.6;
   } else if (kind === 'fall') sfx.fall();
   else dieT = 1;
 
   const prevXp = save.xp, prevLv = levelInfo(prevXp).lv;
-  const dist = Math.floor(b.p - startP), score = dist + Math.round(run.bonus);
+  const dist = Math.floor(progress() - startS), score = dist + Math.round(run.bonus);
   const s = save.stats;
   s.runs++; s.totalDist += dist; s.totalGems += run.gems;
   s.maxRunGems = Math.max(s.maxRunGems, run.gems); s.maxAir = Math.max(s.maxAir, run.maxAir); s.maxClose = Math.max(s.maxClose, run.close);
@@ -815,6 +909,7 @@ canvas.addEventListener('pointercancel', lift);
 addEventListener('blur', () => { keys.clear(); pointers.clear(); pause(); });
 document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
 function steer() {
+  if (window.__dhPilot) return window.__dhPilot();   // automated tests only
   let d = 0;
   if (keys.has('a')) d -= 1;
   if (keys.has('d')) d += 1;
@@ -846,115 +941,177 @@ $('share').addEventListener('click', async () => {
   setTimeout(() => { $('share').textContent = 'Copy result'; }, 1500);
 });
 
-// ---------- simulation ----------
+// ---------- physics ----------
+// A rigid ball: gravity, air drag, rolling resistance, sideways grip, momentum, bounces off hard hits,
+// and rolling rotation (spin follows the contact). Track surfaces push back only along their normals,
+// so slopes, banks, curves, ramps and tunnel walls all fall out of the same contact code.
 const SUB = 1 / 240;
-const tmpV = new THREE.Vector3();
-function step(dt) {
-  b.v = speedAt(b.p);
-  const dir = steer();
-  const maxVX = 7 + b.v * 0.14;
-  b.vx += (dir * maxVX - b.vx) * Math.min(1, (b.grounded ? 14 : 5) * dt);
-  b.x += b.vx * dt;
-  const prevP = b.p;
-  b.p += b.v * dt;
-  b.vy -= G * dt;
-  b.y += b.vy * dt;
+const tmpV = new THREE.Vector3(), nW = new THREE.Vector3(), dv = new THREE.Vector3();
+const lc = { s: 0, u: 0, h: 0 }, lc2 = { s: 0, u: 0, h: 0 };
+function local(r, p, out) { dv.subVectors(p, r.O); out.s = dv.dot(r.F); out.u = dv.dot(r.R); out.h = dv.dot(r.U); return out; }
+const progress = () => b.ci * L + Math.max(0, Math.min(L, b.s));
+function trackRow() {
+  for (let k = 0; k < 6; k++) {
+    const r = row(b.ci);
+    if (!r) return;
+    local(r, b.p, lc);
+    if (lc.s > L && row(b.ci + 1)) b.ci++;
+    else if (lc.s < 0 && row(b.ci - 1)) b.ci--;
+    else break;
+  }
+  b.s = lc.s;
+}
 
-  const g = groundAt(b.x, b.p);
+function step(dt) {
+  simT += dt;
+  const r0 = row(b.ci);
+  const dir = steer();
+  b.v.y -= G * dt;                                                   // gravity
+  if (r0) b.v.addScaledVector(r0.R, dir * (b.grounded ? STEER_G : STEER_AIR) * dt);
+  const sp = b.v.length();
+  b.v.addScaledVector(b.v, -DRAG * sp * dt);                        // air drag
+  if (b.grounded && r0) {
+    const lat = b.v.dot(r0.R);                                       // sideways grip (less while you steer)
+    b.v.addScaledVector(r0.R, -lat * Math.min(1, GRIP * dt) * (dir ? 0.3 : 1));
+    if (sp > 0.5) b.v.addScaledVector(b.v, -ROLL_RES * dt / sp);    // rolling resistance
+  }
+  b.p.addScaledVector(b.v, dt);
+  trackRow();
+
   const wasGrounded = b.grounded;
   b.grounded = false;
-  if (g && b.y - R <= g.y + 0.03 && b.y - R > g.y - 0.7) {
-    const impact = -b.vy + g.dy * b.v;
-    b.y = g.y + R; b.vy = g.dy * b.v; b.grounded = true; b.lastGround = g.y;
-    if (!wasGrounded && b.air > 0.18) {
+  let impact = 0;
+  for (let i = b.ci - 1; i <= b.ci + 1; i++) {
+    const r = row(i);
+    if (!r || !r.segs.length) continue;
+    local(r, b.p, lc2);
+    if (lc2.s < -R - 0.2 || lc2.s > L + R + 0.2) continue;
+    for (const sg of r.segs) {
+      const ax = sg.a[0], ah = sg.a[1], du = sg.b[0] - ax, dh = sg.b[1] - ah, l2 = du * du + dh * dh, len = Math.sqrt(l2);
+      const t = Math.max(0, Math.min(1, ((lc2.u - ax) * du + (lc2.h - ah) * dh) / l2));
+      const eu = lc2.u - (ax + du * t), eh = lc2.h - (ah + dh * t);
+      const nu = -dh / len, nh = du / len;
+      if (eu * nu + eh * nh < -0.02) continue;                       // surfaces are one-sided
+      const es = lc2.s < 0 ? lc2.s : lc2.s > L ? lc2.s - L : 0;
+      const d2 = es * es + eu * eu + eh * eh;
+      if (d2 >= R * R) continue;
+      const dist = Math.sqrt(d2);
+      if (dist > 1e-4) nW.copy(r.F).multiplyScalar(es / dist).addScaledVector(r.R, eu / dist).addScaledVector(r.U, eh / dist);
+      else nW.copy(r.R).multiplyScalar(nu).addScaledVector(r.U, nh);
+      if (sg.kill) { endRun('crash'); return; }
+      b.p.addScaledVector(nW, R - dist);                             // push out of the surface
+      const vn = b.v.dot(nW);
+      if (vn < 0) {                                                   // cancel velocity into it (+ a small bounce on hard hits)
+        b.v.addScaledVector(nW, -vn * (1 + (vn < -7 ? 0.25 : 0)));
+        impact = Math.max(impact, -vn);
+      }
+      if (nW.y > 0.3) { b.grounded = true; b.gN.copy(nW); if (sg.floor) b.lastGround = b.p.y - R; }
+      local(r, b.p, lc2);
+    }
+  }
+  if (b.grounded) b.w.crossVectors(b.gN, b.v).multiplyScalar(1 / R);   // rolling: spin follows the ground
+
+  if (!wasGrounded && b.grounded) {
+    if (b.air > 0.18) {
       sfx.land(impact);
-      if (!reduceMotion) shake = Math.max(shake, Math.min(0.25, impact * 0.012));
-      burst(tmpV.set(b.x, g.y + 0.05, -b.p), 10, ZONES[zoneShown].tile, 5, 1.5, 0.5);
+      if (!reduceMotion) shake = Math.max(shake, Math.min(0.28, impact * 0.02));
+      burst(tmpV.copy(b.p).addScaledVector(b.gN, -R), 10, ZONES[zoneShown].tile, 5, 1.5, 0.5);
       if (b.air > 0.45) {
         const pts = Math.round(b.air * PTS.airPerSec) * mult();
         run.bonus += pts; addCombo();
-        popAt(`AIR +${pts}`, 'air', b.x, b.y + 1, -b.p);
+        popAt(`AIR +${pts}`, 'air', b.p.x, b.p.y + 1, b.p.z);
       }
       run.maxAir = Math.max(run.maxAir, b.air);
     }
   }
-  if (wasGrounded && !b.grounded && b.vy > 2) sfx.jump();
+  if (wasGrounded && !b.grounded && r0 && b.v.dot(r0.U) > 2.5) sfx.jump();
   b.air = b.grounded ? 0 : b.air + dt;
 
-  const ci = Math.floor(b.p / L);
-  for (let i = ci - 1; i <= ci + 1; i++) {
+  // blocks, close calls, gems
+  for (let i = b.ci - 1; i <= b.ci + 1; i++) {
     const r = row(i);
     if (!r) continue;
-    const ym = (r.y0 + r.y1) / 2, cz = (i + 0.5) * L;
-    for (const gm of r.gems) {
-      if (gm.taken) continue;
-      const dx = b.x - laneX(gm.l), dy = b.y - gm.y, dz = b.p - cz;
-      if (dx * dx + dy * dy + dz * dz < (R + 0.42) ** 2) {
-        gm.taken = true; run.gems++; addCombo();
-        const pts = PTS.gem * mult(); run.bonus += pts;
-        sfx.gem(run.combo);
-        burst(tmpV.set(laneX(gm.l), gm.y, -cz), 14, '#3df5c0', 4, 2.5, 0.55);
-        popAt(`+${pts}`, 'gem', laneX(gm.l), gm.y + 0.6, -cz);
+    local(r, b.p, lc2);
+    const prevS = lc2.s - b.v.dot(r.F) * dt;
+    for (const bk of r.blocks) {
+      const u = blockU(bk);
+      const dx = Math.max(Math.abs(lc2.u - u) - OB.w / 2, 0);
+      const dy = Math.max(Math.abs(lc2.h - OB.h / 2) - OB.h / 2, 0);
+      const dz = Math.max(Math.abs(lc2.s - bk.s) - OB.d / 2, 0);
+      if (dx * dx + dy * dy + dz * dz < R * R * 0.85) return endRun('crash');
+      if (!bk.passed && prevS < bk.s && lc2.s >= bk.s && Math.abs(lc2.u - u) < OB.w / 2 + R + 0.55 && lc2.h < OB.h + 0.6) {
+        bk.passed = true; run.close++; addCombo();
+        const pts = PTS.close * mult(); run.bonus += pts;
+        sfx.close(); popAt(`CLOSE +${pts}`, 'close', b.p.x, b.p.y + 1.1, b.p.z);
       }
     }
-    for (let l = 0; l < LANES; l++) {
-      if (!r.obs[l]) continue;
-      const cx = laneX(l), cy = ym + OB.h / 2;
-      const dx = Math.max(Math.abs(b.x - cx) - OB.w / 2, 0);
-      const dyy = Math.max(Math.abs(b.y - cy) - OB.h / 2, 0);
-      const dz = Math.max(Math.abs(b.p - cz) - OB.d / 2, 0);
-      if (dx * dx + dyy * dyy + dz * dz < R * R * 0.8) return endRun('crash');
-      // close call: slipped right past it
-      const key = i * 8 + l;
-      if (prevP < cz && b.p >= cz && !run.passed.has(key) && Math.abs(b.x - cx) < OB.w / 2 + R + 0.45 && b.y < cy + OB.h) {
-        run.passed.add(key); run.close++; addCombo();
-        const pts = PTS.close * mult(); run.bonus += pts;
-        sfx.close(); popAt(`CLOSE +${pts}`, 'close', b.x, b.y + 1.1, -b.p);
-      }
+    for (const g of r.gems) {
+      if (g.taken || g.pos.distanceToSquared(b.p) > (R + 0.45) ** 2) continue;
+      g.taken = true; run.gems++; addCombo();
+      const pts = PTS.gem * mult(); run.bonus += pts;
+      sfx.gem(run.combo);
+      burst(g.pos, 14, '#3df5c0', 4, 2.5, 0.55);
+      popAt(`+${pts}`, 'gem', g.pos.x, g.pos.y + 0.6, g.pos.z);
     }
   }
-  if (b.y < b.lastGround - 9) endRun('fall');
+  if (b.p.y < b.lastGround - 14) endRun('fall');
 }
 
 // ---------- camera ----------
-const camPos = new THREE.Vector3(), camLook = new THREE.Vector3(), tp = new THREE.Vector3(), tl = new THREE.Vector3();
+const camPos = new THREE.Vector3(), camLook = new THREE.Vector3(), camF = new THREE.Vector3(0, 0, -1), camU = new THREE.Vector3(0, 1, 0);
+const tF = new THREE.Vector3(), tU = new THREE.Vector3(), fh = new THREE.Vector3(), focus = new THREE.Vector3();
 function placeCamera(snap, dt = 0.016) {
-  tp.set(b.x * 0.55, Math.max(b.y, b.lastGround - 2) + 2.9, -b.p + 6.2);
-  tl.set(b.x * 0.75, Math.max(b.y, b.lastGround - 3) + 0.2, -b.p - 10);
-  if (snap) { camPos.copy(tp); camLook.copy(tl); }
-  else {
-    const a = 1 - Math.exp(-dt * 10), ay = 1 - Math.exp(-dt * 6);
-    camPos.x += (tp.x - camPos.x) * a; camPos.z = tp.z; camPos.y += (tp.y - camPos.y) * ay;
-    camLook.x += (tl.x - camLook.x) * a; camLook.z = tl.z; camLook.y += (tl.y - camLook.y) * ay;
+  const r = row(b.ci);
+  if (r) {
+    tF.copy(r.F);
+    if (b.v.lengthSq() > 9) tF.lerp(dv.copy(b.v).normalize(), 0.3).normalize();
+    tU.copy(Yv).lerp(r.U, 0.4).normalize();
+    const k = snap ? 1 : 1 - Math.exp(-dt * 4);
+    camF.lerp(tF, k).normalize();
+    camU.lerp(tU, k).normalize();
   }
+  // follow height smoothly, and stop following a ball that is falling into the void
+  const fy = Math.max(b.p.y, b.lastGround - 3);
+  b.focusY = snap ? fy : b.focusY + (fy - b.focusY) * (1 - Math.exp(-dt * 12));
+  focus.set(b.p.x, b.focusY, b.p.z);
+  camPos.copy(focus).addScaledVector(camF, -6.6).addScaledVector(camU, 2.8);
+  camLook.copy(focus).addScaledVector(camF, 9).addScaledVector(camU, 0.3);
   camera.position.copy(camPos);
   if (shake > 0) camera.position.add(tmpV.set((Math.random() - 0.5) * 2 * shake, (Math.random() - 0.5) * 2 * shake, 0));
+  camera.up.copy(camU);
   camera.lookAt(camLook);
+  const sp = b.v.length();
   const portrait = Math.max(0, 1 - camera.aspect) * 34; // narrow screens need a taller view to see the whole track
-  const fov = portrait + (reduceMotion ? 70 : 66 + (b.v - V0) / (VMAX - V0) * 14);
+  const fov = portrait + (reduceMotion ? 70 : 64 + Math.max(0, Math.min(1, (sp - 18) / 20)) * 14);
   if (Math.abs(camera.fov - fov) > 0.05) { camera.fov = fov; camera.updateProjectionMatrix(); }
-  // the far scenery rides along with the camera
-  const cx = camera.position.x, cy = camera.position.y, cz = camera.position.z;
-  sun.position.set(cx * 0.9, cy + 34, cz - 380);
-  stars.position.set(cx, cy, cz);
-  for (const m of ridges) { m.position.set(cx * 0.85, cy - 8 + m.userData.dist * 0.04, cz - m.userData.dist); m.material.map.offset.x = cx * 0.0004 * m.userData.shade; }
-  floor.position.set(Math.round(cx / 10) * 10, b.lastGround - 46, Math.round(cz / 10) * 10);
-  keyLight.position.set(b.x - 3, b.y + 12, -b.p + 6);
-  keyLight.target.position.set(b.x, b.y, -b.p - 5);
+  // far scenery rides along, always out in front
+  fh.set(camF.x, 0, camF.z).normalize();
+  const c = camera.position, yaw = Math.atan2(fh.x, -fh.z);
+  sun.position.copy(c).addScaledVector(fh, 380); sun.position.y += 34; sun.lookAt(c);
+  stars.position.copy(c);
+  for (const m of ridges) {
+    m.position.copy(c).addScaledVector(fh, m.userData.dist); m.position.y = c.y - 8 + m.userData.dist * 0.04;
+    m.lookAt(c.x, m.position.y, c.z);
+    m.material.map.offset.x = yaw * 0.08 * m.userData.shade;
+  }
+  floor.position.set(Math.round(c.x / 10) * 10, b.lastGround - 46, Math.round(c.z / 10) * 10);
+  keyLight.position.copy(b.p).addScaledVector(camF, -4); keyLight.position.y += 12; keyLight.position.x -= 3;
+  keyLight.target.position.copy(b.p).addScaledVector(camF, 5);
 }
 
 // ---------- per-frame effects ----------
 function updateTrail(t) {
   if (!trail.mesh.visible) return;
-  const h = trail.hist;
-  if (state === 'play') { h.unshift(new THREE.Vector3(b.x, b.y, -b.p)); if (h.length > TN) h.pop(); }
+  const h = trail.hist, r = row(b.ci);
+  if (state === 'play') { h.unshift(b.p.clone()); if (h.length > TN) h.pop(); }
+  const side = r ? r.R : X;
   const pos = trail.mesh.geometry.attributes.position, col = trail.mesh.geometry.attributes.color;
   const show = ball.visible && h.length > 1;
   for (let i = 0; i < TN; i++) {
-    const p = h[Math.min(i, h.length - 1)] || tmpV.set(b.x, b.y, -b.p);
-    const back = Math.min(1, (p.z + b.p) / 3.2), k = Math.max(i / (TN - 1), back), w = R * 0.7 * (1 - k);
-    pos.setXYZ(i * 2, p.x - w, p.y - R * 0.45, p.z);
-    pos.setXYZ(i * 2 + 1, p.x + w, p.y - R * 0.45, p.z);
+    const p = h[Math.min(i, h.length - 1)] || b.p;
+    const k = Math.max(i / (TN - 1), Math.min(1, p.distanceTo(b.p) / 3.4)), w = R * 0.7 * (1 - k);
+    pos.setXYZ(i * 2, p.x - side.x * w, p.y - R * 0.45 - side.y * w, p.z - side.z * w);
+    pos.setXYZ(i * 2 + 1, p.x + side.x * w, p.y - R * 0.45 + side.y * w, p.z + side.z * w);
     if (trailCols === 'rainbow') C.setHSL((k * 0.9 + t * 0.4) % 1, 1, 0.55);
     else if (trailCols.length) { const f = k * (trailCols.length - 1), j = Math.min(trailCols.length - 2, Math.floor(f)); C.copy(trailCols[j]).lerp(trailCols[j + 1] || trailCols[j], f - j); }
     const a = show ? Math.pow(1 - k, 1.8) * 0.75 : 0;
@@ -977,18 +1134,19 @@ function updateParticles(dt) {
   partMesh.instanceMatrix.needsUpdate = true;
   if (partMesh.instanceColor) partMesh.instanceColor.needsUpdate = true;
 }
+const camR = new THREE.Vector3();
 function updateSpeedLines() {
-  const k = Math.max(0, Math.min(1, (b.v - 22) / 18));
+  const sp = b.v.length(), k = Math.max(0, Math.min(1, (sp - 20) / 16));
   speedLines.mesh.material.opacity = state === 'play' && !reduceMotion ? k * 0.55 : 0;
   if (!speedLines.mesh.material.opacity) return;
-  const pos = speedLines.mesh.geometry.attributes.position, cz = camera.position.z, cy = camera.position.y, cx = camera.position.x;
-  const len = 1.5 + b.v * 0.12;
+  const pos = speedLines.mesh.geometry.attributes.position, c = camera.position;
+  camR.crossVectors(camF, camU).normalize();
+  const len = 1.5 + sp * 0.12;
   speedLines.seg.forEach((s, i) => {
-    if (s.z > cz + 1 || s.z < cz - 120) {
-      const side = Math.random() < 0.5 ? -1 : 1;
-      s.set(cx + side * rnd(5, 18), cy + rnd(-7, 9), cz - rnd(30, 110));
-    }
-    pos.setXYZ(i * 2, s.x, s.y, s.z); pos.setXYZ(i * 2 + 1, s.x, s.y, s.z + len);
+    const ahead = dv.subVectors(s, c).dot(camF);
+    if (ahead < -1 || ahead > 125) s.copy(c).addScaledVector(camF, rnd(30, 110)).addScaledVector(camR, sgn() * rnd(5, 18)).addScaledVector(camU, rnd(-7, 9));
+    pos.setXYZ(i * 2, s.x, s.y, s.z);
+    pos.setXYZ(i * 2 + 1, s.x - camF.x * len, s.y - camF.y * len, s.z - camF.z * len);
   });
   pos.needsUpdate = true;
 }
@@ -1007,7 +1165,7 @@ function watchPerf(dt) {
 
 // ---------- loop ----------
 let clock = performance.now();
-const rollQ = new THREE.Quaternion(), Z3 = new THREE.Vector3(0, 0, 1);
+const spinQ = new THREE.Quaternion(), axis = new THREE.Vector3();
 function frame(now) {
   requestAnimationFrame(frame);
   const dt = Math.min(0.05, (now - clock) / 1000);
@@ -1016,49 +1174,55 @@ function frame(now) {
 
   if (state === 'play') {
     const n = Math.max(1, Math.ceil(dt / SUB)), h = dt / n;
-    const bx = b.x, bp = b.p;
     for (let i = 0; i < n && state === 'play'; i++) step(h);
-    ball.rotateOnWorldAxis(X, -(b.p - bp) / R);
-    ball.quaternion.premultiply(rollQ.setFromAxisAngle(Z3, -(b.x - bx) / R));
-    const cur = Math.floor(b.p / L);
-    ensureTrack(cur);
-    drawTrack(cur);
-    const z = zoneOf(cur);
-    run.maxZone = Math.max(run.maxZone, Math.floor(cur / ZONE_ROWS));
+    const wl = b.w.length();
+    if (wl > 1e-4) ball.quaternion.premultiply(spinQ.setFromAxisAngle(axis.copy(b.w).divideScalar(wl), wl * dt));
+    ensureTrack(b.ci);
+    drawTrack(b.ci);
+    const z = zoneOf(b.ci);
+    run.maxZone = Math.max(run.maxZone, Math.floor(b.ci / ZONE_ROWS));
     if (z !== zoneShown) applyZone(z);
-    const dist = Math.floor(b.p - startP);
+    const dist = Math.max(0, Math.floor(progress() - startS));
     ui.score.textContent = fmt(dist + run.bonus);
     ui.dist.textContent = `${fmt(dist)} m`;
     ui.gems.textContent = run.gems;
-    ui.speed.textContent = `${Math.round(b.v * 3.6)} km/h`;
+    const sp = b.v.length();
+    ui.speed.textContent = `${Math.round(sp * 3.6)} km/h`;
     if (run.comboT > 0) { run.comboT -= dt; if (run.comboT <= 0) run.combo = 0; }
     const m = mult();
     ui.mult.hidden = m < 2;
     if (m >= 2) ui.mult.textContent = `x${m} COMBO`;
-    if (dist >= nextMilestone) { if (zoneOf(cur) === zoneOf(cur - 2)) toast(`${fmt(nextMilestone)} m`); sfx.ding(); nextMilestone += 500; }
+    if (dist >= nextMilestone) { if (zoneOf(b.ci) === zoneOf(b.ci - 3)) toast(`${fmt(nextMilestone)} m`); sfx.ding(); nextMilestone += 500; }
     if (rollGain && !muted) {
-      rollGain.gain.value = b.grounded ? 0.05 + 0.08 * (b.v - V0) / (VMAX - V0) : 0;
-      rollFilter.frequency.value = 180 + b.v * 14;
+      rollGain.gain.value = b.grounded ? 0.04 + 0.09 * Math.min(1, sp / 36) : 0;
+      rollFilter.frequency.value = 160 + sp * 16;
     }
   } else if (state === 'dying') {
     dieT += dt;
-    if (ball.visible) { b.vy -= G * dt; b.y += b.vy * dt; b.p += b.v * dt * 0.5; b.x += b.vx * dt; }
+    if (ball.visible) { b.v.y -= G * dt; b.p.addScaledVector(b.v, dt); }
     if (dieT > 1.15) showOver();
   } else if (state === 'menu') {
     ball.rotateOnWorldAxis(X, -dt * 1.2);
   }
 
   ballMat?.userData.update?.(gameT);
-  ball.position.set(b.x, b.y, -b.p);
-  ballGlow.position.set(b.x, b.y + 1.2, -b.p + 0.6);
-  const g = groundAt(b.x, b.p);
-  blob.visible = !!g && ball.visible && !Qs.shadows;
-  if (g) {
-    const hgt = Math.max(0, b.y - R - g.y), s = Math.max(0.3, 1 - hgt * 0.15);
-    blob.position.set(b.x, g.y + 0.02, -b.p); blob.scale.set(s, s, s);
-    blob.material.opacity = Math.max(0.15, 1 - hgt * 0.2);
+  ball.position.copy(b.p);
+  ballGlow.position.copy(b.p).addScaledVector(camU, 1.2).addScaledVector(camF, -0.6);
+  // contact shadow when real shadows are off
+  const r = row(b.ci);
+  blob.visible = false;
+  if (r && ball.visible && !Qs.shadows) {
+    local(r, b.p, lc);
+    const lane = Math.floor((lc.u + HALF) / W), sg = r.segs.find(x => x.floor && x.a[0] <= lc.u && x.b[0] > lc.u);
+    if (sg && lane >= 0 && lane < LANES && lc.h > 0) {
+      const hgt = Math.max(0, lc.h - R), s = Math.max(0.3, 1 - hgt * 0.15);
+      worldAt(r, lc.s, lc.u, 0.03, blob.position);
+      blob.quaternion.setFromUnitVectors(Z3, r.U);
+      blob.scale.set(s, s, s); blob.material.opacity = Math.max(0.15, 1 - hgt * 0.2);
+      blob.visible = true;
+    }
   }
-  drawGems(Math.floor(b.p / L), gameT);
+  drawDynamic(b.ci, gameT);
   updateTrail(gameT);
   updateParticles(dt);
   if (shake > 0) shake = Math.max(0, shake - dt * 1.6);
@@ -1084,4 +1248,6 @@ resetWorld();
 refreshMenu();
 requestAnimationFrame(frame);
 // test hook (used by automated checks only)
-window.__downhill = { get state() { return state; }, ball: b, start: startRun, rows: () => rows, save, setQuality, get run() { return run; }, openShop, openGoals };
+window.__downhill = { get state() { return state; }, ball: b, start: startRun, rows: () => rows, save, setQuality, get run() { return run; }, openShop, openGoals, progress, difficulty, row,
+  get lastDeath() { return lastDeath; }, get simT() { return simT; },
+  fast(sec) { for (let k = 0; k < sec / SUB && state === 'play'; k++) { step(SUB); if (k % 20 === 0) ensureTrack(b.ci); } placeCamera(true); drawTrack(b.ci); return state; } };

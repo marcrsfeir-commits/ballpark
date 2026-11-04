@@ -20,7 +20,7 @@ Fifteen free browser games in one place. No ads, no accounts, no paywalls — ev
 | **TROLLEY TROUBLE** | 28 absurd trolley dilemmas and your ethics profile. | neal.fun |
 | **NOT A ROBOT** | A captcha that gets more and more suspicious of you. | neal.fun |
 | **SANDLOT** | Falling-sand physics sandbox: sand, water, lava, acid, walkers, bombs, lightning and a nuke. | original |
-| **DOWNHILL** | Steer a ball down an endless sunset slope: dodge blocks, jump gaps, survive the speed. | original |
+| **DOWNHILL** | Physics ball roller: a 3-wide track that curves, tilts and dives — tunnels laced with red killer panels, moving blocks, ramps over gaps. Gems, skins, levels and goals. | original |
 
 These are fan remakes — go play the originals too. All prompts, questions, answer lists and art here are original.
 
