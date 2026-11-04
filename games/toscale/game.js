@@ -35,6 +35,11 @@ function silhouette(o, color) {
   cache.set(key, c);
   return c;
 }
+// The red one starts exactly as tall as the blue one: it gives nothing away and never looks like a size claim.
+function neutralStart(ref, tgt) {
+  const want = dims(ref, ref.size).h;
+  return tgt.axis === 'height' ? want : want * silhouette(tgt, BLUE).aspect;
+}
 // world size (metres) of an object drawn at `size` along its axis
 function dims(o, size) {
   const a = silhouette(o, BLUE).aspect;
@@ -55,9 +60,7 @@ function roundsFor(n) {
     out.push([a.id, b.id]);
   }
   return out.map(([ref, tgt], i) => {
-    const k = BP.rng(`start:${n}:${i}:${BP.deviceSeed()}`)();
-    const f = k < 0.5 ? 0.25 + k * 0.7 : 1.6 + (k - 0.5) * 4;   // start clearly wrong
-    return { ref, tgt, start: byId[tgt].size * f };
+    return { ref, tgt, start: neutralStart(byId[ref], byId[tgt]) };
   });
 }
 
@@ -242,8 +245,7 @@ function endlessRound() {
     const ra = dims(a, a.size), rb = dims(b, b.size), ratio = Math.max(ra.h, rb.h) / Math.min(ra.h, rb.h);
     if (a === b || ratio > 25 || ratio < 1.15 || (tries < 400 && (recent.includes(a.id) || recent.includes(b.id)))) continue;
     recent = [...recent, a.id, b.id].slice(-RECENT);
-    const k = Math.random(), f = k < 0.5 ? 0.25 + k * 0.7 : 1.6 + (k - 0.5) * 4;
-    return { ref: a.id, tgt: b.id, start: b.size * f };
+    return { ref: a.id, tgt: b.id, start: neutralStart(a, b) };
   }
   return { ref: 'horse', tgt: 'car', start: 2 };
 }
