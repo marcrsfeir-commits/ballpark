@@ -27,6 +27,9 @@ button { font-family: inherit; }
 .pop.gem { color: #6dffd2; font-size: 16px; }
 .pop.air { color: #ffd166; }
 .pop.close { color: #ff6fb5; }
+.pop.floor { color: #9ff4ff; font-size: 17px; }
+#score.bump { animation: bump .25s ease-out; display: inline-block; }
+@keyframes bump { 0% { transform: scale(1.25); color: #9ff4ff; } 100% { transform: scale(1); } }
 @keyframes rise { 0% { opacity: 0; margin-top: 8px; } 15% { opacity: 1; } 100% { opacity: 0; margin-top: -60px; } }
 
 .toast { position: fixed; top: 24%; left: 0; right: 0; text-align: center; font: 900 clamp(26px, 6vw, 48px)/1 "Segoe UI", system-ui, sans-serif;

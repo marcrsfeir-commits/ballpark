@@ -25,7 +25,7 @@ const ROLL_RES = 0.35;        // rolling resistance (m/s² against motion while 
 const STEER_G = 260, STEER_AIR = 28, GRIP = 40, GRIP_STEER = 0.4;  // push, push in the air, sideways grip, grip kept while steering
 const deg = Math.PI / 180;
 const laneU = j => -HALF + W * (j + 0.5);
-const PTS = { gem: 10, close: 25, airPerSec: 60 };
+const PTS = { gem: 10, close: 25, airPerSec: 60, floor: 25 };
 const DIFF_DIST = 4500;       // distance (m) at which difficulty is maxed
 const SPEED_DIST = 3000;      // distance (m) over which the slope steepens (speed keeps building, then a slow climb to 6 km)
 
@@ -245,6 +245,27 @@ const dangerMat = new THREE.MeshStandardMaterial({ map: dangerTex, emissiveMap: 
 const redMesh = new THREE.InstancedMesh(tileGeo, dangerMat, MAXI);
 redMesh.frustumCulled = false; redMesh.receiveShadow = true;
 scene.add(redMesh);
+// the floor is drawn as one continuous ribbon: each row's piece ends exactly where the next row's starts, so
+// there are no tile gaps or rounded seams, just one smooth surface with glowing side rails
+function ribbon(maxQuads, mat) {
+  const g = new THREE.BufferGeometry();
+  const n = maxQuads * 6;
+  g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(n * 3), 3).setUsage(THREE.DynamicDrawUsage));
+  g.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(n * 3), 3).setUsage(THREE.DynamicDrawUsage));
+  g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(n * 3), 3).setUsage(THREE.DynamicDrawUsage));
+  const m = new THREE.Mesh(g, mat); m.frustumCulled = false; scene.add(m);
+  return { m, g, n: 0, max: maxQuads };
+}
+const floorSolid = ribbon(4000, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.42, metalness: 0.35, envMapIntensity: 0.18, side: THREE.DoubleSide }));
+floorSolid.m.receiveShadow = true;
+const floorGlow = ribbon(3000, new THREE.MeshBasicMaterial({ vertexColors: true }));
+function quad(rb, p0, p1, p2, p3, nrm, col) {   // p0-p1 near edge, p3-p2 far edge
+  if (rb.n >= rb.max) return;
+  const P = rb.g.attributes.position.array, N = rb.g.attributes.normal.array, Cc = rb.g.attributes.color.array;
+  let k = rb.n * 18;
+  for (const p of [p0, p1, p2, p0, p2, p3]) { P[k] = p.x; P[k + 1] = p.y; P[k + 2] = p.z; N[k] = nrm.x; N[k + 1] = nrm.y; N[k + 2] = nrm.z; Cc[k] = col.r; Cc[k + 1] = col.g; Cc[k + 2] = col.b; k += 3; }
+  rb.n++;
+}
 // killer blocks (static and moving)
 const OB = { w: W * 0.78, h: 1.15, d: L * 0.5 };
 const blockMesh = new THREE.InstancedMesh(new RoundedBoxGeometry(OB.w, OB.h, OB.d, 3, 0.1), dangerMat, 400);
@@ -374,7 +395,14 @@ function worldAt(r, s, u, h, out = new THREE.Vector3()) {
 function pushRow(floor, extra = {}) {
   const fr = frameFrom(gen.yaw, gen.pitch, gen.bank);
   const r = { i: gen.i, kind: gen.kind, O: gen.O.clone(), ...fr, segs: [], blocks: extra.blocks || [], gems: [], tunnel: !!extra.tunnel };
-  for (let j = 0; j < LANES; j++) if (floor[j]) r.segs.push({ a: [-HALF + W * j, 0], b: [-HALF + W * (j + 1), 0], kill: floor[j] === 2, floor: true });
+  // neighbouring tiles of the same kind merge into one piece of floor (one surface, no lane seams)
+  for (let j = 0; j < LANES;) {
+    if (!floor[j]) { j++; continue; }
+    let e = j; while (e + 1 < LANES && floor[e + 1] === floor[j]) e++;
+    r.segs.push({ a: [-HALF + W * j, 0], b: [-HALF + W * (e + 1), 0], kill: floor[j] === 2, floor: true });
+    j = e + 1;
+  }
+  r.seg = gen.seg;
   if (extra.tunnel) TUNNEL.forEach((sg, k) => r.segs.push({ a: sg[0], b: sg[1], kill: !!extra.tunnel[k], wall: true }));
   const gl = extra.gemLane ?? -1;
   if (gen.gemLeft > 0 && gl >= 0 && floor[gl] === 1 && !r.blocks.some(bk => !bk.move && bk.lane === gl)) {
@@ -505,6 +533,7 @@ function segRamp(n, d) {
 function nextSegment() {
   const p = gen.i * L, d = difficulty(gen.i);
   gen.gemLeft = Math.random() < 0.6 ? irnd(4, 8) : 0;
+  gen.seg++;                      // each section of track is one "floor" (points when you roll onto the next one)
   if (gen.i < 24) { gen.tPitch = basePitch(0); gen.kind = 'start'; return segPlain(24 - gen.i); }
   pickBend(d);
   gen.kind = 'breather';
@@ -537,21 +566,53 @@ function panelMatrix(r, a, b2) {
   M.makeBasis(vx, vy, vz).scale(S.set(len * 0.96, 1, L * 0.97)).setPosition(P);
   return M;
 }
+const fq = Array.from({ length: 8 }, () => new THREE.Vector3()), tmpE = new THREE.Vector3(), C2 = new THREE.Color();
 function drawTrack(ci) {
   if (ci === drawnFrom) return;
   drawnFrom = ci;
   let nt = 0, nr = 0;
+  floorSolid.n = 0; floorGlow.n = 0;
+  const covers = (rr, a, b2) => rr && rr.segs.some(x => x.floor && !x.kill && x.a[0] <= a + 1e-3 && x.b[0] >= b2 - 1e-3);
   for (let i = ci - BEHIND; i < ci + AHEAD; i++) {
     const r = row(i);
     if (!r) continue;
     const z = ZONES[zoneOf(i)];
-    r.segs.forEach((sg, k) => {
+    const nx = row(i + 1);
+    r.segs.forEach(sg => {
       if (sg.kill) { if (nr < MAXI) redMesh.setMatrixAt(nr++, panelMatrix(r, sg.a, sg.b)); return; }
-      if (nt >= MAXI) return;
-      tileMesh.setMatrixAt(nt, panelMatrix(r, sg.a, sg.b));
-      tileMesh.setColorAt(nt, C.set(z.tile).multiplyScalar(sg.wall ? 0.55 : (k + i) % 2 ? 1 : 0.78));
-      nt++;
+      if (sg.wall) {
+        if (nt >= MAXI) return;
+        tileMesh.setMatrixAt(nt, panelMatrix(r, sg.a, sg.b));
+        tileMesh.setColorAt(nt, C.set(z.tile).multiplyScalar(0.55));
+        nt++; return;
+      }
+      // continuous floor piece: the far edge is the next row's near edge whenever the two actually meet
+      const ua = sg.a[0], ub = sg.b[0];
+      const end = (u, out) => { worldAt(r, L, u, 0, out); if (nx) { worldAt(nx, 0, u, 0, tmpE); if (tmpE.distanceToSquared(out) < 0.06) out.copy(tmpE); } return out; };
+      const a0 = worldAt(r, 0, ua, 0, fq[0]), b0 = worldAt(r, 0, ub, 0, fq[1]), b1 = end(ub, fq[2]), a1 = end(ua, fq[3]);
+      const top = C.set(z.tile).multiplyScalar(0.13);
+      quad(floorSolid, a0, b0, b1, a1, r.U, top);
+      // body underneath (sides, and front/back faces where the floor starts or stops)
+      const dn = vz.copy(r.U).multiplyScalar(-TH);
+      const side = C2.set(z.tile).multiplyScalar(0.3);
+      quad(floorSolid, a0, a1, fq[4].copy(a1).add(dn), fq[5].copy(a0).add(dn), r.R, side);
+      quad(floorSolid, b0, b1, fq[4].copy(b1).add(dn), fq[5].copy(b0).add(dn), r.R, side);
+      if (!covers(row(i - 1), ua, ub)) quad(floorSolid, a0, b0, fq[4].copy(b0).add(dn), fq[5].copy(a0).add(dn), r.F, side);
+      if (!covers(nx, ua, ub)) quad(floorSolid, a1, b1, fq[4].copy(b1).add(dn), fq[5].copy(a1).add(dn), r.F, side);
+      // glowing rails along both edges, and a faint stripe across every few metres so the speed reads
+      const lift = vy.copy(r.U).multiplyScalar(0.012), rail = C2.set(z.tile).multiplyScalar(1.4);
+      for (const [u0, u1] of [[ua, ua + 0.14], [ub - 0.14, ub]]) {
+        quad(floorGlow, worldAt(r, 0, u0, 0, fq[4]).add(lift), worldAt(r, 0, u1, 0, fq[5]).add(lift), end(u1, fq[6]).add(lift), end(u0, fq[7]).add(lift), r.U, rail);
+      }
+      if (i % 3 === 0) {
+        const st = C2.set(z.tile).multiplyScalar(0.45);
+        quad(floorGlow, worldAt(r, 0, ua, 0, fq[4]).add(lift), worldAt(r, 0, ub, 0, fq[5]).add(lift), worldAt(r, 0.1, ub, 0, fq[6]).add(lift), worldAt(r, 0.1, ua, 0, fq[7]).add(lift), r.U, st);
+      }
     });
+  }
+  for (const rb of [floorSolid, floorGlow]) {
+    rb.g.setDrawRange(0, rb.n * 6);
+    for (const k of ['position', 'normal', 'color']) { const at = rb.g.attributes[k]; at.clearUpdateRanges(); at.addUpdateRange(0, rb.n * 18); at.needsUpdate = true; }
   }
   tileMesh.count = nt; redMesh.count = nr;
   tileMesh.instanceMatrix.needsUpdate = true; redMesh.instanceMatrix.needsUpdate = true;
@@ -624,6 +685,7 @@ const sfx = {
   buy: () => { tone(660, 0.1, 'triangle', 0.08); tone(990, 0.16, 'triangle', 0.08, null, 0.08); },
   level: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.22, 'triangle', 0.09, null, i * 0.11)),
   nope: () => tone(180, 0.18, 'square', 0.06, 120),
+  floor: () => tone(1180, 0.05, 'square', 0.025),
 };
 const muteBtn = document.getElementById('mute');
 function setMute(m) {
@@ -702,7 +764,7 @@ function popAt(text, cls, wx, wy, wz) {
 // ---------- run lifecycle ----------
 function resetWorld() {
   rows = {}; simT = 0;
-  gen = { i: 0, O: new THREE.Vector3(), yaw: 0, yawRate: 0, tYaw: 0, pitch: basePitch(0), tPitch: basePitch(0), pitchStep: 2.5 * deg, bank: 0, tBank: 0, safe: 1, gemLeft: 0 };
+  gen = { i: 0, O: new THREE.Vector3(), yaw: 0, yawRate: 0, tYaw: 0, pitch: basePitch(0), tPitch: basePitch(0), pitchStep: 2.5 * deg, bank: 0, tBank: 0, safe: 1, gemLeft: 0, seg: 0 };
   drawnFrom = -1;
   ensureTrack(3);
   const r = row(3);
@@ -713,7 +775,7 @@ function resetWorld() {
   startS = progress();
   camF.copy(r.F); camU.copy(Yv);
   ball.visible = true; parts.length = 0; trail.hist.length = 0;
-  run = { bonus: 0, gems: 0, close: 0, maxAir: 0, combo: 0, comboT: 0, passed: new Set(), maxZone: 0 };
+  run = { bonus: 0, gems: 0, close: 0, maxAir: 0, combo: 0, comboT: 0, passed: new Set(), maxZone: 0, seg: null, floors: 0 };
   nextMilestone = 500;
   applyZone(0, true);
   placeCamera(true);
@@ -1044,6 +1106,21 @@ function step(dt) {
       local(r, b.p, lc2);
     }
   }
+  // stay glued over tiny bumps: a ball that was rolling a moment ago, is still within a few cm of floor that carries
+  // on, and is not really moving away from it, keeps rolling instead of skipping. Ramps, drops and holes still launch
+  // it, because there the floor ends (or is far below), so the glue never applies.
+  if (!b.grounded && wasGrounded) {
+    const rr = row(b.ci);
+    if (rr) {
+      local(rr, b.p, lc2);
+      const vn = b.v.dot(rr.U), on = q => q && q.segs.some(x => x.floor && !x.kill && x.a[0] <= lc2.u && x.b[0] >= lc2.u);
+      if (lc2.h > R - 0.06 && lc2.h < R + 0.2 && vn < 3.5 && on(rr) && (lc2.s < L - 0.8 || on(row(b.ci + 1)))) {
+        b.p.addScaledVector(rr.U, R - lc2.h);
+        if (vn > 0) b.v.addScaledVector(rr.U, -vn);
+        b.grounded = true; b.gN.copy(rr.U);
+      }
+    }
+  }
   if (b.grounded) b.w.crossVectors(b.gN, b.v).multiplyScalar(1 / R);   // rolling: spin follows the ground
 
   if (!wasGrounded && b.grounded) {
@@ -1214,12 +1291,23 @@ function frame(now) {
     const n = Math.max(1, Math.ceil(dt / SUB)), h = dt / n;
     for (let i = 0; i < n && state === 'play'; i++) step(h);
     const wl = b.w.length();
-    if (wl > 1e-4) ball.quaternion.premultiply(spinQ.setFromAxisAngle(axis.copy(b.w).divideScalar(wl), wl * dt));
+    // shown spin is a third of the true roll rate: at 150 km/h the real rate is a blur that strobes
+    if (wl > 1e-4) ball.quaternion.premultiply(spinQ.setFromAxisAngle(axis.copy(b.w).divideScalar(wl), wl * dt * 0.33));
     ensureTrack(b.ci);
     drawTrack(b.ci);
     const z = zoneOf(b.ci);
     run.maxZone = Math.max(run.maxZone, Math.floor(b.ci / ZONE_ROWS));
     if (z !== zoneShown) applyZone(z);
+    // points every time you roll onto the next section of floor
+    const rs = row(b.ci);
+    if (rs && rs.seg !== run.seg) {
+      if (run.seg !== null && rs.seg > run.seg) {
+        const pts = PTS.floor * mult(); run.bonus += pts; run.floors++;
+        popAt(`+${pts}`, 'floor', b.p.x, b.p.y + 1.3, b.p.z); sfx.floor();
+        ui.score.classList.remove('bump'); void ui.score.offsetWidth; ui.score.classList.add('bump');
+      }
+      run.seg = rs.seg;
+    }
     const dist = Math.max(0, Math.floor(progress() - startS));
     ui.score.textContent = fmt(dist + run.bonus);
     ui.dist.textContent = `${fmt(dist)} m`;
