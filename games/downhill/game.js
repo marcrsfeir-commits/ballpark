@@ -8,6 +8,7 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { SKINS, TRAILS, trailCss, skinThumbs } from './skins.js';
+import { makeScenery } from './scenery.js';
 
 const ID = 'downhill';
 const store = window.Ballpark ? Ballpark.store(ID) : { get: (k, f) => f, set() {} };
@@ -302,59 +303,115 @@ const blockMesh = new THREE.InstancedMesh(new RoundedBoxGeometry(OB.w, OB.h, OB.
 blockMesh.frustumCulled = false; blockMesh.castShadow = true; blockMesh.receiveShadow = true;
 scene.add(blockMesh);
 
-// scenery beside the track: tall pylons that stand straight up (world vertical) with level neon rings, and now and
-// then an arch over the track. The road tilts down past them, so the slope and the speed read at a glance.
-const PYL_MAX = 260, RING_MAX = 900;
-const pylonMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0x1a0d24, roughness: 0.45, metalness: 0.6, envMapIntensity: 0.6 }), PYL_MAX);
-const ringMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false }), RING_MAX);
-pylonMesh.frustumCulled = ringMesh.frustumCulled = false;
-scene.add(pylonMesh, ringMesh);
-const PYL_DEPTH = 34;            // how far below the track a pylon reaches (it fades into the fog well before its foot)
+// scenery beside the track, all world-vertical and level so the road visibly tilts down past it: neon towers with lit
+// windows, setbacks, antennas and beacons; floating rock islands with palms; huge banded pyramids far out; slim
+// pylons; and now and then an arch over the road. Each piece is a list of instances made when its row is generated.
+const pylonMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0x1a0d24, roughness: 0.45, metalness: 0.6, envMapIntensity: 0.6 }), 200);
+pylonMesh.frustumCulled = false; scene.add(pylonMesh);
+const kit = makeScenery(scene);
+kit.pylon = pylonMesh;
+const DEPTH = 34;                // how far below the track things reach (they fade into the haze well before their feet)
 function decoFor(r) {
   if (r.tunnel || gen.i < 6) return null;
-  const out = [];
-  const yaw = Math.atan2(r.F.x, -r.F.z);
+  const items = [], foot = [];
+  const yaw = Math.atan2(r.F.x, -r.F.z), y0 = r.O.y;
+  const put = (k, x, y, z, sx, sy, sz, col, ry = yaw) => items.push([k, x, y, z, ry, sx, sy, sz, col]);
+  const at = (u, f = L / 2) => worldAt(r, f, u, 0);
   if (gen.i % 46 === 0 && gen.kind !== 'segRamp' && gen.kind !== 'segDrop') {
-    // an arch: two pylons and a level beam high over the road
-    const top = rnd(7, 9);
-    for (const sd of [-1, 1]) out.push({ p: worldAt(r, L / 2, sd * (HALF + 1.6), 0), top, w: 0.9, yaw, rings: 3 });
-    out.push({ beam: true, p: worldAt(r, L / 2, 0, 0), top, span: 2 * (HALF + 1.6) + 0.9, yaw });
-    return out;
+    // an arch: two pylons with rings and a level glowing beam high over the road
+    const top = rnd(7, 9), span = 2 * (HALF + 1.6) + 0.9;
+    for (const sd of [-1, 1]) {
+      const p = at(sd * (HALF + 1.6)), h = top + DEPTH;
+      put('pylon', p.x, p.y + top - h / 2, p.z, 0.9, h, 0.9);
+      for (let k = 0; k < 3; k++) put('trim', p.x, p.y + top - 0.15 - k * 3.2, p.z, 1.25, 0.16, 1.25, 'tile');
+    }
+    const c = at(0);
+    put('trim', c.x, c.y + top + 0.25, c.z, span, 0.5, 0.6, 'tile');
+    return { items, foot };
   }
   if (gen.i % 4) return null;
-  const sides = Math.random() < 0.45 ? [-1, 1] : [gen.i % 8 ? 1 : -1];
-  for (const sd of sides) {
-    const off = HALF + rnd(2.2, 10), w = rnd(0.6, 1.4);
-    out.push({ p: worldAt(r, L / 2, sd * off, 0), top: rnd(-2, 10) + off * 0.25, w, yaw, rings: 1 + Math.floor(Math.random() * 3) });
+  const roll = Math.random(), sd = Math.random() < 0.5 ? -1 : 1;
+  if (roll < 0.34) {
+    // a tower or two: stacked setbacks, a glowing ledge at each step, an antenna with a red beacon
+    for (const side of Math.random() < 0.35 ? [-1, 1] : [sd]) {
+      const off = HALF + rnd(12, 40), p = at(side * off);
+      let w = rnd(3, 7), dd = w * rnd(0.7, 1.25), yb = p.y - DEPTH;
+      const top = p.y + rnd(6, 26) + off * 0.35, n = 1 + Math.floor(Math.random() * 3);
+      const ry = yaw + (Math.random() < 0.3 ? Math.PI / 4 : 0);
+      for (let k = 0; k < n; k++) {
+        const yt = k === n - 1 ? top : yb + (top - yb) * rnd(0.72, 0.85);
+        put('tower', p.x, (yb + yt) / 2, p.z, w, yt - yb, dd, 'tile', ry);
+        put('trim', p.x, yt + 0.1, p.z, w + 0.3, 0.2, dd + 0.3, 'tile', ry);
+        yb = yt; w *= rnd(0.6, 0.8); dd *= rnd(0.6, 0.8);
+      }
+      const ah = rnd(2, 6);
+      put('trim', p.x, top + ah / 2, p.z, 0.14, ah, 0.14, 'rim', ry);
+      put('beacon', p.x, top + ah + 0.15, p.z, 0.28, 0.28, 0.28, null);
+      foot.push({ x: p.x, z: p.z, r: Math.max(w, dd) * 1.1, y0: p.y - DEPTH, y1: top + ah });
+    }
+  } else if (roll < 0.6) {
+    // a floating rock island with palms, close to the track
+    const rI = rnd(1.8, 3), off = HALF + rI + rnd(1.2, 3.5), p = at(sd * off);
+    const yt = p.y + rnd(-2.2, 0.8);
+    put('island', p.x, yt, p.z, rI, rI * 1.9, rI, null, rnd(0, 6.3));
+    put('rim', p.x, yt + 0.02, p.z, rI * 0.98, rI, rI * 0.98, 'tile');
+    const np = 1 + Math.floor(Math.random() * 3);
+    for (let k = 0; k < np; k++) {
+      const a = rnd(0, 6.3), rr = k ? rnd(0.3, 0.6) * rI : rnd(0, 0.3) * rI, sc = rnd(0.7, 1.1);
+      const ry = rnd(0, 6.3);
+      put('trunk', p.x + Math.cos(a) * rr, yt, p.z + Math.sin(a) * rr, sc, sc, sc, null, ry);
+      put('fronds', p.x + Math.cos(a) * rr, yt, p.z + Math.sin(a) * rr, sc, sc, sc, 'tile', ry);
+    }
+    foot.push({ x: p.x, z: p.z, r: rI, y0: yt - rI * 2.7, y1: yt + 8 });
+  } else if (roll < 0.69) {
+    // a huge pyramid far out, with level neon bands
+    const S = rnd(18, 40), off = HALF + rnd(45, 90), p = at(sd * off), yb = p.y - rnd(8, 22);
+    put('pyramid', p.x, yb, p.z, S, S * 0.75, S, 'tile', yaw + rnd(0, 1.5));
+    foot.push({ x: p.x, z: p.z, r: S * 0.72, y0: yb, y1: yb + S * 0.75 });
+  } else if (roll < 0.86) {
+    // a slim pylon with level rings
+    const off = HALF + rnd(2.2, 10), w = rnd(0.6, 1.4), p = at(sd * off), top = rnd(-2, 10) + off * 0.25, h = top + DEPTH;
+    put('pylon', p.x, p.y + top - h / 2, p.z, w, h, w);
+    const nr = 1 + Math.floor(Math.random() * 3);
+    for (let k = 0; k < nr; k++) put('trim', p.x, p.y + top - 0.15 - k * 3.2, p.z, w + 0.35, 0.16, w + 0.35, 'tile');
+    foot.push({ x: p.x, z: p.z, r: w * 0.8, y0: p.y - DEPTH, y1: p.y + top });
   }
-  return out;
+  return items.length ? { items, foot } : null;
 }
-const ringCol = new THREE.Color(), pylQ = new THREE.Quaternion(), pylS = new THREE.Vector3(), pylP = new THREE.Vector3();
+const decoCol = { tile: new THREE.Color(), rim: new THREE.Color() }, white = new THREE.Color(1, 1, 1);
+const dQ = new THREE.Quaternion(), dS = new THREE.Vector3(), dP = new THREE.Vector3();
+// a piece that a later stretch of track would pass through (curves can swing back) is hidden for good
+function blocksTrack(d, j0, j1) {
+  for (const f of d.foot) for (let j = j0; j < j1; j++) {
+    const rr = row(j); if (!rr) continue;
+    const cx = rr.O.x + rr.F.x * L / 2, cz = rr.O.z + rr.F.z * L / 2, cy = rr.O.y;
+    if (cy > f.y0 - 2 && cy < f.y1 + 4 && (cx - f.x) ** 2 + (cz - f.z) ** 2 < (f.r + HALF + 0.6) ** 2) return true;
+  }
+  return false;
+}
 function drawDeco(ci) {
-  let np = 0, nr = 0;
+  const n = {};
+  for (const k in kit) n[k] = 0;
   for (let i = ci - BEHIND; i < ci + AHEAD; i++) {
     const r = row(i);
-    if (!r || !r.deco) continue;
-    ringCol.set(ZONES[zoneOf(i)].tile).multiplyScalar(1.7);
-    for (const d of r.deco) {
-      pylQ.setFromAxisAngle(Yv, -d.yaw);
-      const yTop = d.p.y + d.top;
-      if (d.beam) {
-        if (nr < RING_MAX) { ringMesh.setMatrixAt(nr, M.compose(pylP.set(d.p.x, yTop + 0.25, d.p.z), pylQ, pylS.set(d.span, 0.5, 0.6))); ringMesh.setColorAt(nr++, ringCol); }
-        continue;
-      }
-      if (np >= PYL_MAX) continue;
-      const h = d.top + PYL_DEPTH;
-      pylonMesh.setMatrixAt(np++, M.compose(pylP.set(d.p.x, yTop - h / 2, d.p.z), pylQ, pylS.set(d.w, h, d.w)));
-      for (let k = 0; k < d.rings && nr < RING_MAX; k++) {
-        ringMesh.setMatrixAt(nr, M.compose(pylP.set(d.p.x, yTop - 0.15 - k * 3.2, d.p.z), pylQ, pylS.set(d.w + 0.35, 0.16, d.w + 0.35)));
-        ringMesh.setColorAt(nr++, ringCol);
-      }
+    if (!r || !r.deco || r.deco.hidden) continue;
+    // check it against every row of track that exists now (once each)
+    const from = r.deco.upTo ?? i - 40, to = gen.i;
+    if (to > from) { r.deco.upTo = to; if (blocksTrack(r.deco, Math.max(from, i - 40), to)) { r.deco.hidden = true; continue; } }
+    const Z = ZONES[zoneOf(i)];
+    decoCol.tile.set(Z.tile).multiplyScalar(1.6); decoCol.rim.set(Z.rim).multiplyScalar(1.4);
+    for (const [k, x, y, z, ry, sx, sy, sz, col] of r.deco.items) {
+      const m = kit[k];
+      if (n[k] >= m.instanceMatrix.count) continue;
+      m.setMatrixAt(n[k], M.compose(dP.set(x, y, z), dQ.setFromAxisAngle(Yv, -ry), dS.set(sx, sy, sz)));
+      if (m.instanceColor || col) m.setColorAt(n[k], col ? decoCol[col] : white);
+      n[k]++;
     }
   }
-  pylonMesh.count = np; ringMesh.count = nr;
-  pylonMesh.instanceMatrix.needsUpdate = ringMesh.instanceMatrix.needsUpdate = true;
-  if (ringMesh.instanceColor) ringMesh.instanceColor.needsUpdate = true;
+  for (const k in kit) {
+    const m = kit[k]; m.count = n[k]; m.instanceMatrix.needsUpdate = true;
+    if (m.instanceColor) m.instanceColor.needsUpdate = true;
+  }
 }
 
 const gemMesh = new THREE.InstancedMesh(new THREE.OctahedronGeometry(0.3, 0),
@@ -1488,6 +1545,6 @@ resetWorld();
 refreshMenu();
 requestAnimationFrame(frame);
 // test hook (used by automated checks only)
-window.__downhill = { get state() { return state; }, ball: b, start: startRun, rows: () => rows, save, setQuality, get run() { return run; }, openShop, openGoals, progress, difficulty, row,
+window.__downhill = { kit, get state() { return state; }, ball: b, start: startRun, rows: () => rows, save, setQuality, get run() { return run; }, openShop, openGoals, progress, difficulty, row,
   get lastDeath() { return lastDeath; }, get simT() { return simT; },
   fast(sec) { for (let k = 0; k < sec / SUB && state === 'play'; k++) { step(SUB); if (k % 20 === 0) ensureTrack(b.ci); } placeCamera(true); drawTrack(b.ci); return state; } };
