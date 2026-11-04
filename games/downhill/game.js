@@ -19,13 +19,15 @@ const coarse = matchMedia('(pointer: coarse)').matches;
 // curve (yaw), tilt (bank) and climb or dive (pitch). Everything that collides is a 2D segment in the row's
 // cross-section (u = sideways, h = up) stretched along the row's length — floor tiles, tunnel walls, ceilings.
 const L = 2.2, W = 2.2, LANES = 3, HALF = W * LANES / 2, R = 0.46, G = 30, TH = 0.4, AHEAD = 130, BEHIND = 10;
-const DRAG = 0.0062;          // air drag: a = -k·|v|·v  → terminal speed sqrt(g·sin(slope)/k)
+const DRAG = 0.0046;          // air drag: a = -k·|v|·v  → terminal speed sqrt(g·sin(slope)/k)
 const ROLL_RES = 0.35;        // rolling resistance (m/s² against motion while touching the ground)
-const STEER_G = 46, STEER_AIR = 16, GRIP = 8;  // steering push, push in the air, sideways tyre-like grip
+// steering: a hard push against strong sideways grip, so the ball snaps to ~12 m/s sideways and stops dead on release
+const STEER_G = 190, STEER_AIR = 22, GRIP = 40, GRIP_STEER = 0.4;  // push, push in the air, sideways grip, grip kept while steering
 const deg = Math.PI / 180;
 const laneU = j => -HALF + W * (j + 0.5);
 const PTS = { gem: 10, close: 25, airPerSec: 60 };
 const DIFF_DIST = 4500;       // distance (m) at which difficulty is maxed
+const SPEED_DIST = 3000;      // distance (m) over which the slope steepens (speed keeps building, then a slow climb to 6 km)
 
 const ZONES = [
   { name: 'SUNSET STRIP', tile: '#ff3d9a', sky: ['#0d0221', '#3b0a54', '#ff5e7e'], fog: '#6e1a5a', ridge: '#2a0838', rim: '#ff6fb5' },
@@ -330,7 +332,12 @@ const clampLane = l => Math.max(0, Math.min(LANES - 1, l));
 const sgn = () => (Math.random() < 0.5 ? -1 : 1);
 const Yv = new THREE.Vector3(0, 1, 0);
 const difficulty = i => Math.min(1, (i * L) / DIFF_DIST);
-const basePitch = d => -(10 + 14 * d) * deg;
+// slope steepness at row i sets the cruising speed: ~115 km/h at the top, ~185 km/h at 3 km, ~200 km/h at 6 km
+const basePitch = i => { const x = i * L; return -(9 + 15 * Math.min(1, x / SPEED_DIST) + 4 * Math.min(1, Math.max(0, x - SPEED_DIST) / SPEED_DIST)) * deg; };
+const vTermAt = i => Math.sqrt(G * Math.sin(-basePitch(i)) / DRAG);
+// obstacle spacing is set in seconds, then turned into rows for the speed the ball will have there
+const rowsFor = (sec, min = 2) => Math.max(min, Math.round(sec * vTermAt(gen.i) / L));
+const shiftP = sec => Math.min(0.4, L / (vTermAt(gen.i) * sec)); // chance per row the safe lane moves: about once every sec seconds
 
 // tunnel cross-section, counter-clockwise so each panel's inward normal is on its left
 const TW = 1.3, TT = 3.4, TC = 4.7;
@@ -387,25 +394,26 @@ function walkSafe(p) {
 const FULL = () => [1, 1, 1];
 
 function pickBend(d) {
-  gen.tYaw = Math.random() < 0.22 + 0.45 * d ? sgn() * rnd(0.5, 1.1 + 1.7 * d) * deg : 0;
+  // curves get gentler per metre as speed rises, so they turn about as fast per second as they did at ~110 km/h
+  gen.tYaw = Math.random() < 0.22 + 0.45 * d ? sgn() * rnd(0.5, 1.1 + 1.7 * d) * Math.min(1, 31 / vTermAt(gen.i)) * deg : 0;
   gen.tBank = Math.random() < 0.22 + 0.45 * d ? sgn() * rnd(4, 7 + 13 * d) * deg : 0;
   // usually the track leans into a curve (kinder); later on it sometimes leans the wrong way
   if (gen.tYaw && gen.tBank && Math.random() > d * 0.6) gen.tBank = -Math.abs(gen.tBank) * Math.sign(gen.tYaw);
-  gen.tPitch = basePitch(d); gen.pitchStep = 2.5 * deg;
+  gen.tPitch = basePitch(gen.i); gen.pitchStep = 2.5 * deg;
 }
 function segPlain(n) {
   for (let k = 0; k < n; k++) { if (Math.random() < 0.1) walkSafe(1); pushRow(FULL(), { gemLane: gen.safe }); }
 }
 function segHoles(n, d) {
-  const pHole = 0.22 + 0.3 * d;
+  const pHole = 0.22 + 0.3 * d, pShift = shiftP(0.42 - 0.12 * d);
   for (let k = 0; k < n; k++) {
-    const [a, b2] = walkSafe(0.35);
+    const [a, b2] = walkSafe(pShift);
     const fl = [0, 1, 2].map(l => (l === a || l === b2 || Math.random() > pHole) ? 1 : (d > 0.15 && Math.random() < 0.4 ? 2 : 0));
     pushRow(fl, { gemLane: b2 });
   }
 }
 function segBlocks(n, d) {
-  const pOb = 0.45 + 0.3 * d, every = d < 0.4 ? 4 : 3;
+  const pOb = 0.45 + 0.3 * d, every = rowsFor(0.36 - 0.1 * d, 3);
   for (let k = 0; k < n; k++) {
     if (k % every) { pushRow(FULL(), { gemLane: gen.safe }); continue; }
     const [a, b2] = walkSafe(0.35 + 0.15 * d);
@@ -415,18 +423,22 @@ function segBlocks(n, d) {
   }
 }
 function segMovers(n, d) {
-  // the blocks sweep side to side as a readable wave (each one a little behind the one before)
-  const every = d < 0.5 ? 5 : 4, ph = rnd(0, Math.PI * 2), lag = rnd(0.35, 0.8) * sgn(), w = 1.2 + 1.6 * d;
+  // the blocks sweep side to side as a readable wave. Each block's phase is set so that, at the speed the ball
+  // arrives, it is only a little further along than the one before: the open side slides smoothly across and you
+  // follow it. (A random phase per block made the open side flip every few tenths of a second.)
+  const every = rowsFor(0.42 - 0.1 * d, 4), w = 1.2 + 1.4 * d, ph = rnd(0, Math.PI * 2);
+  const travel = w * every * L / vTermAt(gen.i), drift = rnd(0.3, 0.45 + 0.25 * d) * sgn();
+  n = Math.max(n, every * 4);
   for (let k = 0; k < n; k++) {
     const blocks = [];
-    if (k % every === 0) blocks.push({ s: L / 2, u: 0, lane: -1, move: { A: W, w, ph: ph + k * lag } });
+    if (k % every === 0) blocks.push({ s: L / 2, u: 0, lane: -1, move: { A: W, w, ph: ph + (k / every) * (drift - travel) } });
     pushRow(FULL(), { blocks, gemLane: k % every ? gen.safe : -1 });
   }
 }
 function segNarrow(n, d) {
   const width = d < 0.5 ? 2 : (Math.random() < 0.5 ? 1 : 2);
   for (let k = 0; k < n; k++) {
-    const [a, b2] = walkSafe(width === 1 ? 0.2 : 0.3);
+    const [a, b2] = walkSafe(shiftP(width === 1 ? 0.5 : 0.36));
     const fl = [0, 0, 0];
     fl[a] = fl[b2] = 1;
     if (width === 2 && a === b2) fl[clampLane(a + (a === 2 ? -1 : a === 0 ? 1 : sgn()))] = 1;
@@ -436,6 +448,7 @@ function segNarrow(n, d) {
 function segTunnel(n, d) {
   const ph = irnd(0, 4), lace = 2 + Math.round(d * 2), pSlant = 0.12 + 0.38 * d;
   let slantL = false, slantR = false;
+  const blockEvery = rowsFor(0.3, 4);
   for (let k = 0; k < n; k++) {
     const edge = k === 0 || k === n - 1;
     if (Math.random() < 0.25) slantL = Math.random() < pSlant;
@@ -443,23 +456,28 @@ function segTunnel(n, d) {
     const wallKill = !edge && (k + ph) % 5 < lace;        // walls laced with red panels
     const kill = [slantR && !edge, wallKill, wallKill && d > 0.4, false, wallKill && d > 0.4, wallKill, slantL && !edge];
     const blocks = [];
-    if (d > 0.25 && k > 2 && k < n - 2 && k % 4 === 0) { const l = clampLane(gen.safe + sgn()); if (l !== gen.safe) blocks.push({ s: L / 2, u: laneU(l), lane: l }); }
-    if (k % 3 === 0) walkSafe(0.4);
+    if (d > 0.25 && k > 2 && k < n - 2 && k % blockEvery === 0) { const l = clampLane(gen.safe + sgn()); if (l !== gen.safe) blocks.push({ s: L / 2, u: laneU(l), lane: l }); }
+    if (k % blockEvery === 1) walkSafe(0.4);
     pushRow(FULL(), { tunnel: kill, blocks, gemLane: gen.safe });
   }
 }
-function segDrop(n, d) {
-  segPlain(2);
-  gen.O.y -= rnd(1.8, 3.2);
-  segPlain(6);
-}
-function segRamp(n, d) {
-  // straighten out first so the jump is fair
+function straighten() {
   gen.tYaw = 0; gen.tBank = 0;
   for (let k = 0; k < 24 && (Math.abs(gen.bank) > 1 * deg || Math.abs(gen.yawRate) > 0.05 * deg); k++) pushRow(FULL(), { gemLane: gen.safe });
   gen.bank = 0; gen.yawRate = 0;
+}
+function segDrop(n, d) {
+  // at speed the ball flies a long way off the step, so the track below runs straight under it
+  straighten();
+  segPlain(2);
+  gen.O.y -= rnd(1.8, 3.2);
+  segPlain(rowsFor(1.6, 6));   // room to land and line up before the next obstacles (the flight is long at speed)
+}
+function segRamp(n, d) {
+  // straighten out first so the jump is fair
+  straighten();
   // how fast will the ball be going here?  terminal speed for this slope
-  const vTerm = Math.sqrt(G * Math.sin(-basePitch(d)) / DRAG);
+  const vTerm = vTermAt(gen.i);
   gen.tPitch = 17 * deg; gen.pitchStep = 5 * deg;
   let climb = 0;
   for (let k = 0; k < 9 && gen.pitch < 16 * deg; k++) { const r = pushRow(FULL()); climb += Math.max(0, r.F.y * L); }
@@ -467,7 +485,7 @@ function segRamp(n, d) {
   const vLip = Math.sqrt(Math.max(36, vTerm * vTerm - 2 * G * climb));
   const vSlow = vLip * 0.65, vMid = vLip * 0.85;
   const range = vSlow * vSlow * Math.sin(2 * alpha) / G;
-  const gaps = Math.max(1, Math.min(6, Math.floor(0.55 * range / L)));
+  const gaps = Math.max(1, Math.min(8, Math.floor(0.55 * range / L)));
   const traj = (x, v) => x * Math.tan(alpha) - G * x * x / (2 * v * v * Math.cos(alpha) ** 2);
   const lipY = gen.O.y;
   gen.pitch = 0; gen.tPitch = 0;
@@ -478,8 +496,11 @@ function segRamp(n, d) {
     r.gems.push({ pos: p, taken: false });
   }
   gen.O.y = lipY + traj(gaps * L, vSlow) - 1.0;
-  gen.pitch = gen.tPitch = basePitch(d); gen.pitchStep = 2.5 * deg;
-  segPlain(9);
+  gen.pitch = gen.tPitch = basePitch(gen.i); gen.pitchStep = 2.5 * deg;
+  // a fast ball flies well past the landing (the slope drops away under it), so keep the track clear until it is
+  // down and has had a moment to line up: flight time off the kicker measured against the slope, plus 0.6 s
+  const th = -basePitch(gen.i), tFly = 2 * vLip * Math.sin(alpha + th) / (G * Math.cos(th));
+  segPlain(rowsFor(tFly + 0.6, 9));
 }
 function nextSegment() {
   const p = gen.i * L, d = difficulty(gen.i);
@@ -687,7 +708,7 @@ function resetWorld() {
   const r = row(3);
   b.ci = 3; b.s = L / 2;
   worldAt(r, L / 2, 0, R, b.p);
-  b.v.copy(r.F).multiplyScalar(18); b.w.set(0, 0, 0);
+  b.v.copy(r.F).multiplyScalar(24); b.w.set(0, 0, 0);
   b.grounded = true; b.lastGround = b.p.y - R; b.air = 0; b.gN.copy(r.U); b.focusY = b.p.y;
   startS = progress();
   camF.copy(r.F); camU.copy(Yv);
@@ -972,11 +993,15 @@ function step(dt) {
   b.v.addScaledVector(b.v, -DRAG * sp * dt);                        // air drag
   if (b.grounded && r0) {
     const lat = b.v.dot(r0.R);                                       // sideways grip (less while you steer)
-    b.v.addScaledVector(r0.R, -lat * Math.min(1, GRIP * dt) * (dir ? 0.55 : 1));
+    b.v.addScaledVector(r0.R, -lat * Math.min(1, GRIP * dt * (dir ? GRIP_STEER : 1)));
     if (sp > 0.5) b.v.addScaledVector(b.v, -ROLL_RES * dt / sp);    // rolling resistance
   }
   b.p.addScaledVector(b.v, dt);
   trackRow();
+  // ground height under the ball while it is still above the track (so long, legal flights over steep drops are not
+  // mistaken for falling off, and the camera keeps following them)
+  const rg = row(b.ci);
+  if (rg && Math.abs(lc.u) < HALF + 0.3 && lc.h > -0.3) b.lastGround = b.p.y - rg.U.y * lc.h;
 
   const wasGrounded = b.grounded;
   b.grounded = false;
@@ -992,7 +1017,17 @@ function step(dt) {
       const eu = lc2.u - (ax + du * t), eh = lc2.h - (ah + dh * t);
       const nu = -dh / len, nh = du / len;
       if (eu * nu + eh * nh < -0.02) continue;                       // surfaces are one-sided
-      const es = lc2.s < 0 ? lc2.s : lc2.s > L ? lc2.s - L : 0;
+      let es = lc2.s < 0 ? lc2.s : lc2.s > L ? lc2.s - L : 0;
+      // a tile's front/back edge only matters next to a hole. Where the next row carries on (tile after tile, tunnel
+      // after tunnel) its own surface takes over, so skip the edge: banked rows meet with a few-cm step at the outer
+      // lanes, and clipping that corner at 150 km/h used to launch the ball metres into the air.
+      if (es !== 0) {
+        const nb = row(i + (es > 0 ? 1 : -1));
+        if (nb && (sg.wall ? nb.tunnel : nb.segs.some(x => x.floor && x.a[0] <= lc2.u && x.b[0] >= lc2.u))) continue;
+      }
+      // the far lip of a hole is rounded off: a fast ball that has only dipped a few cm rides up onto the tile
+      // instead of clipping its corner and being thrown metres up. One that has really dropped in still hits the face.
+      if (es < 0 && sg.floor && eh > R * 0.5) es = 0;
       const d2 = es * es + eu * eu + eh * eh;
       if (d2 >= R * R) continue;
       const dist = Math.sqrt(d2);
@@ -1075,14 +1110,15 @@ function placeCamera(snap, dt = 0.016) {
   b.focusY = snap ? fy : b.focusY + (fy - b.focusY) * (1 - Math.exp(-dt * 12));
   focus.set(b.p.x, b.focusY, b.p.z);
   camPos.copy(focus).addScaledVector(camF, -5.0).addScaledVector(camU, 1.9);
-  camLook.copy(focus).addScaledVector(camF, 12).addScaledVector(camU, 0.1);
+  // aim a touch down the slope (more on tall phone screens) so the track ahead fills the view, not the sky
+  camLook.copy(focus).addScaledVector(camF, 12).addScaledVector(camU, -0.25 - 1.3 * Math.max(0, 1 - camera.aspect));
   camera.position.copy(camPos);
   if (shake > 0) camera.position.add(tmpV.set((Math.random() - 0.5) * 2 * shake, (Math.random() - 0.5) * 2 * shake, 0));
   camera.up.copy(camU);
   camera.lookAt(camLook);
   const sp = b.v.length();
   const portrait = Math.max(0, 1 - camera.aspect) * 34; // narrow screens need a taller view to see the whole track
-  const fov = portrait + (reduceMotion ? 74 : 70 + Math.max(0, Math.min(1, (sp - 25) / 25)) * 18);
+  const fov = portrait + (reduceMotion ? 74 : 70 + Math.max(0, Math.min(1, (sp - 26) / 28)) * 20);
   if (Math.abs(camera.fov - fov) > 0.05) { camera.fov = fov; camera.updateProjectionMatrix(); }
   // far scenery rides along, always out in front
   fh.set(camF.x, 0, camF.z).normalize();
@@ -1136,7 +1172,7 @@ function updateParticles(dt) {
 }
 const camR = new THREE.Vector3();
 function updateSpeedLines() {
-  const sp = b.v.length(), k = Math.max(0, Math.min(1, (sp - 26) / 18));
+  const sp = b.v.length(), k = Math.max(0, Math.min(1, (sp - 28) / 20));
   speedLines.mesh.material.opacity = state === 'play' && !reduceMotion ? k * 0.55 : 0;
   if (!speedLines.mesh.material.opacity) return;
   const pos = speedLines.mesh.geometry.attributes.position, c = camera.position;
