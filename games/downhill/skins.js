@@ -48,6 +48,39 @@ const ramp = (stops, t) => {
   return stops[stops.length - 1][1];
 };
 
+// clear refractive glass (the scene behind is bent through it); a long attenuation distance keeps it water-clear
+const glassMaterial = (color, tint, dist) => new THREE.MeshPhysicalMaterial({
+  color, metalness: 0, roughness: 0, transmission: 1, thickness: 0.5, ior: 1.52,
+  attenuationColor: new THREE.Color(tint), attenuationDistance: dist,
+  specularIntensity: 1, clearcoat: 1, clearcoatRoughness: 0, envMapIntensity: 1.3,
+});
+// the coloured vanes inside a marble: three twisted ribbons radiating from the core, plus a few tiny air bubbles.
+// Built for a unit sphere; the caller scales the group to the ball.
+export function marbleSwirl(group, cols, vanes = 3, width = 0.5) {
+  for (let v = 0; v < vanes; v++) {
+    const P = [], ny = 18, nx = 4;
+    for (let j = 0; j <= ny; j++) for (let i = 0; i <= nx; i++) {
+      const y = -0.72 + 1.44 * j / ny, rr = Math.sqrt(Math.max(0, 0.62 - y * y));
+      const x = 0.02 + rr * width * 0.85 * i / nx;          // vanes stay in the core (the glass magnifies them)
+      const a = v / vanes * Math.PI * 2 + y * 2.4;          // the twist
+      P.push(Math.cos(a) * x, y, Math.sin(a) * x);
+    }
+    const idx = [];
+    for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) { const a = j * (nx + 1) + i; idx.push(a, a + 1, a + nx + 1, a + 1, a + nx + 2, a + nx + 1); }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.setIndex(idx); g.computeVertexNormals();
+    const c = new THREE.Color(cols[v % cols.length]);
+    group.add(new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 0.35, roughness: 0.35, side: THREE.DoubleSide })));
+  }
+  const bub = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0.4, roughness: 0.1 });
+  let s = 5; const r = () => ((s = (s * 16807) % 2147483647) / 2147483647);
+  for (let i = 0; i < 9; i++) {
+    const m = new THREE.Mesh(new THREE.SphereGeometry(0.02 + r() * 0.03, 8, 6), bub);
+    const d = 0.3 + r() * 0.5, th = r() * 6.28, ph = Math.acos(2 * r() - 1);
+    m.position.set(Math.sin(ph) * Math.cos(th) * d, Math.cos(ph) * d, Math.sin(ph) * Math.sin(th) * d);
+    group.add(m);
+  }
+}
+
 export const SKINS = [
   {
     id: 'classic', name: 'Classic', cost: 0, level: 1,
@@ -62,7 +95,7 @@ export const SKINS = [
     }),
   },
   {
-    id: 'melon', name: 'Watermelon', cost: 150, level: 1,
+    id: 'melon', name: 'Watermelon', cost: 400, level: 2,
     make: () => new THREE.MeshPhysicalMaterial({
       map: canvasTex('melon', 512, 256, (g, w, h) => {
         noiseImage(g, w, h, 3, 6, (n, u) => {
@@ -74,7 +107,7 @@ export const SKINS = [
     }),
   },
   {
-    id: 'eight', name: 'Eight Ball', cost: 250, level: 1,
+    id: 'eight', name: 'Eight Ball', cost: 700, level: 3,
     make: () => new THREE.MeshPhysicalMaterial({
       map: canvasTex('eight', 512, 256, (g, w, h) => {
         g.fillStyle = '#0b0b10'; g.fillRect(0, 0, w, h);
@@ -87,11 +120,12 @@ export const SKINS = [
     }),
   },
   {
-    id: 'chrome', name: 'Chrome', cost: 400, level: 2,
-    make: () => new THREE.MeshPhysicalMaterial({ color: 0xf2f4ff, metalness: 1, roughness: 0.06, envMapIntensity: 1.4 }),
+    id: 'chrome', name: 'Chrome', cost: 1600, level: 5,
+    live: true,   // mirrors the real world around it, updated as it rolls
+    make: () => new THREE.MeshPhysicalMaterial({ color: 0xf4f6ff, metalness: 1, roughness: 0.02, envMapIntensity: 1.25 }),
   },
   {
-    id: 'planet', name: 'Tiny Planet', cost: 550, level: 3,
+    id: 'planet', name: 'Tiny Planet', cost: 1200, level: 4,
     make: () => new THREE.MeshPhysicalMaterial({
       map: canvasTex('planet', 512, 256, (g, w, h) => {
         noiseImage(g, w, h, 7, 4, (n, u, v) => {
@@ -105,7 +139,7 @@ export const SKINS = [
     }),
   },
   {
-    id: 'lava', name: 'Lava Rock', cost: 700, level: 3,
+    id: 'lava', name: 'Lava Rock', cost: 2000, level: 6,
     make: () => {
       const m = new THREE.MeshStandardMaterial({
         map: canvasTex('lava-c', 512, 256, (g, w, h) => noiseImage(g, w, h, 11, 6, n => { const k = n * 70; return [40 + k, 22 + k * 0.5, 20 + k * 0.4]; })),
@@ -119,7 +153,7 @@ export const SKINS = [
     },
   },
   {
-    id: 'gold', name: 'Solid Gold', cost: 900, level: 4,
+    id: 'gold', name: 'Solid Gold', cost: 2600, level: 7, live: true,
     make: () => new THREE.MeshPhysicalMaterial({
       color: 0xffc34a, metalness: 1, roughness: 0.18,
       roughnessMap: canvasTex('gold-r', 512, 256, (g, w, h) => {
@@ -131,14 +165,15 @@ export const SKINS = [
     }),
   },
   {
-    id: 'glass', name: 'Glass Marble', cost: 1100, level: 5,
-    make: () => new THREE.MeshPhysicalMaterial({
-      color: 0x9fe8ff, metalness: 0, roughness: 0.03, transmission: 0.88, thickness: 0.7, emissive: 0x0a3446, emissiveIntensity: 0.8, ior: 1.5,
-      iridescence: 0.8, iridescenceIOR: 1.3, clearcoat: 1, attenuationColor: new THREE.Color(0x3fd0ff), attenuationDistance: 1.2,
-    }),
+    id: 'glass', name: 'Glass Marble', cost: 3200, level: 8,
+    // real glass: the world behind is refracted through it (and flipped, as through a lens), the world around is
+    // reflected on it, and a twisted ribbon swirl sits inside like a real marble
+    live: true,
+    make: () => glassMaterial(0xf4fdff, 0xbff4ff, 3.5),
+    extras: g => marbleSwirl(g, ['#3dd8ff', '#ffffff', '#ff5fa8']),
   },
   {
-    id: 'disco', name: 'Disco', cost: 1300, level: 6,
+    id: 'disco', name: 'Disco', cost: 3800, level: 9, live: true,
     make: () => new THREE.MeshPhysicalMaterial({
       color: 0xffffff, metalness: 1, roughness: 0.12,
       map: canvasTex('disco', 512, 256, (g, w, h) => {
@@ -148,7 +183,7 @@ export const SKINS = [
     }),
   },
   {
-    id: 'neon', name: 'Neon Wire', cost: 1600, level: 7,
+    id: 'neon', name: 'Neon Wire', cost: 4500, level: 10,
     make: () => new THREE.MeshStandardMaterial({
       color: 0x06030c, roughness: 0.3, metalness: 0.4, emissive: 0xffffff, emissiveIntensity: 2.6,
       emissiveMap: canvasTex('neon', 512, 256, (g, w, h) => {
@@ -161,7 +196,7 @@ export const SKINS = [
     }),
   },
   {
-    id: 'galaxy', name: 'Galaxy', cost: 2000, level: 8,
+    id: 'galaxy', name: 'Galaxy', cost: 5500, level: 11,
     make: () => {
       const draw = (g, w, h) => {
         noiseImage(g, w, h, 21, 4, n => ramp([[0, [4, 2, 16]], [0.45, [30, 8, 70]], [0.62, [150, 40, 160]], [0.8, [255, 140, 200]], [1, [255, 255, 255]]], Math.pow(n, 1.3)));
@@ -176,7 +211,7 @@ export const SKINS = [
     },
   },
   {
-    id: 'prism', name: 'Prism Core', cost: 2800, level: 10,
+    id: 'prism', name: 'Prism Core', cost: 7000, level: 13,
     make: () => {
       const m = new THREE.MeshPhysicalMaterial({
         color: 0x111111, metalness: 0.2, roughness: 0.15, clearcoat: 1, iridescence: 1, iridescenceIOR: 2.0,
@@ -194,7 +229,105 @@ export const SKINS = [
       return m;
     },
   },
+  {
+    id: 'carbon', name: 'Carbon Fiber', cost: 900, level: 3,
+    make: () => new THREE.MeshPhysicalMaterial({
+      map: canvasTex('carbon', 512, 256, (g, w, h) => {
+        g.fillStyle = '#0c0d10'; g.fillRect(0, 0, w, h);
+        for (let y = 0; y < h; y += 8) for (let x = 0; x < w; x += 8) {
+          const a = ((x + y) / 8) % 2;
+          const gr = a ? g.createLinearGradient(x, y, x + 8, y) : g.createLinearGradient(x, y, x, y + 8);
+          gr.addColorStop(0, '#15171c'); gr.addColorStop(0.5, '#3a3e48'); gr.addColorStop(1, '#15171c');
+          g.fillStyle = gr; g.fillRect(x, y, 8, 8);
+        }
+      }),
+      roughness: 0.35, metalness: 0.3, clearcoat: 1, clearcoatRoughness: 0.03,
+    }),
+  },
+  {
+    id: 'obsidian', name: 'Obsidian', cost: 2300, level: 6, live: true,
+    make: () => new THREE.MeshPhysicalMaterial({
+      color: 0x050408, roughness: 0.04, metalness: 0, clearcoat: 1, clearcoatRoughness: 0, envMapIntensity: 1.6,
+      emissive: 0xffffff, emissiveIntensity: 0.9,
+      emissiveMap: canvasTex('obsidian-e', 512, 256, (g, w, h) => noiseImage(g, w, h, 31, 5, n => {
+        const c = Math.max(0, 1 - Math.abs(n - 0.52) * 30); return [120 * c, 40 * c, 255 * c];
+      })),
+    }),
+  },
+  {
+    id: 'opal', name: 'Opal', cost: 4000, level: 10,
+    make: () => new THREE.MeshPhysicalMaterial({
+      map: canvasTex('opal', 512, 256, (g, w, h) => noiseImage(g, w, h, 41, 5, n => ramp([[0, [220, 240, 255]], [0.4, [255, 220, 245]], [0.6, [200, 255, 230]], [1, [255, 250, 210]]], n))),
+      roughness: 0.12, clearcoat: 1, clearcoatRoughness: 0.02, iridescence: 1, iridescenceIOR: 1.8, iridescenceThicknessRange: [200, 900],
+      sheen: 1, sheenColor: new THREE.Color(0xc0a0ff),
+    }),
+  },
+  {
+    id: 'cats', name: "Cat's Eye", cost: 4800, level: 11, live: true,
+    make: () => glassMaterial(0xfffaf2, 0xfff0d0, 5),
+    extras: g => marbleSwirl(g, ['#ff3d3d', '#ffae2e', '#ffe14d', '#ff6a00'], 4, 0.22),
+  },
+  {
+    id: 'ruby', name: 'Ruby Marble', cost: 5200, level: 12, live: true,
+    make: () => glassMaterial(0xffe0e6, 0xff1a3c, 0.9),
+    extras: g => marbleSwirl(g, ['#ffd36a', '#fff1c2'], 2, 0.3),
+  },
+  {
+    id: 'holo', name: 'Hologram', cost: 6000, level: 12,
+    make: () => {
+      const tex = canvasTex('holo', 64, 256, (g, w, h) => {
+        g.fillStyle = '#000'; g.fillRect(0, 0, w, h);
+        for (let y = 0; y < h; y += 8) { g.fillStyle = `rgba(80,255,240,${y % 32 ? 0.45 : 1})`; g.fillRect(0, y, w, y % 32 ? 2 : 3); }
+      });
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(6, 2);
+      const m = new THREE.MeshPhysicalMaterial({ color: 0x0a2a30, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 1.8, transparent: true, opacity: 0.78, roughness: 0.2, iridescence: 1, depthWrite: false });
+      m.userData.update = t => { tex.offset.y = -t * 0.35; m.emissiveIntensity = 1.6 + Math.sin(t * 23) * 0.15 + (Math.sin(t * 1.7) > 0.97 ? 0.8 : 0); };
+      return m;
+    },
+  },
+  {
+    id: 'bubble', name: 'Soap Bubble', cost: 6800, level: 13, live: true,
+    make: () => new THREE.MeshPhysicalMaterial({
+      color: 0xffffff, transmission: 1, thickness: 0.02, ior: 1.05, roughness: 0, iridescence: 1, iridescenceIOR: 1.33, iridescenceThicknessRange: [250, 800],
+      specularIntensity: 1, envMapIntensity: 1.6,
+    }),
+  },
+  {
+    id: 'mercury', name: 'Liquid Mercury', cost: 8000, level: 14, live: true,
+    make: () => {
+      const bump = canvasTex('mercury-b', 256, 128, (g, w, h) => noiseImage(g, w, h, 51, 3, n => [n * 255, n * 255, n * 255]), false);
+      bump.wrapS = bump.wrapT = THREE.RepeatWrapping;
+      const m = new THREE.MeshPhysicalMaterial({ color: 0xdfe6f2, metalness: 1, roughness: 0.03, bumpMap: bump, bumpScale: 1.2, envMapIntensity: 1.3 });
+      m.userData.update = t => { bump.offset.set(t * 0.05, Math.sin(t * 0.7) * 0.08); };   // the surface ripples as it rolls
+      return m;
+    },
+  },
+  {
+    id: 'plasma', name: 'Plasma', cost: 9500, level: 15,
+    make: () => {
+      const tex = canvasTex('plasma', 512, 256, (g, w, h) => noiseImage(g, w, h, 61, 4, n => {
+        const c = Math.pow(Math.max(0, 1 - Math.abs(n - 0.5) * 6), 2); return [255 * c, 255 * c, 255 * c];
+      }));
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      const m = new THREE.MeshStandardMaterial({ color: 0x08020f, emissive: 0xff40ff, emissiveMap: tex, emissiveIntensity: 2.6, roughness: 0.3 });
+      const c = new THREE.Color();
+      m.userData.update = t => { tex.offset.set(t * 0.08, t * 0.03); m.emissive.copy(c.setHSL((0.75 + Math.sin(t * 0.4) * 0.12) % 1, 1, 0.55)); };
+      return m;
+    },
+  },
+  {
+    id: 'sun', name: 'Mini Sun', cost: 12000, level: 18,
+    make: () => {
+      const tex = canvasTex('sun', 512, 256, (g, w, h) => noiseImage(g, w, h, 71, 6, n => ramp([[0, [120, 10, 0]], [0.45, [255, 90, 0]], [0.7, [255, 200, 40]], [1, [255, 255, 220]]], n)));
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      const m = new THREE.MeshBasicMaterial({ map: tex, color: new THREE.Color(2.2, 1.6, 1.1) });
+      m.userData.update = t => { tex.offset.set(t * 0.03, Math.sin(t * 0.5) * 0.02); };
+      return m;
+    },
+  },
 ];
+
+SKINS.sort((a, b) => a.cost - b.cost);   // shop order: cheapest first
 
 export const TRAILS = [
   { id: 'none', name: 'None', level: 1, colors: null },
@@ -230,6 +363,7 @@ export async function skinThumbs(envFactory) {
       const m = s.make();
       m.userData.update?.(1.3);
       const mesh = new THREE.Mesh(geo, m); mesh.rotation.set(0.35, -0.6, 0.1);
+      if (s.extras) { const g = new THREE.Group(); s.extras(g); g.scale.setScalar(0.9); mesh.add(g); }
       sc.add(mesh); r.render(sc, cam); out[s.id] = c.toDataURL('image/png'); sc.remove(mesh);
       await new Promise(requestAnimationFrame);
     }

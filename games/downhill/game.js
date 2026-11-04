@@ -424,11 +424,32 @@ const ball = new THREE.Mesh(new THREE.SphereGeometry(R, 64, 48), new THREE.MeshS
 ball.castShadow = true;
 scene.add(ball);
 let ballMat = null;
+// mirror skins see the real world: a small cube camera at the ball renders the scene around it (every frame on HIGH,
+// less often on lower settings) and that becomes the ball's reflection
+const liveRT = new THREE.WebGLCubeRenderTarget(128, { type: THREE.HalfFloatType, generateMipmaps: false });
+const liveCam = new THREE.CubeCamera(0.35, 700, liveRT);
+let liveSkin = false, liveTick = 0, ballExtras = null;
 function applySkin(id) {
   const s = SKINS.find(k => k.id === id) || SKINS[0];
   if (ballMat) ballMat.dispose();
   ballMat = s.make();
   ball.material = ballMat;
+  if (ballExtras) { ball.remove(ballExtras); ballExtras.traverse(o => { o.geometry?.dispose(); o.material?.dispose(); }); ballExtras = null; }
+  if (s.extras) { ballExtras = new THREE.Group(); s.extras(ballExtras); ballExtras.scale.setScalar(R); ball.add(ballExtras); }
+  liveSkin = !!s.live; liveTick = 0;
+  if (liveSkin) ballMat.envMap = liveRT.texture;
+}
+function updateLiveReflection() {
+  if (!liveSkin || !ball.visible) return;
+  const every = Qs === QUALITY.high ? 1 : Qs === QUALITY.med ? 2 : 4;
+  if (liveTick++ % every) return;
+  const trailWas = trail.mesh.visible;
+  ball.visible = false; trail.mesh.visible = false;
+  const blobWas = blob.visible; blob.visible = false;
+  liveCam.position.copy(ball.position);
+  liveCam.update(renderer, scene);
+  liveRT.texture.needsPMREMUpdate = true;
+  ball.visible = true; trail.mesh.visible = trailWas; blob.visible = blobWas;
 }
 
 function blobTexture() {
@@ -1075,7 +1096,7 @@ function renderShop() {
     btn.className = `skin${owned ? ' owned' : ''}${on ? ' on' : ''}${lockedLv && !owned ? ' locked' : ''}`;
     const img = thumbs && thumbs[s.id] ? `<img src="${thumbs[s.id]}" alt="">` : '<div class="ph"></div>';
     const price = on ? '<span class="price">EQUIPPED</span>' : owned ? '<span class="price">OWNED · USE</span>'
-      : lockedLv ? `<span class="price lock">🔒 LEVEL ${s.level}</span>`
+      : lockedLv ? `<span class="price lock">LEVEL ${s.level}</span>`
       : `<span class="price${save.wallet < s.cost ? ' no' : ''}"><i class="gemico"></i>${fmt(s.cost)}</span>`;
     btn.innerHTML = `${img}<b>${s.name}</b>${price}`;
     btn.setAttribute('aria-label', `${s.name} skin, ${on ? 'equipped' : owned ? 'owned' : lockedLv ? `unlocks at level ${s.level}` : `${s.cost} gems`}`);
@@ -1095,7 +1116,7 @@ function renderShop() {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = `trail${on ? ' on' : ''}${locked ? ' locked' : ''}`;
-    btn.innerHTML = `<i style="background:${trailCss(t)}"></i>${t.name}<small>${on ? 'ON' : locked ? `🔒 LV ${t.level}` : 'USE'}</small>`;
+    btn.innerHTML = `<i style="background:${trailCss(t)}"></i>${t.name}<small>${on ? 'ON' : locked ? `LV ${t.level}` : 'USE'}</small>`;
     btn.addEventListener('click', () => {
       if (locked) { sfx.nope(); toast(`REACH LEVEL ${t.level}`); return; }
       save.trail = t.id; applyTrail(t.id); persist(); sfx.ding(); renderShop();
@@ -1212,7 +1233,11 @@ function step(dt) {
     // firm push against strong grip (a banked track nudges the ball gently downhill), and gravity only presses down.
     let vf = b.v.dot(r0.F), vr = b.v.dot(r0.R), vu = b.v.dot(r0.U);
     vf += (vTermAt(b.ci) - vf) * Math.min(1, PACE_EASE * dt);
-    vr += (dir * STEER - vr * (dir ? GRIP_ON : GRIP_OFF) - G * r0.R.y * 0.35) * dt;
+    // on a banked track the ball rolls down toward the low side like a real ball (5/7 g sin bank for a rolling
+    // sphere), and the grip that stops it on release fades out as the bank steepens, so it keeps rolling that way
+    // until you steer against it
+    const sb = r0.R.y, gripOff = GRIP_OFF * Math.max(0, 1 - Math.abs(sb) * 8);
+    vr += (dir * STEER - vr * (dir ? GRIP_ON : gripOff) - G * sb * (5 / 7)) * dt;
     vu = Math.min(vu, 0) - G * r0.U.y * dt;
     b.v.copy(r0.F).multiplyScalar(vf).addScaledVector(r0.R, vr).addScaledVector(r0.U, vu);
   } else {
@@ -1525,6 +1550,7 @@ function frame(now) {
   if (shake > 0) shake = Math.max(0, shake - dt * 1.6);
   placeCamera(false, dt);
   updateSpeedLines();
+  updateLiveReflection();
   if (Qs.bloom) composer.render(); else renderer.render(scene, camera);
 }
 
@@ -1545,6 +1571,6 @@ resetWorld();
 refreshMenu();
 requestAnimationFrame(frame);
 // test hook (used by automated checks only)
-window.__downhill = { kit, get state() { return state; }, ball: b, start: startRun, rows: () => rows, save, setQuality, get run() { return run; }, openShop, openGoals, progress, difficulty, row,
+window.__downhill = { kit, applySkin, get state() { return state; }, ball: b, start: startRun, rows: () => rows, save, setQuality, get run() { return run; }, openShop, openGoals, progress, difficulty, row,
   get lastDeath() { return lastDeath; }, get simT() { return simT; },
   fast(sec) { for (let k = 0; k < sec / SUB && state === 'play'; k++) { step(SUB); if (k % 20 === 0) ensureTrack(b.ci); } placeCamera(true); drawTrack(b.ci); return state; } };
