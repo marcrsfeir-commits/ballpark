@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Skylane · BALLPARK</title>
+<meta name="theme-color" content="#03061a">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%2303061a'/%3E%3Cpath d='M5 16 L7 6 L9 6 L11 16Z' fill='%23e9edf7'/%3E%3Ccircle cx='8' cy='9' r='2.2' fill='%235ff2ff'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+<script type="importmap">{"imports":{"three":"../../vendor/three/three.module.min.js","three/addons/":"../../vendor/three/addons/"}}</script>
+</head>
+<body data-bp-pos="bl">
+<canvas id="view" aria-label="Skylane game view"></canvas>
+
+<div class="hud" id="hud" hidden>
+  <div class="score"><span class="v" id="score">0</span><span class="k">PIECES</span></div>
+  <div class="side"><span id="pace">PACE 1</span><span id="speed">0 km/h</span></div>
+</div>
+<div class="toast" id="toast" aria-live="polite"></div>
+
+<button class="iconbtn" id="mute" type="button" aria-label="Mute sound" title="Sound (M)">
+  <svg class="on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+  <svg class="offi" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16.5 9.5l5 5M21.5 9.5l-5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+</button>
+<button class="iconbtn pause" id="pauseBtn" type="button" aria-label="Pause" title="Pause (P)" hidden>
+  <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1" fill="currentColor"/><rect x="14" y="5" width="4" height="14" rx="1" fill="currentColor"/></svg>
+</button>
+
+<section class="panel" id="start">
+  <h1>SKYLANE</h1>
+  <p class="sub">One smooth road over the clouds. Roll as far as you can: every new piece of road is a point, and the pace keeps rising.</p>
+  <button class="big" id="go" type="button">ROLL</button>
+  <p class="best" id="bestMenu"></p>
+  <div class="row"><button class="small" id="quality" type="button">GRAPHICS <b id="qualityLabel">HIGH</b></button></div>
+  <p class="how"><kbd>&larr;</kbd><kbd>&rarr;</kbd> or <kbd>A</kbd><kbd>D</kbd> to steer &middot; on a phone, hold the left or right side &middot; <kbd>P</kbd> pause</p>
+</section>
+
+<section class="panel" id="paused" hidden>
+  <h2>PAUSED</h2>
+  <button class="big" id="resume" type="button">RESUME</button>
+  <button class="small" id="quit" type="button">END RUN</button>
+</section>
+
+<section class="panel" id="over" hidden>
+  <h2 id="overTitle">CRASHED</h2>
+  <div class="final"><span id="finalScore">0</span><small>PIECES</small></div>
+  <p class="detail" id="overDetail"></p>
+  <p class="bestline" id="bestOver"></p>
+  <button class="big" id="again" type="button">AGAIN</button>
+  <div class="row"><button class="small" id="share" type="button">Copy result</button><button class="small" id="overMenu" type="button">Menu</button></div>
+</section>
+
+<script src="../../shared/bp.js"></script>
+<script type="module" src="game.js"></script>
+</body>
+</html>

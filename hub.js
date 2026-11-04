@@ -98,6 +98,15 @@ const GAMES = [
       <rect x="66" y="56" width="7" height="6" fill="#ff2a4a" stroke="#ffe14d" stroke-width="1"/><circle cx="46" cy="66" r="6" fill="#20d8ff"/><path d="M42 63 L50 69 M42 69 L50 63" stroke="#fff" stroke-width="1.4"/></svg>`,
   },
   {
+    id: 'skylane', name: 'SKYLANE', path: 'games/skylane/', insp: 'original endless roller',
+    blurb: 'One smooth road floating over the clouds. Tap to steer, every new piece of road is a point, and the pace keeps rising.',
+    bg: 'linear-gradient(170deg,#0d1d4a 0%,#06102e 55%,#03061a 100%)', accent: '#5ff2ff', glow: 'rgba(95,242,255,.32)',
+    art: `<svg viewBox="0 0 110 80" aria-hidden="true"><rect width="110" height="52" fill="#06102e"/><rect y="44" width="110" height="36" fill="#2b4a86"/>
+      <circle cx="84" cy="16" r="8" fill="#f4f1e6"/><circle cx="84" cy="16" r="13" fill="#9fb7ff" opacity=".18"/>${[[12, 8], [30, 20], [48, 6], [64, 26], [22, 34]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1" fill="#cfe0ff"/>`).join('')}
+      <path d="M50 44 L60 44 L96 80 L14 80 Z" fill="#b9c3dc"/><path d="M50 44 L14 80 M60 44 L96 80" stroke="#5ff2ff" stroke-width="2.4"/>
+      <rect x="57" y="50" width="6" height="5" fill="#ff8c22" stroke="#ffb347" stroke-width="1"/><circle cx="52" cy="68" r="7" fill="#eef2ff"/><path d="M45.5 68 H58.5" stroke="#1a2a6c" stroke-width="2.2"/><path d="M45.5 68 H58.5" stroke="#5ff2ff" stroke-width="1"/></svg>`,
+  },
+  {
     id: 'sandbox', name: 'SANDLOT', path: 'games/sandbox/', insp: 'original physics sandbox',
     blurb: 'Sand, water, lava, acid, little walkers and bombs. Then lightning, viruses, black holes and a nuke.',
     bg: 'linear-gradient(160deg,#1b2233 0%,#0b0e16 75%)', accent: '#f2c14e', onAccent: '#1b1405', glow: 'rgba(242,193,78,.3)',
