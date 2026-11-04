@@ -96,9 +96,34 @@ function gradientCanvas(stops, w = 4, h = 512) {
   return c;
 }
 const texOf = (c, srgb = true) => { const t = new THREE.CanvasTexture(c); if (srgb) t.colorSpace = THREE.SRGBColorSpace; return t; };
-const skies = ZONES.map(z => texOf(gradientCanvas([[0, z.sky[0]], [0.5, z.sky[1]], [0.86, z.sky[2]], [1, z.sky[2]]])));
-scene.background = skies[0];
 scene.fog = new THREE.Fog(ZONES[0].fog, 60, 260);
+// sky: a dome that rides with the camera, in world space, so it tilts with the view (a flat screen gradient used to
+// show a hard edge when the camera pitched down the steep hill). It runs from the zone's night sky, through a glowing
+// horizon, into a dark ground haze, with no seams anywhere. Zone colours blend over a couple of seconds.
+const skyU = {
+  top: { value: new THREE.Color(ZONES[0].sky[0]) }, mid: { value: new THREE.Color(ZONES[0].sky[1]) }, low: { value: new THREE.Color(ZONES[0].sky[2]) },
+  ground: { value: new THREE.Color(ZONES[0].ridge) }, glow: { value: new THREE.Color(ZONES[0].tile) },
+};
+const skyDome = new THREE.Mesh(new THREE.SphereGeometry(600, 48, 24), new THREE.ShaderMaterial({
+  side: THREE.BackSide, depthWrite: false, depthTest: false, fog: false, uniforms: skyU,
+  vertexShader: 'varying vec3 vp; void main(){ vp = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+  fragmentShader: `uniform vec3 top, mid, low, ground, glow; varying vec3 vp;
+    void main(){
+      float h = normalize(vp).y;
+      vec3 c = mix(low, mid, smoothstep(0.0, 0.13, h));
+      c = mix(c, top, smoothstep(0.13, 0.55, h));
+      vec3 g = mix(low * 0.3 + ground * 0.7, ground * 0.35, smoothstep(0.0, -0.2, h));
+      c = h < 0.0 ? g : c;
+      c += glow * (exp(-abs(h) * 40.0) * 0.22 + exp(-abs(h) * 9.0) * 0.04);
+      gl_FragColor = vec4(c, 1.0);
+      #include <colorspace_fragment>
+    }`,
+}));
+skyDome.renderOrder = -6; skyDome.frustumCulled = false;
+scene.add(skyDome);
+// colours the scene is blending toward (set per zone)
+const zoneTarget = { top: new THREE.Color(), mid: new THREE.Color(), low: new THREE.Color(), ground: new THREE.Color(), glow: new THREE.Color(),
+  fog: new THREE.Color(), ridge0: new THREE.Color(), ridge1: new THREE.Color(), ridge2: new THREE.Color(), grid: new THREE.Color() };
 
 // reflections: a little studio built from the zone's own sky, sun and neon strips
 const pmrem = new THREE.PMREMGenerator(renderer);
@@ -148,7 +173,7 @@ function sunTexture() {
 }
 const sun = new THREE.Mesh(new THREE.PlaneGeometry(190, 190),
   new THREE.MeshBasicMaterial({ map: sunTexture(), transparent: true, fog: false, depthWrite: false, color: new THREE.Color(1.6, 1.6, 1.6) }));
-sun.renderOrder = -3;
+sun.renderOrder = -4;
 scene.add(sun);
 
 // stars
@@ -160,7 +185,7 @@ const stars = (() => {
   }
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   const p = new THREE.Points(g, new THREE.PointsMaterial({ color: 0xffffff, size: 1.6, sizeAttenuation: false, fog: false, transparent: true, opacity: 0.85, depthWrite: false }));
-  p.renderOrder = -4; scene.add(p); return p;
+  p.renderOrder = -5; scene.add(p); return p;
 })();
 
 // mountain ridges (two parallax layers)
@@ -172,15 +197,18 @@ function ridgeTexture(seed, rough) {
   for (let x = 0; x <= 2048; x += 16) { y += (r() - 0.5) * rough; y = Math.max(40, Math.min(210, y + (150 - y) * 0.05)); pts.push([x, y]); }
   pts[pts.length - 1][1] = pts[0][1];
   g.beginPath(); g.moveTo(0, 256); for (const [x, yy] of pts) g.lineTo(x, yy); g.lineTo(2048, 256); g.closePath();
-  const fill = g.createLinearGradient(0, 40, 0, 256); fill.addColorStop(0, '#9a9a9a'); fill.addColorStop(1, '#3a3a3a');
+  // the mountains fade out at their feet into the horizon haze, so the bottom of the layer never shows as an edge
+  const fill = g.createLinearGradient(0, 40, 0, 256);
+  fill.addColorStop(0, 'rgba(154,154,154,1)'); fill.addColorStop(0.55, 'rgba(84,84,84,1)'); fill.addColorStop(1, 'rgba(50,50,50,0)');
   g.fillStyle = fill; g.fill();
   g.beginPath(); for (const [x, yy] of pts) g.lineTo(x, yy);
   g.strokeStyle = '#ffffff'; g.lineWidth = 3; g.shadowColor = '#fff'; g.shadowBlur = 10; g.stroke();
   const t = texOf(c); t.wrapS = THREE.RepeatWrapping; return t;
 }
-const ridges = [[11, 70, 330, 0.75], [29, 46, 270, 1]].map(([seed, rough, dist, shade]) => {
-  const m = new THREE.Mesh(new THREE.PlaneGeometry(1400, 175), new THREE.MeshBasicMaterial({ map: ridgeTexture(seed, rough), transparent: true, fog: false, depthWrite: false }));
-  m.userData = { dist, shade }; m.renderOrder = -2; scene.add(m); return m;
+// three parallax layers, far to near: a pale misty range, a rim-lit range, and a dark near range
+const ridges = [[7, 90, 420, 0.5, 210], [11, 70, 330, 0.75, 175], [29, 46, 270, 1, 150]].map(([seed, rough, dist, shade, h], i) => {
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(1600, h), new THREE.MeshBasicMaterial({ map: ridgeTexture(seed, rough), transparent: true, fog: false, depthWrite: false }));
+  m.userData = { dist, shade, h }; m.renderOrder = -3 + i * 0.4; scene.add(m); return m;
 });
 
 // glowing grid far below the track
@@ -188,7 +216,7 @@ const floorTex = (() => {
   const c = document.createElement('canvas'); c.width = c.height = 64;
   const g = c.getContext('2d'); g.fillStyle = '#000'; g.fillRect(0, 0, 64, 64);
   g.strokeStyle = '#fff'; g.lineWidth = 3; g.strokeRect(0, 0, 64, 64);
-  const t = texOf(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(50, 50); t.anisotropy = 8; return t;
+  const t = texOf(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(140, 140); t.anisotropy = 8; return t;
 })();
 const floorFade = (() => {
   const c = document.createElement('canvas'); c.width = c.height = 256;
@@ -197,7 +225,7 @@ const floorFade = (() => {
   g.fillStyle = gr; g.fillRect(0, 0, 256, 256);
   return new THREE.CanvasTexture(c);
 })();
-const floor = new THREE.Mesh(new THREE.PlaneGeometry(500, 500),
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(1400, 1400),
   new THREE.MeshBasicMaterial({ map: floorTex, alphaMap: floorFade, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
 floor.rotation.x = -Math.PI / 2; floor.renderOrder = -1;
 scene.add(floor);
@@ -273,6 +301,61 @@ const OB = { w: W * 0.78, h: 1.15, d: L * 0.5 };
 const blockMesh = new THREE.InstancedMesh(new RoundedBoxGeometry(OB.w, OB.h, OB.d, 3, 0.1), dangerMat, 400);
 blockMesh.frustumCulled = false; blockMesh.castShadow = true; blockMesh.receiveShadow = true;
 scene.add(blockMesh);
+
+// scenery beside the track: tall pylons that stand straight up (world vertical) with level neon rings, and now and
+// then an arch over the track. The road tilts down past them, so the slope and the speed read at a glance.
+const PYL_MAX = 260, RING_MAX = 900;
+const pylonMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0x1a0d24, roughness: 0.45, metalness: 0.6, envMapIntensity: 0.6 }), PYL_MAX);
+const ringMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false }), RING_MAX);
+pylonMesh.frustumCulled = ringMesh.frustumCulled = false;
+scene.add(pylonMesh, ringMesh);
+const PYL_DEPTH = 34;            // how far below the track a pylon reaches (it fades into the fog well before its foot)
+function decoFor(r) {
+  if (r.tunnel || gen.i < 6) return null;
+  const out = [];
+  const yaw = Math.atan2(r.F.x, -r.F.z);
+  if (gen.i % 46 === 0 && gen.kind !== 'segRamp' && gen.kind !== 'segDrop') {
+    // an arch: two pylons and a level beam high over the road
+    const top = rnd(7, 9);
+    for (const sd of [-1, 1]) out.push({ p: worldAt(r, L / 2, sd * (HALF + 1.6), 0), top, w: 0.9, yaw, rings: 3 });
+    out.push({ beam: true, p: worldAt(r, L / 2, 0, 0), top, span: 2 * (HALF + 1.6) + 0.9, yaw });
+    return out;
+  }
+  if (gen.i % 4) return null;
+  const sides = Math.random() < 0.45 ? [-1, 1] : [gen.i % 8 ? 1 : -1];
+  for (const sd of sides) {
+    const off = HALF + rnd(2.2, 10), w = rnd(0.6, 1.4);
+    out.push({ p: worldAt(r, L / 2, sd * off, 0), top: rnd(-2, 10) + off * 0.25, w, yaw, rings: 1 + Math.floor(Math.random() * 3) });
+  }
+  return out;
+}
+const ringCol = new THREE.Color(), pylQ = new THREE.Quaternion(), pylS = new THREE.Vector3(), pylP = new THREE.Vector3();
+function drawDeco(ci) {
+  let np = 0, nr = 0;
+  for (let i = ci - BEHIND; i < ci + AHEAD; i++) {
+    const r = row(i);
+    if (!r || !r.deco) continue;
+    ringCol.set(ZONES[zoneOf(i)].tile).multiplyScalar(1.7);
+    for (const d of r.deco) {
+      pylQ.setFromAxisAngle(Yv, -d.yaw);
+      const yTop = d.p.y + d.top;
+      if (d.beam) {
+        if (nr < RING_MAX) { ringMesh.setMatrixAt(nr, M.compose(pylP.set(d.p.x, yTop + 0.25, d.p.z), pylQ, pylS.set(d.span, 0.5, 0.6))); ringMesh.setColorAt(nr++, ringCol); }
+        continue;
+      }
+      if (np >= PYL_MAX) continue;
+      const h = d.top + PYL_DEPTH;
+      pylonMesh.setMatrixAt(np++, M.compose(pylP.set(d.p.x, yTop - h / 2, d.p.z), pylQ, pylS.set(d.w, h, d.w)));
+      for (let k = 0; k < d.rings && nr < RING_MAX; k++) {
+        ringMesh.setMatrixAt(nr, M.compose(pylP.set(d.p.x, yTop - 0.15 - k * 3.2, d.p.z), pylQ, pylS.set(d.w + 0.35, 0.16, d.w + 0.35)));
+        ringMesh.setColorAt(nr++, ringCol);
+      }
+    }
+  }
+  pylonMesh.count = np; ringMesh.count = nr;
+  pylonMesh.instanceMatrix.needsUpdate = ringMesh.instanceMatrix.needsUpdate = true;
+  if (ringMesh.instanceColor) ringMesh.instanceColor.needsUpdate = true;
+}
 
 const gemMesh = new THREE.InstancedMesh(new THREE.OctahedronGeometry(0.3, 0),
   new THREE.MeshStandardMaterial({ color: 0x3df5c0, emissive: 0x2ee6b4, emissiveIntensity: 0.55, roughness: 0.1, metalness: 0.3, flatShading: true }), 400);
@@ -413,6 +496,7 @@ function pushRow(floor, extra = {}) {
     r.gems.push({ pos: worldAt(r, L / 2, laneU(gl), 0.85), taken: false });
     gen.gemLeft--;
   }
+  r.deco = decoFor(r);
   rows[gen.i++] = r;
   gen.O.addScaledVector(fr.F, L);
   stepAngles();
@@ -620,6 +704,7 @@ function drawTrack(ci) {
   }
   tileMesh.count = nt; redMesh.count = nr;
   tileMesh.instanceMatrix.needsUpdate = true; redMesh.instanceMatrix.needsUpdate = true;
+  drawDeco(ci);
   if (tileMesh.instanceColor) tileMesh.instanceColor.needsUpdate = true;
 }
 const blockU = bk => bk.move ? bk.u + bk.move.A * Math.sin(simT * bk.move.w + bk.move.ph) : bk.u;
@@ -785,15 +870,27 @@ function resetWorld() {
   placeCamera(true);
   drawTrack(b.ci);
 }
+// ease every scenery colour toward the current zone (k = 1 snaps)
+function blendZone(k) {
+  const T = zoneTarget;
+  skyU.top.value.lerp(T.top, k); skyU.mid.value.lerp(T.mid, k); skyU.low.value.lerp(T.low, k);
+  skyU.ground.value.lerp(T.ground, k); skyU.glow.value.lerp(T.glow, k);
+  scene.fog.color.lerp(T.fog, k);
+  ridges[0].material.color.lerp(T.ridge0, k); ridges[1].material.color.lerp(T.ridge1, k); ridges[2].material.color.lerp(T.ridge2, k);
+  floor.material.color.lerp(T.grid, k);
+}
 function applyZone(z, silent) {
   zoneShown = z;
   const Z = ZONES[z];
-  scene.background = skies[z];
-  scene.fog.color.set(Z.fog);
   scene.environment = envFor(z);
-  ridges[0].material.color.set(Z.ridge).lerp(C.set(Z.rim), 0.35);
-  ridges[1].material.color.set(Z.ridge);
-  floor.material.color.set(Z.tile).multiplyScalar(0.6);
+  const T = zoneTarget;
+  T.top.set(Z.sky[0]); T.mid.set(Z.sky[1]); T.low.set(Z.sky[2]); T.ground.set(Z.ridge); T.glow.set(Z.rim);
+  T.fog.set(Z.fog);
+  T.ridge0.set(Z.ridge).lerp(C.set(Z.sky[2]), 0.45);
+  T.ridge1.set(Z.ridge).lerp(C.set(Z.rim), 0.35);
+  T.ridge2.set(Z.ridge);
+  T.grid.set(Z.tile).multiplyScalar(0.6);
+  if (silent) blendZone(1);
   if (!silent) { toast(Z.name, `ZONE ${Math.floor(b.ci / ZONE_ROWS) + 1}`); sfx.ding(); }
 }
 function startRun() {
@@ -1216,10 +1313,12 @@ function placeCamera(snap, dt = 0.016) {
   // far scenery rides along, always out in front
   fh.set(camF.x, 0, camF.z).normalize();
   const c = camera.position, yaw = Math.atan2(fh.x, -fh.z);
+  skyDome.position.copy(c);
+  blendZone(1 - Math.exp(-dt * 1.4));
   sun.position.copy(c).addScaledVector(fh, 380); sun.position.y += 34; sun.lookAt(c);
   stars.position.copy(c);
   for (const m of ridges) {
-    m.position.copy(c).addScaledVector(fh, m.userData.dist); m.position.y = c.y - 8 + m.userData.dist * 0.04;
+    m.position.copy(c).addScaledVector(fh, m.userData.dist); m.position.y = c.y + 2 + m.userData.h * 0.06;
     m.lookAt(c.x, m.position.y, c.z);
     m.material.map.offset.x = yaw * 0.08 * m.userData.shade;
   }
@@ -1238,13 +1337,13 @@ function updateTrail(t) {
   const show = ball.visible && h.length > 1;
   for (let i = 0; i < TN; i++) {
     const p = h[Math.min(i, h.length - 1)] || b.p;
-    const k = Math.max(i / (TN - 1), Math.min(1, p.distanceTo(b.p) / 3.4)), w = R * 0.7 * (1 - k);
+    const k = Math.max(i / (TN - 1), Math.min(1, p.distanceTo(b.p) / 2.4)), w = R * 0.55 * (1 - k);
     pos.setXYZ(i * 2, p.x - side.x * w, p.y - R * 0.45 - side.y * w, p.z - side.z * w);
     pos.setXYZ(i * 2 + 1, p.x + side.x * w, p.y - R * 0.45 + side.y * w, p.z + side.z * w);
     if (trailCols === 'rainbow') C.setHSL((k * 0.9 + t * 0.4) % 1, 1, 0.55);
     else if (trailCols.length) { const f = k * (trailCols.length - 1), j = Math.min(trailCols.length - 2, Math.floor(f)); C.copy(trailCols[j]).lerp(trailCols[j + 1] || trailCols[j], f - j); }
     // the camera now sits close behind the ball, so the trail runs toward the lens: keep it faint near the ball
-    const a = show ? Math.pow(1 - k, 1.8) * 0.75 * (0.25 + 0.75 * Math.min(1, k * 4)) : 0;
+    const a = show ? Math.pow(1 - k, 2) * 0.45 * (0.15 + 0.85 * Math.min(1, k * 5)) : 0;
     col.setXYZ(i * 2, C.r * a, C.g * a, C.b * a); col.setXYZ(i * 2 + 1, C.r * a, C.g * a, C.b * a);
   }
   pos.needsUpdate = true; col.needsUpdate = true;
