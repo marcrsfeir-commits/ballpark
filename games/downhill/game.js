@@ -22,7 +22,7 @@ const L = 2.2, W = 2.2, LANES = 3, HALF = W * LANES / 2, R = 0.46, G = 30, TH = 
 const DRAG = 0.0046;          // air drag: a = -k·|v|·v  → terminal speed sqrt(g·sin(slope)/k)
 const ROLL_RES = 0.35;        // rolling resistance (m/s² against motion while touching the ground)
 // steering: a hard push against strong sideways grip, so the ball snaps to ~12 m/s sideways and stops dead on release
-const STEER_G = 190, STEER_AIR = 22, GRIP = 40, GRIP_STEER = 0.4;  // push, push in the air, sideways grip, grip kept while steering
+const STEER_G = 260, STEER_AIR = 28, GRIP = 40, GRIP_STEER = 0.4;  // push, push in the air, sideways grip, grip kept while steering
 const deg = Math.PI / 180;
 const laneU = j => -HALF + W * (j + 0.5);
 const PTS = { gem: 10, close: 25, airPerSec: 60 };
@@ -1109,16 +1109,17 @@ function placeCamera(snap, dt = 0.016) {
   const fy = Math.max(b.p.y, b.lastGround - 3);
   b.focusY = snap ? fy : b.focusY + (fy - b.focusY) * (1 - Math.exp(-dt * 12));
   focus.set(b.p.x, b.focusY, b.p.z);
-  camPos.copy(focus).addScaledVector(camF, -5.0).addScaledVector(camU, 1.9);
+  // low and tight behind the ball (it fills about a fifth of the screen height), the way the fast slope rollers frame it
+  camPos.copy(focus).addScaledVector(camF, -2.9).addScaledVector(camU, 1.05);
   // aim a touch down the slope (more on tall phone screens) so the track ahead fills the view, not the sky
-  camLook.copy(focus).addScaledVector(camF, 12).addScaledVector(camU, -0.25 - 1.3 * Math.max(0, 1 - camera.aspect));
+  camLook.copy(focus).addScaledVector(camF, 12).addScaledVector(camU, -0.45 - 1.1 * Math.max(0, 1 - camera.aspect));
   camera.position.copy(camPos);
   if (shake > 0) camera.position.add(tmpV.set((Math.random() - 0.5) * 2 * shake, (Math.random() - 0.5) * 2 * shake, 0));
   camera.up.copy(camU);
   camera.lookAt(camLook);
   const sp = b.v.length();
   const portrait = Math.max(0, 1 - camera.aspect) * 34; // narrow screens need a taller view to see the whole track
-  const fov = portrait + (reduceMotion ? 74 : 70 + Math.max(0, Math.min(1, (sp - 26) / 28)) * 20);
+  const fov = portrait + (reduceMotion ? 66 : 64 + Math.max(0, Math.min(1, (sp - 26) / 28)) * 12);
   if (Math.abs(camera.fov - fov) > 0.05) { camera.fov = fov; camera.updateProjectionMatrix(); }
   // far scenery rides along, always out in front
   fh.set(camF.x, 0, camF.z).normalize();
@@ -1150,7 +1151,8 @@ function updateTrail(t) {
     pos.setXYZ(i * 2 + 1, p.x + side.x * w, p.y - R * 0.45 + side.y * w, p.z + side.z * w);
     if (trailCols === 'rainbow') C.setHSL((k * 0.9 + t * 0.4) % 1, 1, 0.55);
     else if (trailCols.length) { const f = k * (trailCols.length - 1), j = Math.min(trailCols.length - 2, Math.floor(f)); C.copy(trailCols[j]).lerp(trailCols[j + 1] || trailCols[j], f - j); }
-    const a = show ? Math.pow(1 - k, 1.8) * 0.75 : 0;
+    // the camera now sits close behind the ball, so the trail runs toward the lens: keep it faint near the ball
+    const a = show ? Math.pow(1 - k, 1.8) * 0.75 * (0.25 + 0.75 * Math.min(1, k * 4)) : 0;
     col.setXYZ(i * 2, C.r * a, C.g * a, C.b * a); col.setXYZ(i * 2 + 1, C.r * a, C.g * a, C.b * a);
   }
   pos.needsUpdate = true; col.needsUpdate = true;
