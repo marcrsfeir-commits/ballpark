@@ -19,15 +19,15 @@ const coarse = matchMedia('(pointer: coarse)').matches;
 // curve (yaw), tilt (bank) and climb or dive (pitch). Everything that collides is a 2D segment in the row's
 // cross-section (u = sideways, h = up) stretched along the row's length — floor tiles, tunnel walls, ceilings.
 const L = 2.2, W = 2.2, LANES = 3, HALF = W * LANES / 2, R = 0.46, G = 30, TH = 0.4, AHEAD = 130, BEHIND = 10;
-const DRAG = 0.0046;          // air drag: a = -k·|v|·v  → terminal speed sqrt(g·sin(slope)/k)
+const DRAG = 0.012;           // air drag: a = -k·|v|·v  → terminal speed sqrt(g·sin(slope)/k)
 const ROLL_RES = 0.35;        // rolling resistance (m/s² against motion while touching the ground)
 // steering: a hard push against strong sideways grip, so the ball snaps to ~12 m/s sideways and stops dead on release
-const STEER_G = 260, STEER_AIR = 28, GRIP = 40, GRIP_STEER = 0.4;  // push, push in the air, sideways grip, grip kept while steering
+const STEER_G = 150, STEER_AIR = 18, GRIP = 40, GRIP_STEER = 0.4;  // push, push in the air, sideways grip, grip kept while steering
 const deg = Math.PI / 180;
 const laneU = j => -HALF + W * (j + 0.5);
 const PTS = { gem: 10, close: 25, airPerSec: 60, floor: 25 };
 const DIFF_DIST = 4500;       // distance (m) at which difficulty is maxed
-const SPEED_DIST = 3000;      // distance (m) over which the slope steepens (speed keeps building, then a slow climb to 6 km)
+const SPEED_DIST = 4500;      // distance (m) over which the slope steepens and the speed builds (a few minutes of play)
 
 const ZONES = [
   { name: 'SUNSET STRIP', tile: '#ff3d9a', sky: ['#0d0221', '#3b0a54', '#ff5e7e'], fog: '#6e1a5a', ridge: '#2a0838', rim: '#ff6fb5' },
@@ -353,8 +353,8 @@ const clampLane = l => Math.max(0, Math.min(LANES - 1, l));
 const sgn = () => (Math.random() < 0.5 ? -1 : 1);
 const Yv = new THREE.Vector3(0, 1, 0);
 const difficulty = i => Math.min(1, (i * L) / DIFF_DIST);
-// slope steepness at row i sets the cruising speed: ~115 km/h at the top, ~185 km/h at 3 km, ~200 km/h at 6 km
-const basePitch = i => { const x = i * L; return -(9 + 15 * Math.min(1, x / SPEED_DIST) + 4 * Math.min(1, Math.max(0, x - SPEED_DIST) / SPEED_DIST)) * deg; };
+// slope steepness at row i sets the cruising speed: ~68 km/h at the top, building gently to ~120 km/h at 4.5 km
+const basePitch = i => -(8.3 + 17.5 * Math.min(1, i * L / SPEED_DIST)) * deg;
 const vTermAt = i => Math.sqrt(G * Math.sin(-basePitch(i)) / DRAG);
 // obstacle spacing is set in seconds, then turned into rows for the speed the ball will have there
 const rowsFor = (sec, min = 2) => Math.max(min, Math.round(sec * vTermAt(gen.i) / L));
@@ -770,7 +770,7 @@ function resetWorld() {
   const r = row(3);
   b.ci = 3; b.s = L / 2;
   worldAt(r, L / 2, 0, R, b.p);
-  b.v.copy(r.F).multiplyScalar(24); b.w.set(0, 0, 0);
+  b.v.copy(r.F).multiplyScalar(17); b.w.set(0, 0, 0);
   b.grounded = true; b.lastGround = b.p.y - R; b.air = 0; b.gN.copy(r.U); b.focusY = b.p.y;
   startS = progress();
   camF.copy(r.F); camU.copy(Yv);
@@ -1196,7 +1196,7 @@ function placeCamera(snap, dt = 0.016) {
   camera.lookAt(camLook);
   const sp = b.v.length();
   const portrait = Math.max(0, 1 - camera.aspect) * 34; // narrow screens need a taller view to see the whole track
-  const fov = portrait + (reduceMotion ? 66 : 64 + Math.max(0, Math.min(1, (sp - 26) / 28)) * 12);
+  const fov = portrait + (reduceMotion ? 66 : 64 + Math.max(0, Math.min(1, (sp - 18) / 16)) * 12);
   if (Math.abs(camera.fov - fov) > 0.05) { camera.fov = fov; camera.updateProjectionMatrix(); }
   // far scenery rides along, always out in front
   fh.set(camF.x, 0, camF.z).normalize();
@@ -1251,7 +1251,7 @@ function updateParticles(dt) {
 }
 const camR = new THREE.Vector3();
 function updateSpeedLines() {
-  const sp = b.v.length(), k = Math.max(0, Math.min(1, (sp - 28) / 20));
+  const sp = b.v.length(), k = Math.max(0, Math.min(1, (sp - 22) / 12));
   speedLines.mesh.material.opacity = state === 'play' && !reduceMotion ? k * 0.55 : 0;
   if (!speedLines.mesh.material.opacity) return;
   const pos = speedLines.mesh.geometry.attributes.position, c = camera.position;
