@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Downhill · BALLPARK</title>
+<meta name="theme-color" content="#1a0b2e">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M0 13 L16 7 V16 H0Z' fill='%23ff3d9a'/%3E%3Ccircle cx='6' cy='7' r='3.4' fill='%2360f0ff'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+<script type="importmap">{"imports":{"three":"../../vendor/three/three.module.min.js","three/addons/":"../../vendor/three/addons/"}}</script>
+</head>
+<body data-bp-pos="bl">
+<canvas id="view" aria-label="Downhill game view"></canvas>
+
+<div class="hud" id="hud" hidden>
+  <div class="stat"><span class="k">SCORE</span><span class="v" id="score">0</span><span class="s" id="dist">0 m</span></div>
+  <div class="stat right"><span class="k">GEMS</span><span class="v gem" id="runGems">0</span><span class="s" id="speed">0 km/h</span></div>
+</div>
+<div class="mult" id="mult" hidden></div>
+<div id="pops" aria-hidden="true"></div>
+<div class="toast" id="toast" aria-live="polite"></div>
+
+<button class="iconbtn" id="mute" type="button" aria-label="Mute sound" title="Sound (M)">🔊</button>
+<button class="iconbtn pause" id="pauseBtn" type="button" aria-label="Pause" title="Pause (P)" hidden>❚❚</button>
+
+<!-- main menu -->
+<section class="panel" id="start">
+  <div class="topline">
+    <div class="lvl"><span class="badge" id="lvlNum">1</span><div class="bar"><i id="lvlBar"></i></div><span class="xp" id="lvlXp"></span></div>
+    <div class="wallet"><span class="gemico"></span><b id="wallet">0</b></div>
+  </div>
+  <h1>DOWNHILL</h1>
+  <p class="sub">Roll as far as you can. Grab gems, hit ramps, it only gets faster.</p>
+  <button class="big" id="go" type="button">ROLL ▸</button>
+  <div class="tabs">
+    <button class="tab" id="openShop" type="button"><span>🎨</span>SKINS</button>
+    <button class="tab" id="openGoals" type="button"><span>🏆</span>GOALS <em id="goalCount"></em></button>
+    <button class="tab" id="quality" type="button"><span>✨</span><b id="qualityLabel">HIGH</b></button>
+  </div>
+  <p class="how"><kbd>←</kbd><kbd>→</kbd> / <kbd>A</kbd><kbd>D</kbd> steer · on phone hold left or right side · <kbd>P</kbd> pause</p>
+  <p class="best" id="bestStart"></p>
+</section>
+
+<!-- skins shop -->
+<section class="panel wide" id="shop" hidden>
+  <div class="head"><h2>SKINS</h2><div class="wallet"><span class="gemico"></span><b id="wallet2">0</b></div></div>
+  <div class="grid" id="skinGrid"></div>
+  <h3>TRAILS <small>unlock by levelling up</small></h3>
+  <div class="trails" id="trailGrid"></div>
+  <button class="ghost back" id="shopBack" type="button">◂ Back</button>
+</section>
+
+<!-- goals -->
+<section class="panel wide" id="goals" hidden>
+  <div class="head"><h2>GOALS</h2><div class="wallet"><span class="gemico"></span><b id="wallet3">0</b></div></div>
+  <ul class="goallist" id="goalList"></ul>
+  <button class="ghost back" id="goalsBack" type="button">◂ Back</button>
+</section>
+
+<!-- game over -->
+<section class="panel" id="over" hidden>
+  <h2 id="overTitle">WIPEOUT</h2>
+  <div class="result" id="finalScore">0</div>
+  <div class="breakdown" id="breakdown"></div>
+  <div class="lvl big"><span class="badge" id="lvlNum2">1</span><div class="bar"><i id="lvlBar2"></i></div><span class="xp" id="lvlXp2"></span></div>
+  <p class="unlock" id="unlock" hidden></p>
+  <p class="best" id="bestOver"></p>
+  <div class="row">
+    <button class="big" id="again" type="button">AGAIN ▸</button>
+  </div>
+  <div class="row small">
+    <button class="ghost" id="overShop" type="button">🎨 Skins</button>
+    <button class="ghost" id="overMenu" type="button">Menu</button>
+    <button class="ghost" id="share" type="button">Copy result</button>
+  </div>
+</section>
+
+<section class="panel small" id="paused" hidden>
+  <h2>PAUSED</h2>
+  <button class="big" id="resume" type="button">RESUME ▸</button>
+  <div class="row small"><button class="ghost" id="quit" type="button">End run</button></div>
+</section>
+
+<script src="../../shared/bp.js"></script>
+<script type="module" src="game.js"></script>
+</body>
+</html>

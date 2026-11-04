@@ -2,11 +2,11 @@
 
 **Play it here: https://marcrsfeir-commits.github.io/ballpark/**
 
-Thirteen free browser games in one place. No ads, no accounts, no paywalls — everything runs in your browser and saves on your device. Daily puzzles are picked per device, so friends get different sets.
+Fifteen free browser games in one place. No ads, no accounts, no paywalls — everything runs in your browser and saves on your device. Daily puzzles are picked per device, so friends get different sets.
 
 | Game | What you do | Inspired by |
 |---|---|---|
-| **KRILLDIVE** | Name the rarest answer you can — obvious answers float, rare ones sink you to the 7,000 m trench. 41 themed packs, 826 prompts, endless mode, archive. | Krillion |
+| **KRILLDIVE** | Name the rarest answer you can — obvious answers float, rare ones sink you to the 7,000 m trench. 41 themed packs, 847 prompts, endless mode, archive. | Krillion |
 | **JARFUL** | Objects pour into a 3D jar (real physics). Guess how many in 15 seconds. Daily, Over/Under, Fill To and Practice. | Amountle |
 | **NAPKIN** | Three huge estimates a day ("how many tennis balls fill an Olympic pool?"), scored by ratio. Calculator + archive. | Fermi.gg |
 | **ODD HUE** | Six blocks, one is a shade off. Classic, 60-second Rush and Daily. | HSL Color Game |
@@ -19,6 +19,8 @@ Thirteen free browser games in one place. No ads, no accounts, no paywalls — e
 | **BEEN THERE** | A 200-item life checklist — how much have you done? | neal.fun |
 | **TROLLEY TROUBLE** | 28 absurd trolley dilemmas and your ethics profile. | neal.fun |
 | **NOT A ROBOT** | A captcha that gets more and more suspicious of you. | neal.fun |
+| **SANDLOT** | Falling-sand physics sandbox: sand, water, lava, acid, walkers, bombs, lightning and a nuke. | original |
+| **DOWNHILL** | Steer a ball down an endless sunset slope: dodge blocks, jump gaps, survive the speed. | original |
 
 These are fan remakes — go play the originals too. All prompts, questions, answer lists and art here are original.
 
