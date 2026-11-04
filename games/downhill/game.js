@@ -18,14 +18,14 @@ const coarse = matchMedia('(pointer: coarse)').matches;
 // The track is a chain of rows. Each row has its own frame (origin O, forward F, right R, up U), so the track can
 // curve (yaw), tilt (bank) and climb or dive (pitch). Everything that collides is a 2D segment in the row's
 // cross-section (u = sideways, h = up) stretched along the row's length — floor tiles, tunnel walls, ceilings.
-const L = 2.2, W = 2.2, LANES = 3, HALF = W * LANES / 2, R = 0.46, G = 30, TH = 0.4, AHEAD = 110, BEHIND = 10;
-const DRAG = 0.0115;          // air drag: a = -k·|v|·v  → terminal speed sqrt(g·sin(slope)/k)
+const L = 2.2, W = 2.2, LANES = 3, HALF = W * LANES / 2, R = 0.46, G = 30, TH = 0.4, AHEAD = 130, BEHIND = 10;
+const DRAG = 0.0062;          // air drag: a = -k·|v|·v  → terminal speed sqrt(g·sin(slope)/k)
 const ROLL_RES = 0.35;        // rolling resistance (m/s² against motion while touching the ground)
-const STEER_G = 24, STEER_AIR = 8, GRIP = 2.6;  // steering push, push in the air, sideways tyre-like grip
+const STEER_G = 46, STEER_AIR = 16, GRIP = 8;  // steering push, push in the air, sideways tyre-like grip
 const deg = Math.PI / 180;
 const laneU = j => -HALF + W * (j + 0.5);
 const PTS = { gem: 10, close: 25, airPerSec: 60 };
-const DIFF_DIST = 3200;       // distance (m) at which difficulty is maxed
+const DIFF_DIST = 4500;       // distance (m) at which difficulty is maxed
 
 const ZONES = [
   { name: 'SUNSET STRIP', tile: '#ff3d9a', sky: ['#0d0221', '#3b0a54', '#ff5e7e'], fog: '#6e1a5a', ridge: '#2a0838', rim: '#ff6fb5' },
@@ -94,7 +94,7 @@ function gradientCanvas(stops, w = 4, h = 512) {
 const texOf = (c, srgb = true) => { const t = new THREE.CanvasTexture(c); if (srgb) t.colorSpace = THREE.SRGBColorSpace; return t; };
 const skies = ZONES.map(z => texOf(gradientCanvas([[0, z.sky[0]], [0.5, z.sky[1]], [0.86, z.sky[2]], [1, z.sky[2]]])));
 scene.background = skies[0];
-scene.fog = new THREE.Fog(ZONES[0].fog, 45, 190);
+scene.fog = new THREE.Fog(ZONES[0].fog, 60, 260);
 
 // reflections: a little studio built from the zone's own sky, sun and neon strips
 const pmrem = new THREE.PMREMGenerator(renderer);
@@ -330,7 +330,7 @@ const clampLane = l => Math.max(0, Math.min(LANES - 1, l));
 const sgn = () => (Math.random() < 0.5 ? -1 : 1);
 const Yv = new THREE.Vector3(0, 1, 0);
 const difficulty = i => Math.min(1, (i * L) / DIFF_DIST);
-const basePitch = d => -(9 + 13 * d) * deg;
+const basePitch = d => -(10 + 14 * d) * deg;
 
 // tunnel cross-section, counter-clockwise so each panel's inward normal is on its left
 const TW = 1.3, TT = 3.4, TC = 4.7;
@@ -405,7 +405,7 @@ function segHoles(n, d) {
   }
 }
 function segBlocks(n, d) {
-  const pOb = 0.45 + 0.3 * d, every = d < 0.35 ? 3 : 2;
+  const pOb = 0.45 + 0.3 * d, every = d < 0.4 ? 4 : 3;
   for (let k = 0; k < n; k++) {
     if (k % every) { pushRow(FULL(), { gemLane: gen.safe }); continue; }
     const [a, b2] = walkSafe(0.35 + 0.15 * d);
@@ -416,7 +416,7 @@ function segBlocks(n, d) {
 }
 function segMovers(n, d) {
   // the blocks sweep side to side as a readable wave (each one a little behind the one before)
-  const every = d < 0.5 ? 4 : 3, ph = rnd(0, Math.PI * 2), lag = rnd(0.35, 0.8) * sgn(), w = 1.2 + 1.6 * d;
+  const every = d < 0.5 ? 5 : 4, ph = rnd(0, Math.PI * 2), lag = rnd(0.35, 0.8) * sgn(), w = 1.2 + 1.6 * d;
   for (let k = 0; k < n; k++) {
     const blocks = [];
     if (k % every === 0) blocks.push({ s: L / 2, u: 0, lane: -1, move: { A: W, w, ph: ph + k * lag } });
@@ -687,7 +687,7 @@ function resetWorld() {
   const r = row(3);
   b.ci = 3; b.s = L / 2;
   worldAt(r, L / 2, 0, R, b.p);
-  b.v.copy(r.F).multiplyScalar(9); b.w.set(0, 0, 0);
+  b.v.copy(r.F).multiplyScalar(18); b.w.set(0, 0, 0);
   b.grounded = true; b.lastGround = b.p.y - R; b.air = 0; b.gN.copy(r.U); b.focusY = b.p.y;
   startS = progress();
   camF.copy(r.F); camU.copy(Yv);
@@ -972,7 +972,7 @@ function step(dt) {
   b.v.addScaledVector(b.v, -DRAG * sp * dt);                        // air drag
   if (b.grounded && r0) {
     const lat = b.v.dot(r0.R);                                       // sideways grip (less while you steer)
-    b.v.addScaledVector(r0.R, -lat * Math.min(1, GRIP * dt) * (dir ? 0.3 : 1));
+    b.v.addScaledVector(r0.R, -lat * Math.min(1, GRIP * dt) * (dir ? 0.55 : 1));
     if (sp > 0.5) b.v.addScaledVector(b.v, -ROLL_RES * dt / sp);    // rolling resistance
   }
   b.p.addScaledVector(b.v, dt);
@@ -1066,7 +1066,7 @@ function placeCamera(snap, dt = 0.016) {
     tF.copy(r.F);
     if (b.v.lengthSq() > 9) tF.lerp(dv.copy(b.v).normalize(), 0.3).normalize();
     tU.copy(Yv).lerp(r.U, 0.4).normalize();
-    const k = snap ? 1 : 1 - Math.exp(-dt * 4);
+    const k = snap ? 1 : 1 - Math.exp(-dt * 6);
     camF.lerp(tF, k).normalize();
     camU.lerp(tU, k).normalize();
   }
@@ -1074,15 +1074,15 @@ function placeCamera(snap, dt = 0.016) {
   const fy = Math.max(b.p.y, b.lastGround - 3);
   b.focusY = snap ? fy : b.focusY + (fy - b.focusY) * (1 - Math.exp(-dt * 12));
   focus.set(b.p.x, b.focusY, b.p.z);
-  camPos.copy(focus).addScaledVector(camF, -6.6).addScaledVector(camU, 2.8);
-  camLook.copy(focus).addScaledVector(camF, 9).addScaledVector(camU, 0.3);
+  camPos.copy(focus).addScaledVector(camF, -5.0).addScaledVector(camU, 1.9);
+  camLook.copy(focus).addScaledVector(camF, 12).addScaledVector(camU, 0.1);
   camera.position.copy(camPos);
   if (shake > 0) camera.position.add(tmpV.set((Math.random() - 0.5) * 2 * shake, (Math.random() - 0.5) * 2 * shake, 0));
   camera.up.copy(camU);
   camera.lookAt(camLook);
   const sp = b.v.length();
   const portrait = Math.max(0, 1 - camera.aspect) * 34; // narrow screens need a taller view to see the whole track
-  const fov = portrait + (reduceMotion ? 70 : 64 + Math.max(0, Math.min(1, (sp - 18) / 20)) * 14);
+  const fov = portrait + (reduceMotion ? 74 : 70 + Math.max(0, Math.min(1, (sp - 25) / 25)) * 18);
   if (Math.abs(camera.fov - fov) > 0.05) { camera.fov = fov; camera.updateProjectionMatrix(); }
   // far scenery rides along, always out in front
   fh.set(camF.x, 0, camF.z).normalize();
@@ -1136,7 +1136,7 @@ function updateParticles(dt) {
 }
 const camR = new THREE.Vector3();
 function updateSpeedLines() {
-  const sp = b.v.length(), k = Math.max(0, Math.min(1, (sp - 20) / 16));
+  const sp = b.v.length(), k = Math.max(0, Math.min(1, (sp - 26) / 18));
   speedLines.mesh.material.opacity = state === 'play' && !reduceMotion ? k * 0.55 : 0;
   if (!speedLines.mesh.material.opacity) return;
   const pos = speedLines.mesh.geometry.attributes.position, c = camera.position;
