@@ -622,11 +622,35 @@ function analyze(q, input) {
 }
 
 export function matchAnswer(q, input) {
-  return analyze(q, input).hit;
+  const h = analyze(q, input).hit;
+  return h && h.typo && !closeEnough(input, h.answer) ? null : h;
+}
+
+// A "did you mean" must really look like what was typed: same first letter and ≤ ~1 edit per 3 letters,
+// so "John Marston" never turns into "Marathon" or "Snickers".
+function closeEnough(input, answer) {
+  const a = norm(input).replace(/ /g, ''), b = norm(answer).replace(/ /g, '');
+  if (!a || !b || a[0] !== b[0]) return false;
+  const L = Math.max(a.length, b.length), tol = Math.max(1, Math.floor(L / 3));
+  return lev(a, b, tol) <= tol;
+}
+function lev(a, b, max) {
+  if (Math.abs(a.length - b.length) > max) return max + 1;
+  let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i];
+    for (let j = 1; j <= b.length; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    prev = cur;
+  }
+  return prev[b.length];
 }
 
 // Closest listed answer to a miss, for "did you mean …?" (looser than matchAnswer, never auto-accepted).
 export function suggestAnswer(q, input) {
+  const s = suggestRaw(q, input);
+  return s && closeEnough(input, s.answer) ? s : null;
+}
+function suggestRaw(q, input) {
   const r = analyze(q, input);
   const ix = r.ix;
   if (r.hit) return r.hit;
