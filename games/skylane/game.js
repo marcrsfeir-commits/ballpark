@@ -19,7 +19,7 @@ const DS = 0.5;                 // road sample spacing (m)
 const HALF = 3.0;               // half width of the full road (m)
 const R = 0.42;                 // ball radius
 const G = 26;                   // gravity
-const STEER = 140, GRIP_ON = 15, GRIP_OFF = 30, AIR_STEER = 0.45; // sideways: ~9 m/s max, stops quickly on release
+const STEER = 140, GRIP_ON = 15, GRIP_OFF = 30, AIR_STEER = 0.45, PACE_EASE = 2; // same as DOWNHILL: ~9 m/s sideways, stops quickly on release
 const THICK = 0.45;             // road slab thickness
 const AHEAD = 340, BEHIND = 30; // how much road exists around the ball (m)
 const FACE = 0.35;              // arriving lower than this under a floor edge = hitting its face
@@ -522,13 +522,15 @@ function step(dt) {
   simT += dt;
   const b = ball, dir = steerDir();
   // pace: the ball eases up to the current pace speed
-  b.vs += (vTarget(b.s) - b.vs) * Math.min(1, 1.2 * dt);
-  // sideways: a firm push that settles at ~9 m/s, and strong grip that stops it soon after you let go
+  b.vs += (vTarget(b.s) - b.vs) * Math.min(1, PACE_EASE * dt);
+  // sideways (same model as DOWNHILL): a firm push that settles at ~9 m/s and strong grip that stops it on release.
+  // On a banked road the ball rolls toward the low side like a real ball (5/7 g sin bank for a rolling sphere), and
+  // the grip that stops it fades as the bank steepens, so it keeps rolling that way until you steer against it.
   if (b.grounded) {
-    const sm = sampleK(Math.floor(b.s / DS));
-    const bankPush = sm ? -G * sm.R.y * 0.35 : 0;   // a banked road nudges the ball gently downhill
-    b.vu += (dir * STEER - b.vu * (dir ? GRIP_ON : GRIP_OFF) + bankPush) * dt;
-  } else b.vu += dir * STEER * AIR_STEER * dt;
+    const sm = sampleK(Math.floor(b.s / DS)), sb = sm ? sm.R.y : 0;
+    const gripOff = GRIP_OFF * Math.max(0, 1 - Math.abs(sb) * 8);
+    b.vu += (dir * STEER - b.vu * (dir ? GRIP_ON : gripOff) - G * sb * (5 / 7)) * dt;
+  } else if (dir && dir * b.vu < 9) b.vu += dir * STEER * AIR_STEER * dt;   // air steering up to ~9 m/s sideways, as in DOWNHILL
   b.s += b.vs * dt;
   b.u += b.vu * dt;
   const fh = floorAt(b.s, b.u);
