@@ -604,6 +604,25 @@ export function packArt(id) {
         for (const [x, y] of [[10, 13], [13, 12], [16, 14]]) px(g, x, y, '#6aa83a');
         break;
       }
+      case 'invincible': { // yellow-and-blue hero mask
+        g.fillStyle = '#f5c400'; ell(g, 15, 14, 12, 11);
+        snap(g, w, h); shade(g, w, h, '#fff1a8', '#9a7600');
+        g.fillStyle = '#1f5fbf'; g.beginPath(); g.ellipse(15, 14, 12, 11, 0, Math.PI, 0); g.fill();
+        snap(g, w, h); shade(g, w, h, '#6aa0ff', null);
+        g.fillStyle = '#ffffff'; poly(g, [6, 12, 13, 13, 12, 16, 7, 15]); poly(g, [24, 12, 17, 13, 18, 16, 23, 15]);
+        g.fillStyle = '#1f5fbf'; g.fillRect(14, 2, 2, 6);
+        break;
+      }
+      case 'rickmorty': { // green portal swirl
+        g.fillStyle = '#5fbf2a'; ell(g, 15, 13, 14, 12);
+        snap(g, w, h); shade(g, w, h, '#c9f59a', '#2f6e10');
+        g.fillStyle = '#97ce4c'; ell(g, 15, 13, 10, 8.5);
+        g.fillStyle = '#d6f7a6'; ell(g, 15, 13, 6, 5);
+        g.fillStyle = '#f4ffe0'; ell(g, 15, 13, 2.5, 2);
+        snap(g, w, h);
+        for (let a = 0; a < 6.28; a += 0.9) px(g, Math.round(15 + Math.cos(a) * 12), Math.round(13 + Math.sin(a) * 10), '#e8ffc8');
+        break;
+      }
       default: {
         const k = krill('krill', 0);
         g.drawImage(k, 0, 2);
