@@ -10,15 +10,19 @@ const today = BP.dayNumber(EPOCH);
 let day = today, qi = 0, state = null, calcOpen = false;
 
 // ---------- data ----------
-// Day n's 3 questions are picked on this device from the ones it has seen least, then kept for that day.
+// Day n's 3 questions are picked on this device from the ones it has seen least (newest additions first),
+// then kept for that day. Bonus rounds use negative day numbers.
+const NEW_FROM = 89; // questions from this index on were added in Nov 2026
+const bonusLabel = n => 'Bonus ' + -n;
 function questionsFor(n) {
   let set = store.get('set:' + n, null);
-  if (!Array.isArray(set) || set.length !== 3 || set.some(i => !QUESTIONS[i])) {
+  const stale = Array.isArray(set) && !load(n).answers.length && !set.some(i => i >= NEW_FROM); // picked before the new questions existed, never played
+  if (stale || !Array.isArray(set) || set.length !== 3 || set.some(i => !QUESTIONS[i])) {
     const seen = store.get('qseen', {});
     let tick = store.get('qtick', 0);
     const idx = QUESTIONS.map((_, i) => i);
     for (let i = idx.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [idx[i], idx[j]] = [idx[j], idx[i]]; }
-    idx.sort((a, b) => (seen[a] || 0) - (seen[b] || 0));
+    idx.sort((a, b) => (seen[a] || 0) - (seen[b] || 0) || (b >= NEW_FROM) - (a >= NEW_FROM));
     set = idx.slice(0, 3);
     for (const i of set) seen[i] = ++tick;
     store.set('qseen', seen); store.set('qtick', tick); store.set('set:' + n, set);
@@ -72,7 +76,7 @@ function crowd(q) {
 const CALC_ICON = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2.5"/><path d="M8.5 7.5h7M8.5 12h.01M12 12h.01M15.5 12h.01M8.5 16h.01M12 16h.01M15.5 16h.01"/></svg>';
 function header(q) {
   const qs = [0, 1, 2].map(i => `<span class="${i === qi ? 'on' : state.answers[i] ? 'done' : ''}">Q${i + 1} ${state.answers[i] ? tierMark(state.answers[i].ratio) : '○'}</span>`).join('');
-  return `<div class="head"><span>Napkin</span><div class="qs">${qs}</div><span>${day === today ? '' : 'Archive · '}No. ${String(day).padStart(3, '0')}</span></div>`;
+  return `<div class="head"><span>Napkin</span><div class="qs">${qs}</div><span>${day < 0 ? bonusLabel(day) : (day === today ? '' : 'Archive · ') + 'No. ' + String(day).padStart(3, '0')}</span></div>`;
 }
 
 function render() {
@@ -168,18 +172,19 @@ function renderFinal(qsDay) {
     state.done = true; save();
     if (day === today) BP.report('napkin', { score: total, max: 300, label: `${total}/300` });
     const st = store.get('stats', { days: 0, spot: 0, sumLog: 0, n: 0 });
-    st.days++; for (const a of state.answers) { st.n++; st.sumLog += Math.abs(Math.log10(a.ratio)); if (Math.max(a.ratio, 1 / a.ratio) <= 1.1) st.spot++; }
+    if (day > 0) st.days++; for (const a of state.answers) { st.n++; st.sumLog += Math.abs(Math.log10(a.ratio)); if (Math.max(a.ratio, 1 / a.ratio) <= 1.1) st.spot++; }
     store.set('stats', st);
   }
-  app.innerHTML = `<section class="card final"><div class="head"><span>Napkin</span><span class="tiers">${line}</span><span>No. ${String(day).padStart(3, '0')}</span></div>
+  app.innerHTML = `<section class="card final"><div class="head"><span>Napkin</span><span class="tiers">${line}</span><span>${day < 0 ? bonusLabel(day) : 'No. ' + String(day).padStart(3, '0')}</span></div>
     <h2>${total} / 300</h2><div>${total >= 240 ? 'Human calculator.' : total >= 170 ? 'Solid napkin work.' : total >= 100 ? 'In the right ballpark.' : 'Wild guesses — that\'s half the fun.'}</div>
     <div class="rows">${qsDay.map((q, i) => { const a = state.answers[i], t = ratioText(a.ratio); return `<div><span>${tierMark(a.ratio)}</span><span>${q.q}</span><b>${t.v}</b></div>`; }).join('')}</div>
-    <div class="btns"><button class="solid" id="share">COPY RESULT</button><button id="arch">PLAY THE ARCHIVE</button><a href="../../index.html">BALLPARK</a></div></section>`;
+    <div class="btns"><button class="solid" id="more">3 MORE QUESTIONS</button><button id="share">COPY RESULT</button><button id="arch">PLAY THE ARCHIVE</button><a href="../../index.html">BALLPARK</a></div></section>`;
   document.getElementById('share').onclick = () => {
-    const text = `Napkin No. ${day} · ${total}/300\n${state.answers.map((a, i) => `Q${i + 1} ${ratioText(a.ratio).v} (${TIER_NAMES[tierOf(a.ratio)]})`).join('\n')}`;
+    const text = `Napkin ${day < 0 ? bonusLabel(day) : 'No. ' + day} · ${total}/300\n${state.answers.map((a, i) => `Q${i + 1} ${ratioText(a.ratio).v} (${TIER_NAMES[tierOf(a.ratio)]})`).join('\n')}`;
     navigator.clipboard?.writeText(text).then(() => toast('Copied!'), () => toast('Copy failed'));
   };
   document.getElementById('arch').onclick = () => openMenu('archive');
+  document.getElementById('more').onclick = () => { const b = store.get('bonusN', 0) + 1; store.set('bonusN', b); openDay(-b); };
 }
 
 // ---------- menu ----------
