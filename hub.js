@@ -78,7 +78,7 @@ const GAMES = [
   },
   {
     id: 'trolley', name: 'TROLLEY TROUBLE', path: 'games/trolley/', insp: 'inspired by neal.fun',
-    blurb: 'Pull the lever or don\'t. 28 ridiculous dilemmas, one questionable conscience.',
+    blurb: 'Pull the lever or don\'t. 42 ridiculous dilemmas, one questionable conscience.',
     bg: 'linear-gradient(160deg,#fefce8 0%,#fde68a 100%)', fg: '#292524', accent: '#292524', onAccent: '#fde68a', glow: 'rgba(250,204,21,.3)',
     art: `<svg viewBox="0 0 110 80" aria-hidden="true"><path d="M2 60 H50 L100 30 M50 60 H108" stroke="#292524" stroke-width="3" fill="none"/><rect x="10" y="44" width="26" height="14" rx="3" fill="#ef4444"/><circle cx="16" cy="60" r="3" fill="#292524"/><circle cx="30" cy="60" r="3" fill="#292524"/><line x1="50" y1="60" x2="58" y2="44" stroke="#292524" stroke-width="3"/><circle cx="58" cy="43" r="3.5" fill="#ef4444"/><g fill="#facc15"><ellipse cx="92" cy="22" rx="7" ry="4.5"/><circle cx="86.5" cy="15.5" r="3.6"/><path d="M98 20 l4 -3 v4z"/></g><path d="M83 15 l-3.5 1.2 l3.5 1.4z" fill="#f97316"/><circle cx="86" cy="14.5" r=".8" fill="#292524"/><path d="M98 40 h7 v9 l-1 4 q-1 3 -5 3 h-5 q-3 0 -3 -3 q0 -3 3 -3 h4z" fill="#ef4444"/><rect x="98" y="40" width="7" height="3" fill="#fff"/></svg>`,
   },

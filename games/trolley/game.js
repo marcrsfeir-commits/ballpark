@@ -1,5 +1,5 @@
 /* TROLLEY TROUBLE - BALLPARK game
- * 28 absurd (and harmless) trolley problems. Scene is a generated SVG, animation is a tiny rAF tween engine,
+ * 42 absurd (and harmless) trolley problems. Scene is a generated SVG, animation is a tiny rAF tween engine,
  * sound is synthesized with Web Audio. Crowd percentages are SIMULATED (fixed per level in levels.js).
  */
 (() => {
@@ -25,27 +25,41 @@ if (rmQuery) {
 const reduced = () => rmFlag;
 
 /* ------------------------------------------------------------------ persisted state */
+// Saves are keyed by level id (stored in 'ids'), so new levels can be added anywhere without scrambling old runs.
+// Saves made before 'ids' existed used this original 28-level order.
+const LEGACY_IDS = ['ducks', 'future', 'sock', 'philosophers', 'delivery', 'cat', 'monday', 'empty', 'tortoise', 'ants',
+  'pajamas', 'banana', 'loop', 'homework', 'spoiler', 'cookies', 'mimes', 'ghosts', 'slice', 'wifi', 'penguins', 'liar',
+  'pinata', 'dino', 'wizard', 'earworm', 'ages', 'results'];
+function savedOrder() {
+  const ids = store.get('ids', null);
+  return Array.isArray(ids) ? ids : LEGACY_IDS;
+}
+function remap(raw, fill, ok) {
+  const out = Array(N).fill(fill);
+  if (!Array.isArray(raw)) return out;
+  const order = savedOrder();
+  for (let j = 0; j < raw.length && j < order.length; j++) {
+    const i = LEVELS.findIndex(L => L.id === order[j]);
+    if (i !== -1 && ok(raw[j])) out[i] = raw[j];
+  }
+  return out;
+}
 function loadChoices() {
-  const raw = store.get('choices', []);
-  const out = Array(N).fill(null);
-  if (Array.isArray(raw)) for (let i = 0; i < N; i++) out[i] = (raw[i] === 0 || raw[i] === 1) ? raw[i] : null;
+  const out = remap(store.get('choices', []), null, v => v === 0 || v === 1);
   // only keep a contiguous run from the start (levels are always played in order)
   const firstNull = out.indexOf(null);
   if (firstNull !== -1) for (let i = firstNull; i < N; i++) out[i] = null;
   return out;
 }
 function loadTimes() {
-  const raw = store.get('times', []);
-  const out = Array(N).fill(0);
-  if (Array.isArray(raw)) for (let i = 0; i < N; i++) out[i] = Number.isFinite(raw[i]) ? raw[i] : 0;
-  return out;
+  return remap(store.get('times', []), 0, v => Number.isFinite(v));
 }
 let choices = loadChoices();
 let times = loadTimes();
 let muted = store.get('muted', false) === true;
 const answered = () => choices.filter(c => c !== null).length;
 const firstOpen = () => { const i = choices.indexOf(null); return i === -1 ? N : i; };
-const saveProgress = () => { store.set('choices', choices); store.set('times', times); };
+const saveProgress = () => { store.set('ids', LEVELS.map(L => L.id)); store.set('choices', choices); store.set('times', times); };
 
 /* ------------------------------------------------------------------ sound (Web Audio, synthesized) */
 const Sound = (() => {
@@ -948,9 +962,9 @@ function showEnd() {
 function shareText() {
   const { s, prof } = lastProfile || (() => { const s = computeStats(); return { s, prof: pickProfile(s) }; })();
   const rows = [];
-  for (let r = 0; r < 4; r++) {
+  for (let r = 0; r < Math.ceil(N / 7); r++) {
     let row = '';
-    for (let c = 0; c < 7; c++) row += choices[r * 7 + c] === 1 ? '\u25A0' : '\u25A1';   // plain squares, never colour emoji
+    for (let c = 0; c < 7 && r * 7 + c < N; c++) row += choices[r * 7 + c] === 1 ? '\u25A0' : '\u25A1';   // plain squares, never colour emoji
     rows.push(row);
   }
   let url = '';

@@ -1,4 +1,4 @@
-// TROLLEY TROUBLE - level data. 28 original, silly, family-friendly dilemmas.
+// TROLLEY TROUBLE - level data. 42 original, silly, family-friendly dilemmas.
 //
 // Layout convention: the LEFT track is where the trolley is already heading ("stay" = do nothing),
 // the RIGHT track is where it goes if you pull the lever ("pull").
@@ -233,6 +233,118 @@
         out: 'Little you sees stars and yells "COOL!" Somewhere in your timeline, the bowl haircut gets slightly better.' },
       pull: { items: [{ e: '1f9d3', hat: '1f963' }], label: 'You, age 90 (same haircut)',
         out: 'Old you chuckles. "I remember this one," they say, brushing off the stars. "It was fine."' }
+    },
+    {
+      id: 'snails', title: 'The Snail Grand Prix', theme: 'day', pullPct: 58, util: 'pull',
+      text: 'Four racing snails are on the main track, forty minutes into a race that is two meters long. On the other track: last year\'s champion snail, resting on its trophy and refusing to sign autographs.',
+      stay: { items: rep('1f40c', 4), label: '4 snails, mid-race', bonk: 'SPLORT!',
+        out: 'The snails pop into their shells and roll the rest of the way. It is the fastest finish in snail racing history.' },
+      pull: { items: [{ e: '1f40c', hat: '1f3c6' }], label: '1 retired champion snail', bonk: 'TONK!',
+        out: 'The trophy rings like a bell. The champion peeks out, sighs, and announces a comeback tour.' }
+    },
+    {
+      id: 'snooze', title: 'Snooze Button', theme: 'night', pullPct: 37,
+      text: 'It is 5:59 a.m. The trolley is heading for your alarm clock, about to ring for school. Pull the lever and it hits your bed instead, which is still warm and extremely comfortable.',
+      stay: { items: ['23f0'], label: 'Your alarm clock (rings in 1 minute)', bonk: 'BRRRING!',
+        out: 'The alarm clock goes quiet forever. You sleep in until noon and wake up with the deep confusion of someone who missed something.' },
+      pull: { items: ['1f6cf'], label: 'Your warm, perfect bed', bonk: 'FWUMP!',
+        out: 'The bed is squashed flat as a pancake. The alarm rings. You are now awake AND bedless. Great start to the day.' }
+    },
+    {
+      id: 'sandcastle', title: 'Sandcastle Kingdom', theme: 'beach', pullPct: 61,
+      text: 'A kid spent six whole hours building a huge sandcastle, and it sits right on the main track. On the other track: three seagulls who have stolen everyone\'s fries all summer, sharing a fresh batch.',
+      stay: { items: ['1f3f0'], label: '1 magnificent sandcastle', bonk: 'FLUMPH!',
+        out: 'The sandcastle becomes a sand pancake. The kid immediately starts building Sandcastle Kingdom II, which is bigger.' },
+      pull: { items: ['1f426', '1f35f', '1f426', '1f426'], label: '3 fry-stealing seagulls', bonk: 'SQUAWK!',
+        out: 'The seagulls burst into a cloud of feathers and outrage, land three meters away, and steal more fries.' }
+    },
+    {
+      id: 'snowmen', title: 'Snowman Family Reunion', theme: 'snow', pullPct: 72, util: 'pull',
+      text: 'Four snowmen are having a family reunion on the main track. On the other track: one snowman in a top hat who says he is the mayor of winter. Nobody voted for him.',
+      stay: { items: rep('26c4', 4), label: '4 snowmen at a reunion', fx: 'confetti', bonk: 'POOF!',
+        out: 'Four snowmen become one giant snowball. They decide this is fine; they were always close.' },
+      pull: { items: [{ e: '26c4', hat: '1f3a9' }], label: '1 self-declared mayor of winter', bonk: 'POOF!',
+        out: 'The mayor rebuilds himself in four seconds flat, hat first. He blames the whole thing on spring.' }
+    },
+    {
+      id: 'fridge', title: 'Name on the Box', theme: 'day', pullPct: 81,
+      text: 'The trolley is heading for a slice of cake with YOUR name written on the box. Pull the lever and it flattens your sibling\'s sandwich instead. Their name is on that one.',
+      stay: { items: ['1f370'], label: 'Your cake (labelled, obviously)', bonk: 'SPLAT!',
+        out: 'Your cake is now a cake smoothie. Your sibling hands you a spoon, looking far too happy about it.' },
+      pull: { items: ['1f96a'], label: 'Your sibling\'s sandwich', bonk: 'SQUISH!',
+        out: 'The sandwich becomes a toasted panini. Your sibling says it actually tastes better now. You are both confused.' }
+    },
+    {
+      id: 'robots', title: 'The Poet Robot', theme: 'space', pullPct: 49, util: 'pull',
+      text: 'Five cleaning robots are rolling across the main track toward their charging dock. On the other track: one robot that taught itself to write poems. They rhyme. They are not good.',
+      stay: { items: rep('1f916', 5), label: '5 cleaning robots', bonk: 'CLANK!',
+        out: 'Five robots reboot at once. They forget where the dock is and clean the trolley instead. It sparkles.' },
+      pull: { items: [{ e: '1f916', hat: '1f4dd' }], label: '1 robot poet', bonk: 'CLONK!',
+        out: 'The robot bounces back and writes a poem about it: "Trolley came, I saw the light, now my head is not on right."' }
+    },
+    {
+      id: 'bees', title: 'Bee Business', theme: 'day', pullPct: 74, util: 'pull',
+      text: 'A whole hive of busy bees is buzzing over the main track. On the other track: one jar of the honey they made last summer. The bees would like you to know it is THEIR honey.',
+      stay: { items: rep('1f41d', 3), label: 'A hive of 30,000 bees', badge: 'x30,000', soft: true, fx: 'sparkle', bonk: 'BZZZT!',
+        out: 'The trolley zooms through a cloud of very annoyed bees. They file 30,000 complaints, each one a tiny buzz.' },
+      pull: { items: ['1f36f'], label: '1 jar of honey', bonk: 'GLOP!',
+        out: 'Honey everywhere. The trolley is now sticky forever. The bees fly over and start licking the tracks.' }
+    },
+    {
+      id: 'chess', title: 'Checkmate in One', theme: 'night', pullPct: 45,
+      text: 'On the main track: a chess game you are ONE move from winning, after three hours. On the other: a 1,000-piece jigsaw puzzle with 999 pieces done. The last piece is under the sofa.',
+      stay: { items: ['265f'], label: 'Your chess game, one move from victory', fx: 'confetti', bonk: 'CLATTER!',
+        out: 'Chess pieces rain down everywhere. Your opponent declares it a draw. You will be thinking about this one for years.' },
+      pull: { items: ['1f9e9'], label: 'A 999/1000 jigsaw puzzle', fx: 'confetti', bonk: 'CLATTER!',
+        out: 'The puzzle becomes 1,000 loose pieces again. Someone finds the missing one under the sofa. Perfect timing, honestly.' }
+    },
+    {
+      id: 'cereal', title: 'Milk First', theme: 'sunset', pullPct: 23,
+      text: 'On the main track: a bowl of cereal made the normal way. On the other track: a bowl where somebody poured the MILK first, then the cereal. It is still sitting there, judging you.',
+      stay: { items: ['1f963'], label: 'Cereal, poured the normal way', bonk: 'SPLOOSH!',
+        out: 'A wave of milk washes over the track. The cereal surfs it to safety, crunchy and proud.' },
+      pull: { items: ['1f95b', '1f963'], label: 'Milk-first cereal', bonk: 'SPLOOSH!',
+        out: 'The milk-first bowl is gone. Somewhere, a breakfast philosopher sheds a single tear of relief.' }
+    },
+    {
+      id: 'photo', title: 'Just One More Photo', theme: 'beach', pullPct: 67,
+      text: 'A family is posing for a holiday photo on the main track, smiles frozen for ten minutes. On the other track: the photographer, who keeps saying "just one more" and has taken 400.',
+      stay: { items: ['1f468-200d-1f469-200d-1f467'], label: 'A family, mid-smile', bonk: 'CLICK!',
+        out: 'The family gets bonked mid-smile. It becomes the best photo of the trip: total chaos, everyone laughing.' },
+      pull: { items: [{ e: '1f9d1', hat: '1f4f8' }], label: 'The "one more" photographer', bonk: 'FLASH!',
+        out: 'The camera flies into the air and takes one last shot: the trolley from above. Photo of the year.' }
+    },
+    {
+      id: 'library', title: 'The Overdue Book', theme: 'sunset', pullPct: 22,
+      text: 'The trolley is heading for a library book that is twelve years overdue. Pull the lever and it heads for the librarian who has waited at the door all twelve years. She has her stamp ready.',
+      stay: { items: ['1f4da'], label: 'A book, 12 years overdue', bonk: 'FWAP!',
+        out: 'The book flies open and lands on its last page. Now you know how it ends. You still owe the fine.' },
+      pull: { items: [{ e: '1f469', hat: '1f4d6' }], label: 'The very patient librarian', bonk: 'SHHH!',
+        out: 'The librarian brushes off the stars and whispers "shhh" at the trolley. It immediately rolls more quietly.' }
+    },
+    {
+      id: 'sciencefair', title: 'Science Fair Panic', theme: 'desert', pullPct: 47,
+      text: 'Two minutes before judging, your baking-soda volcano sits on the main track. On the other track: last year\'s winner, a potato battery that lights one very small bulb.',
+      stay: { items: ['1f30b'], label: 'Your baking-soda volcano', fx: 'confetti', bonk: 'FIZZ!',
+        out: 'The volcano erupts in fizzy foam all over the trolley. The judges think it was planned and give you first place.' },
+      pull: { items: ['1f954', '1f50b', '1f4a1'], label: 'The potato battery', bonk: 'BZAP!',
+        out: 'The potato goes flying and the bulb flickers out. The trolley\'s headlights come on instead. Science is weird.' }
+    },
+    {
+      id: 'kites', title: 'Kite Day', theme: 'day', pullPct: 39, util: 'pull',
+      text: 'On the main track: four kites hopelessly tangled together, strings knotted beyond repair. On the other track: one perfect kite, flying high on the first try. Its owner is so proud.',
+      stay: { items: rep('1fa81', 4), label: '4 hopelessly tangled kites', bonk: 'TWANG!',
+        out: 'The trolley untangles all four kites in one go. They fly off together, friends forever. Nobody can explain it.' },
+      pull: { items: ['1fa81'], label: '1 perfect kite', bonk: 'TWANG!',
+        out: 'The kite string catches the trolley, which floats gently off the tracks for one second. Best day ever, for the trolley.' }
+    },
+    {
+      id: 'bats', title: 'The Bat Choir', theme: 'spooky', pullPct: 79, util: 'pull',
+      text: 'Five bats are rehearsing an upside-down choir concert on the main track. On the other track: a jack-o\'-lantern somebody spent three whole hours carving. It has eyebrows.',
+      stay: { items: rep('1f987', 5), label: '5 bats in a choir', soft: true, fx: 'sparkle', bonk: 'EEEEK!',
+        out: 'The bats scatter and hit a perfect high note on the way up. Their best rehearsal yet.' },
+      pull: { items: ['1f383'], label: '1 very detailed jack-o\'-lantern', bonk: 'SQUELCH!',
+        out: 'Pumpkin soup for everyone! The eyebrows survive, somehow, and get framed.' }
     },
     {
       id: 'results', title: 'The Results Button', theme: 'space', pullPct: 40,
