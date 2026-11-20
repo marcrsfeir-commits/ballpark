@@ -129,6 +129,25 @@ const drawTitle = () => title.replaceChildren(pixelText('BALLPARK', { px: innerW
 drawTitle();
 addEventListener('resize', drawTitle);
 
+// NEW / UPDATED badges: version.json carries a content hash per game; the player's last-seen hashes live in
+// ballpark.seen. A first visit marks everything as seen (no wall of badges); opening a game clears its badge.
+let builds = null;
+const SEEN = 'ballpark.seen';
+const fmtDay = d => new Date(d + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }).toUpperCase();
+function badgeFor(id) {
+  const b = builds && builds[id], seen = read(SEEN, null);
+  if (!b || !seen) return '';
+  if (!(id in seen)) return `<span class="fresh new" title="New game">NEW</span>`;
+  if (seen[id] !== b.h) return `<span class="fresh" title="Changed on ${fmtDay(b.d)} since you last played">UPDATED ${fmtDay(b.d)}</span>`;
+  return '';
+}
+function markSeen(id) {
+  if (!builds || !builds[id]) return;
+  const seen = read(SEEN, {});
+  seen[id] = builds[id].h;
+  try { localStorage.setItem(SEEN, JSON.stringify(seen)); } catch { /* storage blocked */ }
+}
+
 function render() {
   const status = read('ballpark.status', {});
   const t = today();
@@ -145,10 +164,11 @@ function render() {
     a.style.cssText = `--bg:${g.bg};--fg:${g.fg || '#fff'};--accent:${g.accent};--on-accent:${g.onAccent || (g.fg ? '#fff' : '#0b0b10')};--glow:${g.glow}`;
     a.innerHTML = `${playedToday ? '<span class="tick" title="Played today"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>' : ''}
       <div class="art">${g.art}</div>
-      <h2>${g.name}</h2>
+      <h2>${g.name} ${badgeFor(g.id)}</h2>
       <p>${g.blurb}</p>
       <div class="insp">${g.insp}</div>
       <div class="meta"><span class="status ${playedToday ? 'done' : ''}">${playedToday ? `TODAY · ${s.label || s.score}` : 'NOT PLAYED TODAY'}</span><span class="play">${playedToday ? 'AGAIN' : 'PLAY'} ▸</span></div>`;
+    a.addEventListener('click', () => markSeen(g.id));
     wrap.append(a);
   }
   // scorecard tile: copy every result from today in one go
@@ -190,7 +210,17 @@ if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
 }
 
 // subtle build label in the footer
-fetch('version.json', { cache: 'no-store' }).then(r => r.json()).then(v => { const el = document.getElementById('ver'); if (el) el.textContent = `v${v.v} · ${v.built}`; }).catch(() => {});
+fetch('version.json', { cache: 'no-store' }).then(r => r.json()).then(v => {
+  const el = document.getElementById('ver'); if (el) el.textContent = `v${v.v} · ${v.built}`;
+  if (v.games) {
+    builds = v.games;
+    if (!read(SEEN, null)) { // first visit on this device: nothing is "new" to someone who has never been here
+      const all = {}; for (const id in builds) all[id] = builds[id].h;
+      try { localStorage.setItem(SEEN, JSON.stringify(all)); } catch { /* storage blocked */ }
+    }
+    render();
+  }
+}).catch(() => {});
 
 async function offlineBadge() {
   const el = document.getElementById('offline');
