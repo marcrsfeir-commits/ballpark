@@ -20,8 +20,8 @@
 <div id="pops" aria-hidden="true"></div>
 <div class="toast" id="toast" aria-live="polite"></div>
 
-<button class="iconbtn" id="mute" type="button" aria-label="Mute sound" title="Sound (M)">🔊</button>
-<button class="iconbtn pause" id="pauseBtn" type="button" aria-label="Pause" title="Pause (P)" hidden>❚❚</button>
+<button class="iconbtn" id="mute" type="button" aria-label="Mute sound" title="Sound (M)"></button>
+<button class="iconbtn pause" id="pauseBtn" type="button" aria-label="Pause" title="Pause (P)" data-ico="pause" hidden></button>
 
 <!-- main menu -->
 <section class="panel" id="start">
@@ -33,9 +33,9 @@
   <p class="sub">Roll as far as you can. Grab gems, hit ramps, it only gets faster.</p>
   <button class="big" id="go" type="button">ROLL ▸</button>
   <div class="tabs">
-    <button class="tab" id="openShop" type="button"><span>🎨</span>SKINS</button>
-    <button class="tab" id="openGoals" type="button"><span>🏆</span>GOALS <em id="goalCount"></em></button>
-    <button class="tab" id="quality" type="button"><span>✨</span><b id="qualityLabel">HIGH</b></button>
+    <button class="tab" id="openShop" type="button"><span data-ico="palette"></span>SKINS</button>
+    <button class="tab" id="openGoals" type="button"><span data-ico="trophy"></span>GOALS <em id="goalCount"></em></button>
+    <button class="tab" id="quality" type="button"><span data-ico="sparkle"></span><b id="qualityLabel">HIGH</b></button>
   </div>
   <p class="how"><kbd>←</kbd><kbd>→</kbd> / <kbd>A</kbd><kbd>D</kbd> steer · on phone hold left or right side · <kbd>P</kbd> pause</p>
   <p class="best" id="bestStart"></p>
@@ -69,7 +69,7 @@
     <button class="big" id="again" type="button">AGAIN ▸</button>
   </div>
   <div class="row small">
-    <button class="ghost" id="overShop" type="button">🎨 Skins</button>
+    <button class="ghost" id="overShop" type="button" data-ico="palette">Skins</button>
     <button class="ghost" id="overMenu" type="button">Menu</button>
     <button class="ghost" id="share" type="button">Copy result</button>
   </div>

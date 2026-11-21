@@ -58,20 +58,42 @@ function levelInfo(xp) {
   return { lv, into: left, need: xpStep(lv) };
 }
 
+// ---------- drawn icons (BALLPARK has no emoji: every icon is a small stroke SVG in currentColor) ----------
+const ICON = {
+  sound: '<path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="currentColor" stroke-linejoin="round"/><path d="M15.5 9a4.2 4.2 0 0 1 0 6M18 6.5a7.8 7.8 0 0 1 0 11"/>',
+  muted: '<path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="currentColor" stroke-linejoin="round"/><path d="M15.5 9.5l5 5M20.5 9.5l-5 5"/>',
+  pause: '<rect x="6.5" y="5" width="3.6" height="14" rx="1.2" fill="currentColor" stroke="none"/><rect x="13.9" y="5" width="3.6" height="14" rx="1.2" fill="currentColor" stroke="none"/>',
+  palette: '<path d="M12 3.5a8.5 8.5 0 1 0 0 17c1.4 0 1.9-1 1.4-2.1-.6-1.3.2-2.6 1.7-2.6h2.1c1.9 0 3.3-1.5 3.3-3.6C20.5 7 16.7 3.5 12 3.5z"/><circle cx="7.6" cy="11" r="1.4" fill="currentColor" stroke="none"/><circle cx="10.4" cy="7.3" r="1.4" fill="currentColor" stroke="none"/><circle cx="15" cy="7.6" r="1.4" fill="currentColor" stroke="none"/>',
+  trophy: '<path d="M7.5 4h9v5a4.5 4.5 0 0 1-9 0z"/><path d="M7.5 6H4.5c0 3 1.3 4.5 3.4 4.8M16.5 6h3c0 3-1.3 4.5-3.4 4.8M12 13.5V17M8.5 20h7M9.5 17h5v3h-5z"/>',
+  sparkle: '<path d="M12 3c.6 4.3 1.9 5.9 6.5 6.5-4.6.6-5.9 2.2-6.5 6.5-.6-4.3-1.9-5.9-6.5-6.5C10.1 8.9 11.4 7.3 12 3z" fill="currentColor" stroke-linejoin="round"/><path d="M18.5 15v5M16 17.5h5"/>',
+  road: '<path d="M9 3.5 5 20.5M15 3.5l4 17M12 4.5v2.5M12 10v3M12 16v4"/>',
+  star: '<path d="m12 3.5 2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.8l-5.2 2.8 1-5.8-4.3-4.1 5.9-.8z" stroke-linejoin="round"/>',
+  gem: '<path d="M7 4.5h10l3.5 5L12 20 3.5 9.5z" stroke-linejoin="round"/><path d="M3.5 9.5h17M9.5 4.5 8 9.5l4 10.5 4-10.5-1.5-5"/>',
+  air: '<path d="M2.5 19.5h6M15.5 19.5h6"/><path d="M5.5 16.5C7.5 10.5 11 8 15 8.2" stroke-dasharray="2 2.6"/><circle cx="18" cy="9" r="3" fill="currentColor" stroke="none"/>',
+  close: '<path d="M12 4 21 19.5H3z" stroke-linejoin="round"/><path d="M12 9.5v4.5"/><circle cx="12" cy="17" r="1.1" fill="currentColor" stroke="none"/>',
+  runs: '<path d="M19.5 12A7.5 7.5 0 0 1 6.3 16.9M4.5 12A7.5 7.5 0 0 1 17.7 7.1"/><path d="M17.9 3.6v3.7h-3.7M6.1 20.4v-3.7h3.7"/>',
+  globe: '<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c-3 3.2-3 13.8 0 17M12 3.5c3 3.2 3 13.8 0 17"/>',
+  ice: '<path d="M12 3v18M4.2 7.5l15.6 9M19.8 7.5l-15.6 9M9.5 4.5 12 7l2.5-2.5M9.5 19.5 12 17l2.5 2.5"/>',
+  check: '<circle cx="12" cy="12" r="8.5"/><path d="m8 12.3 2.8 2.8L16.3 9.4"/>',
+  up: '<path d="M12 20V5M6 10.5 12 4.5l6 6"/>',
+};
+const icon = (name, cls = '') => `<svg class="ico ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">${ICON[name]}</svg>`;
+for (const el of document.querySelectorAll('[data-ico]')) el.insertAdjacentHTML('afterbegin', icon(el.dataset.ico));
+
 const GOALS = [
-  { id: 'd500', ic: '🛣️', text: 'Roll 500 m in one run', target: 500, val: s => s.bestDist, reward: 40 },
-  { id: 'd1500', ic: '🛣️', text: 'Roll 1,500 m in one run', target: 1500, val: s => s.bestDist, reward: 120 },
-  { id: 'd3000', ic: '🛣️', text: 'Roll 3,000 m in one run', target: 3000, val: s => s.bestDist, reward: 300 },
-  { id: 's2000', ic: '⭐', text: 'Score 2,000 in one run', target: 2000, val: s => s.bestScore, reward: 100 },
-  { id: 's6000', ic: '⭐', text: 'Score 6,000 in one run', target: 6000, val: s => s.bestScore, reward: 350 },
-  { id: 'g30', ic: '💎', text: 'Grab 30 gems in one run', target: 30, val: s => s.maxRunGems, reward: 80 },
-  { id: 'g500', ic: '💎', text: 'Collect 500 gems in total', target: 500, val: s => s.totalGems, reward: 200 },
-  { id: 'air', ic: '🪂', text: 'Stay airborne 1.2 s in one jump', target: 1.2, val: s => s.maxAir, reward: 100, fmt: v => `${Math.min(v, 1.2).toFixed(1)} / 1.2 s` },
-  { id: 'close', ic: '😬', text: '8 close calls in one run', target: 8, val: s => s.maxClose, reward: 120 },
-  { id: 'runs', ic: '🔁', text: 'Play 15 runs', target: 15, val: s => s.runs, reward: 60 },
-  { id: 'total', ic: '🌍', text: 'Roll 20,000 m in total', target: 20000, val: s => s.totalDist, reward: 250 },
-  { id: 'ice', ic: '🧊', text: 'Reach the Ice Circuit', target: 2, val: s => s.maxZone, reward: 150, fmt: v => `zone ${Math.min(v, 2) + 1} / 3` },
-  { id: 'skins', ic: '🎨', text: 'Own 4 skins', target: 4, val: () => save.owned.length, reward: 150 },
+  { id: 'd500', ic: 'road', text: 'Roll 500 m in one run', target: 500, val: s => s.bestDist, reward: 40 },
+  { id: 'd1500', ic: 'road', text: 'Roll 1,500 m in one run', target: 1500, val: s => s.bestDist, reward: 120 },
+  { id: 'd3000', ic: 'road', text: 'Roll 3,000 m in one run', target: 3000, val: s => s.bestDist, reward: 300 },
+  { id: 's2000', ic: 'star', text: 'Score 2,000 in one run', target: 2000, val: s => s.bestScore, reward: 100 },
+  { id: 's6000', ic: 'star', text: 'Score 6,000 in one run', target: 6000, val: s => s.bestScore, reward: 350 },
+  { id: 'g30', ic: 'gem', text: 'Grab 30 gems in one run', target: 30, val: s => s.maxRunGems, reward: 80 },
+  { id: 'g500', ic: 'gem', text: 'Collect 500 gems in total', target: 500, val: s => s.totalGems, reward: 200 },
+  { id: 'air', ic: 'air', text: 'Stay airborne 1.2 s in one jump', target: 1.2, val: s => s.maxAir, reward: 100, fmt: v => `${Math.min(v, 1.2).toFixed(1)} / 1.2 s` },
+  { id: 'close', ic: 'close', text: '8 close calls in one run', target: 8, val: s => s.maxClose, reward: 120 },
+  { id: 'runs', ic: 'runs', text: 'Play 15 runs', target: 15, val: s => s.runs, reward: 60 },
+  { id: 'total', ic: 'globe', text: 'Roll 20,000 m in total', target: 20000, val: s => s.totalDist, reward: 250 },
+  { id: 'ice', ic: 'ice', text: 'Reach the Ice Circuit', target: 2, val: s => s.maxZone, reward: 150, fmt: v => `zone ${Math.min(v, 2) + 1} / 3` },
+  { id: 'skins', ic: 'palette', text: 'Own 4 skins', target: 4, val: () => save.owned.length, reward: 150 },
 ];
 
 // ---------- renderer / scene ----------
@@ -857,7 +879,7 @@ const sfx = {
 const muteBtn = document.getElementById('mute');
 function setMute(m) {
   muted = m; store.set('muted', m);
-  muteBtn.textContent = m ? '🔇' : '🔊';
+  muteBtn.innerHTML = icon(m ? 'muted' : 'sound');
   muteBtn.setAttribute('aria-label', m ? 'Unmute sound' : 'Mute sound');
   if (rollGain) rollGain.gain.value = 0;
 }
@@ -1017,10 +1039,10 @@ function endRun(kind) {
   if (lv > prevLv) {
     save.wallet += lvGems;
     const unlocked = [...SKINS.filter(x => x.level > prevLv && x.level <= lv).map(x => `${x.name} skin`), ...TRAILS.filter(x => x.level > prevLv && x.level <= lv).map(x => `${x.name} trail`)];
-    notes.push(`⬆️ LEVEL ${lv}! +${lvGems} gems${unlocked.length ? ` · unlocked: ${unlocked.join(', ')}` : ''}`);
+    notes.push(`${icon('up')}LEVEL ${lv}! +${lvGems} gems${unlocked.length ? ` · unlocked: ${unlocked.join(', ')}` : ''}`);
   }
   for (const g of GOALS) {
-    if (!save.goals[g.id] && g.val(s) >= g.target) { save.goals[g.id] = Date.now(); save.wallet += g.reward; notes.push(`🏆 ${g.text} · +${g.reward} gems`); }
+    if (!save.goals[g.id] && g.val(s) >= g.target) { save.goals[g.id] = Date.now(); save.wallet += g.reward; notes.push(`${icon('trophy')}${g.text} · +${g.reward} gems`); }
   }
   persist();
 
@@ -1038,7 +1060,7 @@ function showOver() {
   const r = lastResult;
   $('overTitle').textContent = r.kind === 'crash' ? 'WIPEOUT' : r.kind === 'fall' ? 'FELL OFF' : 'RUN ENDED';
   $('finalScore').textContent = fmt(r.score);
-  $('breakdown').innerHTML = `<span><b>${fmt(r.dist)}</b> m</span><span><b>${r.gems}</b> gems</span><span><b>+${fmt(r.bonus)}</b> trick pts</span>`;
+  $('breakdown').innerHTML = `<span><b>${fmt(r.dist)}</b> m</span><span><b>${r.gems}</b> gem${r.gems === 1 ? '' : 's'}</span><span><b>+${fmt(r.bonus)}</b> trick pts</span>`;
   const bo = $('bestOver');
   bo.classList.toggle('new', r.newBest && r.score > 0);
   bo.textContent = r.newBest && r.score > 0 ? 'NEW BEST!' : `BEST ${fmt(save.bestScore)} PTS`;
@@ -1127,7 +1149,7 @@ function renderShop() {
 }
 function checkSkinGoal() {
   const g = GOALS.find(x => x.id === 'skins');
-  if (!save.goals[g.id] && save.owned.length >= g.target) { save.goals[g.id] = Date.now(); save.wallet += g.reward; setTimeout(() => toast('🏆 GOAL DONE', `+${g.reward} GEMS`), 1600); }
+  if (!save.goals[g.id] && save.owned.length >= g.target) { save.goals[g.id] = Date.now(); save.wallet += g.reward; setTimeout(() => toast('GOAL DONE', `+${g.reward} GEMS`), 1600); }
 }
 function openGoals() {
   showPanel('goals');
@@ -1137,7 +1159,7 @@ function openGoals() {
     const v = g.val(s), done = !!save.goals[g.id], pct = Math.min(1, v / g.target);
     const li = document.createElement('li');
     li.className = done ? 'done' : '';
-    li.innerHTML = `<span class="ic">${done ? '✅' : g.ic}</span><div><div class="t">${g.text}</div><div class="pb"><i style="width:${pct * 100}%"></i></div>
+    li.innerHTML = `<span class="ic">${icon(done ? 'check' : g.ic)}</span><div><div class="t">${g.text}</div><div class="pb"><i style="width:${pct * 100}%"></i></div>
       <div class="pt">${done ? 'DONE' : g.fmt ? g.fmt(v) : `${fmt(Math.min(v, g.target))} / ${fmt(g.target)}`}</div></div><span class="rw"><i class="gemico"></i>${g.reward}</span>`;
     list.append(li);
   }
@@ -1193,7 +1215,7 @@ $('quality').addEventListener('click', () => setQuality(save.quality === 'high' 
 ui.pauseBtn.addEventListener('click', () => { pause(); ui.pauseBtn.blur(); });
 $('share').addEventListener('click', async () => {
   const r = lastResult; if (!r) return;
-  const text = `DOWNHILL ⛰️ ${fmt(r.score)} pts · ${fmt(r.dist)} m · ${r.gems} 💎 (level ${levelInfo(save.xp).lv})\n${location.href.split('#')[0]}`;
+  const text = `DOWNHILL: ${fmt(r.score)} pts · ${fmt(r.dist)} m · ${r.gems} gem${r.gems === 1 ? '' : 's'} (level ${levelInfo(save.xp).lv})\n${location.href.split('#')[0]}`;
   let ok = false;
   try { await navigator.clipboard.writeText(text); ok = true; } catch {
     const ta = document.createElement('textarea'); ta.value = text; document.body.append(ta); ta.select();
