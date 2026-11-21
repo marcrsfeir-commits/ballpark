@@ -2,6 +2,13 @@
 
 One verified improvement per run (scheduled task `ballpark-daily`). Sundays = a new original game.
 
+## 2026-11-21 (Sat) — DOWNHILL: drawn icons replace every emoji
+- Swept all 16 games in headless Chrome (desktop + phone): 0 console errors, 0 horizontal scroll on load. A repo-wide grep found DOWNHILL was the only game still breaking the no-emoji rule (25 spots).
+- `games/downhill/game.js`: new `ICON` map of 16 stroke SVGs (currentColor, 24-unit grid) + `icon(name)`; HTML placeholders use `data-ico="..."` and are filled at boot. Covers the mute/unmute and pause buttons, SKINS/GOALS/quality tabs (pink/gold/cyan glow), all 13 goal icons (check when done), level-up and goal notes on the results card, the "Skins" button. Goal toast and share text are plain text now ("DOWNHILL: 712 pts · 249 m · 10 gems (level 3)").
+- Also "1 gem" instead of "1 gems" in the results breakdown and share text.
+- Verified (puppeteer, SW bypassed, desktop 1280×860 + phone 375×812): 6 icons on the menu, mute toggles icon + aria-label, 13 goal icons, pause button shows during play, full runs to WIPEOUT with seeded save (level-up + "Play 15 runs" goal notes both show their icons), share text copied, 0 console errors, no horizontal scroll, no emoji in page text. Screenshots looked right. `git grep` for emoji ranges outside vendor/: 0 hits.
+- Version: d011888.
+
 ## 2026-11-20 (Fri) — Hub: NEW / UPDATED badges on game cards
 - `tools/build-sw.mjs` now writes `games: {id: {h, d}}` into version.json: a content hash of each `games/<id>/` folder and the day it last changed (kept from the previous version.json while the hash is unchanged; first run seeded from each game's last git commit date).
 - `hub.js`: the player's last-seen hashes live in `ballpark.seen`. First visit on a device marks everything seen (no wall of badges). A changed game shows an "UPDATED 19 NOV" pill next to its name, a game the device has never seen shows "NEW"; clicking the card clears it. Pill uses the card accent, gentle pulse (off under reduced motion).
@@ -24,4 +31,5 @@ One verified improvement per run (scheduled task `ballpark-daily`). Sundays = a 
 - Circle Up / Odd Hue: check phone feel and a daily leaderboard-ish streak in the hub.
 - Hub: a short "what changed" line per game (e.g. a `notes` map in version.json set by the daily run) shown as the UPDATED pill's tooltip / under the blurb.
 - Big Spender / Been There: content counts — check if they run out fast.
-- Performance pass on DOWNHILL / SKYLANE with CPU throttle 6.
+- Performance pass on DOWNHILL / SKYLANE with CPU throttle 6. (Both already auto-drop quality below 32 fps, so check measured fps first.)
+- A tiny `tools/check-emoji.mjs` (or a check inside build-sw) that fails on emoji in text files, so the rule can't regress.
