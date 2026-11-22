@@ -2,6 +2,14 @@
 
 One verified improvement per run (scheduled task `ballpark-daily`). Sundays = a new original game.
 
+## 2026-11-22 (Sun) — NEW GAME: FAIR SHARE (17 games)
+- `games/fairshare/` (index.html, style.css, game.js). One straight swipe across a treat on a plate; split it into exactly the share asked. Daily = 5 treats seeded by date (same for everyone, no shape twice): half, half, half, one third, one quarter. Score 100 − 9 × points off per treat, /500. Practice = endless, random targets, running average.
+- 9 procedural shapes (blob cookie, bitten cookie, star cake, heart, toast, cheese wedge, brownie tetromino slabs, croissant crescent, cream-puff cloud) × flavours with drawn toppings (chips, sprinkles, berries, cheese holes, drizzle, crumbs). Cut = half-plane polygon clip (exact area, concave shapes fine); pieces slide apart with their %, the perfect parallel cut is drawn dashed. Too-short drags and misses don't count.
+- Results card: per-treat mini SVG with your cut, grade pips, copy text ("Half ±0.42 | ..."), countdown to tomorrow; daily progress saved per cut (`ballpark.fairshare.daily`, `.stats`, `.muted`), so reloads resume and can't reroll. Keyboard: arrows aim (Shift = fine), Enter cuts. Reduced motion respected. `window.__fair` test hooks (`show(kind, seed)`, `cut`, `fracOn`).
+- Hub: card + drawn cookie icon, "seventeen" games, 0 / 17.
+- Verified (puppeteer, SW bypassed, desktop 1280×860 + phone 375×812): 360 generated treats all valid; full daily with real mouse drags (perfect cuts scored 100, sloppy ones 44–51), results 395/500, share text, hub card shows "TODAY · 396/500", reload shows "See today's result", practice + keyboard cut, miss doesn't count; 0 console errors, no horizontal scroll, no emoji. Screenshots of every shape looked right (made the croissant chunkier, moved the score pop off the treat, no repeated shapes in a day after the first pass showed two bitten pancakes).
+- Version: 77bf127.
+
 ## 2026-11-21 (Sat) — DOWNHILL: drawn icons replace every emoji
 - Swept all 16 games in headless Chrome (desktop + phone): 0 console errors, 0 horizontal scroll on load. A repo-wide grep found DOWNHILL was the only game still breaking the no-emoji rule (25 spots).
 - `games/downhill/game.js`: new `ICON` map of 16 stroke SVGs (currentColor, 24-unit grid) + `icon(name)`; HTML placeholders use `data-ico="..."` and are filled at boot. Covers the mute/unmute and pause buttons, SKINS/GOALS/quality tabs (pink/gold/cyan glow), all 13 goal icons (check when done), level-up and goal notes on the results card, the "Skins" button. Goal toast and share text are plain text now ("DOWNHILL: 712 pts · 249 m · 10 gems (level 3)").
@@ -32,4 +40,5 @@ One verified improvement per run (scheduled task `ballpark-daily`). Sundays = a 
 - Hub: a short "what changed" line per game (e.g. a `notes` map in version.json set by the daily run) shown as the UPDATED pill's tooltip / under the blurb.
 - Big Spender / Been There: content counts — check if they run out fast.
 - Performance pass on DOWNHILL / SKYLANE with CPU throttle 6. (Both already auto-drop quality below 32 fps, so check measured fps first.)
+- FAIR SHARE: more shapes (donut with a hole needs polygon-with-holes clipping; pizza with toppings), a "two cuts into thirds" round, a weekly hard mode.
 - A tiny `tools/check-emoji.mjs` (or a check inside build-sw) that fails on emoji in text files, so the rule can't regress.
