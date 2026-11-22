@@ -107,6 +107,16 @@ const GAMES = [
       <rect x="57" y="50" width="6" height="5" fill="#ff8c22" stroke="#ffb347" stroke-width="1"/><circle cx="52" cy="68" r="7" fill="#eef2ff"/><path d="M45.5 68 H58.5" stroke="#1a2a6c" stroke-width="2.2"/><path d="M45.5 68 H58.5" stroke="#5ff2ff" stroke-width="1"/></svg>`,
   },
   {
+    id: 'fairshare', name: 'FAIR SHARE', path: 'games/fairshare/', insp: 'original cutting game',
+    blurb: 'One straight swipe. Cut the cookie in exactly half, then a third, then a quarter. Five treats a day.',
+    bg: 'linear-gradient(160deg,#4a2e1a 0%,#24160d 60%,#140c07 100%)', accent: '#ffc94a', onAccent: '#241600', glow: 'rgba(255,201,74,.28)',
+    art: `<svg viewBox="0 0 110 80" aria-hidden="true"><ellipse cx="55" cy="43" rx="47" ry="33" fill="#e4d6c0"/>
+      <path d="M52 13 A30 30 0 0 0 52 73 Z" fill="#d9a15a" stroke="#a8692f" stroke-width="2"/><path d="M58 13 A30 30 0 0 1 58 73 Z" fill="#d9a15a" stroke="#a8692f" stroke-width="2"/>
+      ${[[36, 32], [42, 56], [31, 46], [70, 30], [78, 48], [66, 62], [44, 22], [74, 18]].map(([x, y]) => `<ellipse cx="${x}" cy="${y}" rx="3.6" ry="2.7" fill="#4a2a14"/>`).join('')}
+      <path d="M55 3 V78" stroke="#fff" stroke-width="2" stroke-dasharray="4 3"/>
+      <text x="38" y="47" font-size="9" font-weight="900" fill="#241600" font-family="Segoe UI,Arial" text-anchor="middle">50</text><text x="72" y="47" font-size="9" font-weight="900" fill="#241600" font-family="Segoe UI,Arial" text-anchor="middle">50</text></svg>`,
+  },
+  {
     id: 'sandbox', name: 'SANDLOT', path: 'games/sandbox/', insp: 'original physics sandbox',
     blurb: 'Sand, water, lava, acid, little walkers and bombs. Then lightning, viruses, black holes and a nuke.',
     bg: 'linear-gradient(160deg,#1b2233 0%,#0b0e16 75%)', accent: '#f2c14e', onAccent: '#1b1405', glow: 'rgba(242,193,78,.3)',
