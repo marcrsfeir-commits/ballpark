@@ -5,8 +5,18 @@ import path from 'path';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import { execSync } from 'child_process';
+import { spawn } from 'child_process';
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
+
+// Run emoji check first (fails fast if emoji found, so the build stops immediately)
+console.log('Checking for emoji...');
+try {
+  execSync(`node "${path.join(root, 'tools', 'check-emoji.mjs')}"`, { cwd: root, stdio: 'inherit' });
+} catch (err) {
+  process.exit(1);
+}
+
 const SKIP_DIRS = new Set(['.git', 'tools', 'node_modules', '.claude']);
 const SKIP_FILES = new Set(['sw.js', 'version.json', 'serve.js', 'README.md', 'GAME_SPEC.md', '.gitignore']);
 const files = [];
