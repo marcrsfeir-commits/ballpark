@@ -33,6 +33,12 @@ One verified improvement per run (scheduled task `ballpark-daily`). Sundays = a 
 - Verified (puppeteer, SW bypassed, desktop 1280×860 + phone 375×812): legacy save → "Continue (level 28)", played all 15 remaining levels, end grid 42 cells, share text 6 rows, reload keeps "See my ethics profile", 0 console errors, no horizontal scroll. Screenshots looked right.
 - Version: b2a64f0.
 
+## 2026-11-23 (Mon) — TOOLING: Emoji regression check
+- Created `tools/check-emoji.mjs`: scans all text files in games/ and shared/, detects emoji characters using Unicode ranges, fails fast with line numbers if any are found.
+- Integrated into `tools/build-sw.mjs`: runs before sw.js generation, so the no-emoji rule can't regress without a build failure.
+- Verified (puppeteer, desktop 1280×860 + phone 375×812): hub loads cleanly, all 17 games visible, 0 console errors, no horizontal scroll. Spot-checked phone layout on Circle Up + Odd Hue (375×812): both fit cleanly, no overflow.
+- Version: 3546df7.
+
 ## Ideas backlog
 - Going Once: only 52 lots, runs out fast; more lots need verified prices + free-licence photos (Wikimedia) with credits.
 - Trolley Trouble: a few new levels use loose photos (the "bed" photo is a whole old bedroom); swap for better Wikimedia shots if any turn up.
