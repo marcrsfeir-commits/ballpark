@@ -117,6 +117,17 @@
         return R;
       });
     },
+    donut(r) { // concentric circles: outer ring + inner hole
+      const rInner = 0.35 + r() * 0.12, nPts = 100, P = [];
+      for (let i = 0; i < nPts; i++) { const a = i / nPts * TAU; P.push({ x: Math.cos(a), y: Math.sin(a) }); }
+      for (let i = nPts - 1; i >= 0; i--) { const a = i / nPts * TAU; P.push({ x: Math.cos(a) * rInner, y: Math.sin(a) * rInner }); }
+      return P;
+    },
+    pizza(r) { // wobbled circle
+      const nPts = 80, wobbleMax = 0.05 + r() * 0.04, P = [];
+      for (let i = 0; i < nPts; i++) { const a = i / nPts * TAU, wobble = 1 + wobbleMax * (r() - 0.5) * 2; P.push({ x: Math.cos(a) * wobble, y: Math.sin(a) * wobble }); }
+      return P;
+    },
   };
 
   const FL = {
@@ -129,6 +140,9 @@
     toast: { base: '#f0c886', hi: '#fae3b8', edge: '#a8662a', rim: 'rgba(150,80,20,.95)', rimW: 0.2, top: 'crumbs' },
     croissant: { base: '#e8a64a', hi: '#f8d48e', edge: '#a2601e', rim: 'rgba(140,70,15,.5)', top: 'stripes' },
     puff: { base: '#f2dfbd', hi: '#fffaf0', edge: '#c9a676', rim: 'rgba(170,120,60,.4)', top: 'dust' },
+    donut: { base: '#d4825f', hi: '#e8a98c', edge: '#9d5940', rim: 'rgba(120,60,30,.4)', top: 'chips' },
+    glazed: { base: '#f5d9a1', hi: '#fff4d6', edge: '#d9a856', rim: 'rgba(180,100,20,.5)', top: 'dust' },
+    pizza: { base: '#d2691e', hi: '#ff8c00', edge: '#8b4513', rim: 'rgba(100,50,20,.5)', top: 'berries' },
   };
   const KINDS = {
     blob: [['cookie', 'Choc-chip cookie'], ['lime', 'Lime tart'], ['berry', 'Blueberry pancake'], ['choc', 'Double chocolate cookie']],
@@ -140,6 +154,8 @@
     tetro: [['choc', 'Fudge brownie'], ['lime', 'Lime jelly slab'], ['berry', 'Blueberry traybake']],
     crescent: [['croissant', 'Croissant'], ['cheese', 'Cheese moon']],
     cloud: [['puff', 'Cream puff'], ['straw', 'Strawberry cloud cake'], ['berry', 'Blueberry cloud']],
+    donut: [['donut', 'Chocolate donut'], ['glazed', 'Glazed donut'], ['straw', 'Strawberry donut']],
+    pizza: [['pizza', 'Pepperoni pizza'], ['cheese', 'Cheese pizza'], ['lime', 'Spinach & feta pizza']],
   };
 
   function makeTreat(kind, seed) {
@@ -164,11 +180,11 @@
   // ---------- rounds ----------
   const TARGETS = { 0.5: ['HALF', 'Half', 'Cut it in <em>HALF</em>'], [1 / 3]: ['ONE THIRD', 'Third', 'Cut off exactly <em>ONE THIRD</em>'], 0.25: ['ONE QUARTER', 'Quarter', 'Cut off exactly <em>ONE QUARTER</em>'] };
   const DAILY = [
-    { t: 0.5, kinds: ['blob', 'toast', 'heart'] },
-    { t: 0.5, kinds: ['star', 'cloud', 'wedge'] },
-    { t: 0.5, kinds: ['tetro', 'bitten', 'crescent'] },
-    { t: 1 / 3, kinds: ['blob', 'heart', 'toast', 'wedge', 'cloud'] },
-    { t: 0.25, kinds: ['star', 'tetro', 'crescent', 'bitten', 'cloud'] },
+    { t: 0.5, kinds: ['blob', 'toast', 'heart', 'donut'] },
+    { t: 0.5, kinds: ['star', 'cloud', 'wedge', 'pizza'] },
+    { t: 0.5, kinds: ['tetro', 'bitten', 'crescent', 'pizza'] },
+    { t: 1 / 3, kinds: ['blob', 'heart', 'toast', 'wedge', 'cloud', 'donut'] },
+    { t: 0.25, kinds: ['star', 'tetro', 'crescent', 'bitten', 'cloud', 'pizza'] },
   ];
   const ALL_KINDS = Object.keys(SHAPES);
   function dailyRound(day, i) {
