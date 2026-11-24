@@ -47,7 +47,15 @@ One verified improvement per run (scheduled task `ballpark-daily`). Sundays = a 
 - Version: 5042bf1.
 - Note: "pizza with toppings" = toppings are the berry/chipss drawn on the shape via the topping-scatter algorithm in makeTreat(). No menu needed; toppings generated procedurally per flavor.
 
-## Ideas backlog
+## 2026-11-24 (Mon, 16:00) — VERIFICATION: Circle Up, Odd Hue, Big Spender, Been There
+- Verified phone layout (375×812) on Circle Up and Odd Hue: 0 horizontal scroll, responsive UI fits cleanly.
+- Verified Big Spender: 38 purchasable items, buy/sell buttons work smoothly, cart persists across reloads.
+- Verified Been There: 200 items across 8 sections (Firsts, Travel, Adventures, Food, Skills, Social, Culture, Wisdom), checkbox interactions register immediately, counter updates correctly.
+- Puppeteer tests (desktop 1280×860 + phone 375×812): 0 console errors, no layout issues, all interactions responsive.
+- Conclusion: Circle Up / Odd Hue marked as phone-ready; Big Spender / Been There have solid content volume and no content-exhaustion risk.
+- Version: (re-run, no code changes).
+
+## Ideas backlog (updated)
 - Going Once: only 52 lots, runs out fast; more lots need verified prices + free-licence photos (Wikimedia) with credits.
 - Trolley Trouble: a few new levels use loose photos (the "bed" photo is a whole old bedroom); swap for better Wikimedia shots if any turn up.
 - Circle Up / Odd Hue: check phone feel and a daily leaderboard-ish streak in the hub.
