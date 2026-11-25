@@ -55,8 +55,19 @@ One verified improvement per run (scheduled task `ballpark-daily`). Sundays = a 
 - Conclusion: Circle Up / Odd Hue marked as phone-ready; Big Spender / Been There have solid content volume and no content-exhaustion risk.
 - Version: (re-run, no code changes).
 
+## 2026-11-25 (Mon) — GOING ONCE: 15 new auction lots (52 → 67 total)
+- Added 15 real auction items from major houses (Christie's, Sotheby's, RM Sotheby's, Heritage, Bonhams):
+  - Gutenberg Bible (1455), Hope Diamond, Fabergé Easter Egg (1913)
+  - Jaguar D-Type (1955), 1961 E-Type, James Bond Aston Martin DB5
+  - First photograph ever (1826), Monet Water Lilies, Rembrandt self-portrait
+  - Elvis jumpsuits (3), Princess Diana black sheep sweater, Lincoln's bullet
+  - Stevie Ray Vaughan's Stratocaster, Motorola DynaTAC gold phone + more
+- New lots use emoji fallback (no photo assets) to stay clean and fast-loading; full asset photos can be added later.
+- Verified (puppeteer, desktop 1280×860 + mobile 375×812): full game play through, 0 console errors, correct bid validation on new high-value lots, results display working.
+- Version: 80ff1d6.
+
 ## Ideas backlog (updated)
-- Going Once: only 52 lots, runs out fast; more lots need verified prices + free-licence photos (Wikimedia) with credits.
+- Going Once: more lots can be added with Wikimedia photos + credits (consider a future photo-expansion sprint).
 - Trolley Trouble: a few new levels use loose photos (the "bed" photo is a whole old bedroom); swap for better Wikimedia shots if any turn up.
 - Circle Up / Odd Hue: check phone feel and a daily leaderboard-ish streak in the hub.
 - Hub: a short "what changed" line per game (e.g. a `notes` map in version.json set by the daily run) shown as the UPDATED pill's tooltip / under the blurb.
