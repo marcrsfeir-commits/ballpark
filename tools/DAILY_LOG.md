@@ -66,6 +66,14 @@ One verified improvement per run (scheduled task `ballpark-daily`). Sundays = a 
 - Verified (puppeteer, desktop 1280×860 + mobile 375×812): full game play through, 0 console errors, correct bid validation on new high-value lots, results display working.
 - Version: 80ff1d6.
 
+## 2026-11-26 (Wed) — BIG SPENDER: 12 new items (38 → 50 total)
+- Added mid-range luxury items to fill price gaps and prevent content exhaustion:
+  - Rolls-Royce ($400k), Luxury yacht 60m ($25M), Race horse ranch ($50M)
+  - Luxury resort ($200M), Film production studio ($500M), Olympic stadium ($850M)
+  - Ski resort ($1.5B), Space station module ($10B), plus 4 vehicle/landmark items
+- Verified (desktop and mobile 375×812): all items render correctly, Buy/Sell buttons functional, prices format correctly, cart persists across reloads. Tested full purchase cycle (bought burger for $4, money animated, Sell button enabled). 0 console errors (unrelated script fetch errors from serve.js pre-existing). Items grid extends to 50 items.
+- Version: a1b1f35.
+
 ## Ideas backlog (updated)
 - Going Once: more lots can be added with Wikimedia photos + credits (consider a future photo-expansion sprint).
 - Trolley Trouble: a few new levels use loose photos (the "bed" photo is a whole old bedroom); swap for better Wikimedia shots if any turn up.
