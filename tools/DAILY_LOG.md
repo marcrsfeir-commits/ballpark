@@ -74,6 +74,12 @@ One verified improvement per run (scheduled task `ballpark-daily`). Sundays = a 
 - Verified (desktop and mobile 375×812): all items render correctly, Buy/Sell buttons functional, prices format correctly, cart persists across reloads. Tested full purchase cycle (bought burger for $4, money animated, Sell button enabled). 0 console errors (unrelated script fetch errors from serve.js pre-existing). Items grid extends to 50 items.
 - Version: a1b1f35.
 
+## 2026-11-27 (Thu) — GOING ONCE: 15 new auction lots (67 → 82 total)
+- Added 15 historical/cultural items with real prices: Albert Einstein's equation sheet (1.81M), Marie Curie's notebooks (925k), Muhammad Ali's Olympic gloves (1.47M), Charles Dickens' A Christmas Carol manuscript (2.525M), Martin Luther King Jr.'s Bible (475k), James Dean's Porsche 550 (2.42M), Oscar Wilde letters (338k), Harry Houdini props (1.2M), Lewis Carroll annotated Alice (1.65M), Charlie Parker saxophone (137.5k), Jimi Hendrix Stratocaster (198k), and others.
+- All new items use emoji fallback codes (no photo assets); can add Wikimedia photos in a future sprint.
+- Verified (puppeteer, desktop 1280×860 + mobile 375×812): full game play (guessed $5M on result), 0 console errors, correct bid validation, no horizontal scroll on either layout. Screenshots looked right.
+- Version: ffb4a6b (now 82 lots).
+
 ## Ideas backlog (updated)
 - Going Once: more lots can be added with Wikimedia photos + credits (consider a future photo-expansion sprint).
 - Trolley Trouble: a few new levels use loose photos (the "bed" photo is a whole old bedroom); swap for better Wikimedia shots if any turn up.
