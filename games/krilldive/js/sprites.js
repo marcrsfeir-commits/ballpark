@@ -623,6 +623,26 @@ export function packArt(id) {
         for (let a = 0; a < 6.28; a += 0.9) px(g, Math.round(15 + Math.cos(a) * 12), Math.round(13 + Math.sin(a) * 10), '#e8ffc8');
         break;
       }
+      case 'pokemon': { // red-and-white capture ball
+        g.fillStyle = '#f2f4f8'; ell(g, 15, 13, 11, 11);
+        snap(g, w, h); shade(g, w, h, null, '#9aa3b5');
+        g.fillStyle = '#e3350d'; g.beginPath(); g.ellipse(15, 13, 11, 11, 0, Math.PI, 0); g.fill();
+        snap(g, w, h); shade(g, w, h, '#ff8a6e', null);
+        g.fillStyle = '#1b1f2a'; g.fillRect(4, 12, 22, 2); ell(g, 15, 13, 4, 4);
+        g.fillStyle = '#f2f4f8'; ell(g, 15, 13, 2.4, 2.4);
+        snap(g, w, h);
+        px(g, 9, 6, '#ffd0c4'); px(g, 10, 5, '#ffd0c4');
+        break;
+      }
+      case 'minecraft': { // grass block, three faces
+        g.fillStyle = '#8b5a2b'; poly(g, [15, 4, 27, 9, 27, 21, 15, 26, 3, 21, 3, 9]);
+        g.fillStyle = '#6aa84f'; poly(g, [15, 4, 27, 9, 15, 14, 3, 9]);
+        g.fillStyle = '#5d9b3a'; poly(g, [3, 9, 15, 14, 15, 17, 3, 12]); poly(g, [27, 9, 15, 14, 15, 17, 27, 12]);
+        snap(g, w, h);
+        g.fillStyle = '#6b4220'; poly(g, [15, 17, 27, 12, 27, 21, 15, 26]);
+        for (const [x, y, c] of [[7, 15, '#a0703e'], [10, 19, '#6b4220'], [6, 18, '#5a3a1a'], [20, 18, '#4f3016'], [23, 16, '#8b5a2b'], [18, 22, '#8b5a2b'], [13, 8, '#86c06a'], [18, 9, '#4f8a33'], [9, 9, '#86c06a'], [21, 8, '#86c06a']]) px(g, x, y, c);
+        break;
+      }
       default: {
         const k = krill('krill', 0);
         g.drawImage(k, 0, 2);

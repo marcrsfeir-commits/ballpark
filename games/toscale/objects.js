@@ -94,9 +94,44 @@ export const OBJECTS = [
   { id: 'penguin', name: 'Emperor penguin', detail: 'height as pictured, leaning forward', axis: 'height', size: 1.0, fact: 'The tallest penguin; it can dive more than 500 m deep.' },
   { id: 'flamingo', name: 'Greater flamingo', detail: 'standing height', axis: 'height', size: 1.3, fact: 'Flamingos are pink only because of the shrimp and algae they eat.' },
   { id: 'wolf', name: 'Grey wolf', detail: 'length incl. tail', axis: 'length', size: 1.6, fact: 'A wolf pack can roam more than 1,000 km² of territory.' },
+  // added 2026-11-28: animals and everyday things
+  { id: 'ostrich', name: 'Common ostrich', detail: 'adult male, height to top of head', axis: 'height', size: 2.4, fact: 'The largest living bird, and its eye is bigger than its brain.' },
+  { id: 'monarch', name: 'Monarch butterfly', detail: 'wingspan', axis: 'length', size: 0.095, fact: 'Some fly about 4,000 km from Canada to Mexico each autumn.' },
+  { id: 'violin', name: 'Violin', detail: 'full size (4/4), total length', axis: 'height', size: 0.59, fact: 'Its four strings are tuned G, D, A and E.' },
+  { id: 'chessking', name: 'Chess king', detail: 'tournament size, height', axis: 'height', size: 0.095, fact: 'FIDE rules want the king between 8.5 and 10.5 cm tall.' },
+  { id: 'racket', name: 'Tennis racket', detail: 'standard adult, length', axis: 'height', size: 0.686, fact: 'The rules cap a racket at 73.7 cm long.' },
+  { id: 'bowlingpin', name: 'Bowling pin', detail: 'ten-pin, height', axis: 'height', size: 0.381, fact: 'Each pin weighs about 1.5 kg.' },
+  { id: 'amfootball', name: 'American football', detail: 'full size, length', axis: 'length', size: 0.28, fact: 'Nicknamed the pigskin, but made of cowhide.' },
+  { id: 'david', name: "Michelangelo's David", detail: 'marble statue, without pedestal', axis: 'height', size: 5.17, fact: 'Carved from a single block of marble between 1501 and 1504.' },
+  // added 2026-11-28: vehicles and aircraft
+  { id: 'beetle', name: 'Volkswagen Beetle', detail: 'classic Type 1, length', axis: 'length', size: 4.07, fact: 'Over 21.5 million were built between 1938 and 2003.' },
+  { id: 'fiat500', name: 'Fiat 500', detail: '1960s Nuova 500, length', axis: 'length', size: 2.97, fact: 'Under 3 m long, it put Italy on wheels after the war.' },
+  { id: 'smart', name: 'Smart Fortwo', detail: 'two-seater city car, length', axis: 'length', size: 2.69, fact: 'Short enough to park nose-first against the kerb.' },
+  { id: 'delorean', name: 'DeLorean DMC-12', detail: 'the time-machine car, length', axis: 'length', size: 4.27, fact: 'Its stainless-steel body was never painted.' },
+  { id: 'f40', name: 'Ferrari F40', detail: 'length', axis: 'length', size: 4.36, fact: "Built in 1987 for Ferrari's 40th birthday." },
+  { id: 'hindenburg', name: 'Hindenburg airship', detail: 'length', axis: 'length', size: 245, fact: 'Almost as long as the Titanic, and filled with hydrogen.' },
+  { id: 'cessna', name: 'Cessna 172', detail: 'length', axis: 'length', size: 8.28, fact: 'More have been built than any other aircraft.' },
+  { id: 'b737', name: 'Boeing 737-800', detail: 'length', axis: 'length', size: 39.5, fact: 'The 737 is the best-selling jet airliner family ever.' },
+  { id: 'concorde', name: 'Concorde', detail: 'length', axis: 'length', size: 61.66, fact: 'It crossed the Atlantic in about three and a half hours.' },
+  { id: 'sr71', name: 'SR-71 Blackbird', detail: 'length', axis: 'length', size: 32.74, fact: 'Still the fastest crewed jet: over 3,500 km/h.' },
+  { id: 'an225', name: 'Antonov An-225 Mriya', detail: 'wingspan, seen head-on', axis: 'length', size: 88.4, fact: 'The heaviest aircraft ever built. It was destroyed in 2022.' },
+  // added 2026-11-28: space
+  { id: 'shuttle', name: 'Space Shuttle orbiter', detail: 'length', axis: 'length', size: 37.24, fact: 'It landed like a glider, with no engine power at all.' },
+  { id: 'lunarmodule', name: 'Apollo Lunar Module', detail: 'height, legs extended', axis: 'height', size: 7.04, fact: 'Only the top half flew back up; the legs stayed on the Moon.' },
+  // added 2026-11-28: landmarks
+  { id: 'washington', name: 'Washington Monument', detail: 'height', axis: 'height', size: 169.3, fact: 'The stone changes colour about a quarter of the way up, where work stopped for over 20 years.' },
+  { id: 'atomium', name: 'Atomium', detail: 'height', axis: 'height', size: 102, fact: 'Its nine spheres model an iron crystal enlarged 165 billion times.' },
+  { id: 'gatewayarch', name: 'Gateway Arch', detail: 'height', axis: 'height', size: 192, fact: 'It is exactly as wide as it is tall.' },
+  { id: 'spaceneedle', name: 'Space Needle', detail: 'height', axis: 'height', size: 184, fact: "Built in about 400 days for the 1962 World's Fair." },
+  { id: 'londoneye', name: 'London Eye', detail: 'height', axis: 'height', size: 135, fact: 'One full turn takes about 30 minutes.' },
+  { id: 'fernsehturm', name: 'Berlin TV Tower', detail: 'height incl. antenna', axis: 'height', size: 368, fact: 'Sunlight on its steel ball makes a cross, nicknamed the Pope\'s revenge.' },
+  { id: 'cntower', name: 'CN Tower', detail: 'height', axis: 'height', size: 553.3, fact: "The world's tallest free-standing structure for 32 years." },
+  { id: 'skytree', name: 'Tokyo Skytree', detail: 'height', axis: 'height', size: 634, fact: 'The tallest tower in the world.' },
 ];
 
 // Curated pairs that people get wrong: [reference, target]
 export const PAIRS = [
   ['tuna', 'bison'], ['yacht', 'a380'], ['chichen', 'christ'], ['dodo', 'elephant'], ['bigben', 'eiffel'], ['cab', 'polar'], ['f1', 'shark'], ['pisa', 'liberty'], ['titanic', 'eiffel'], ['saturn', 'liberty'], ['trex', 'bus'], ['pyramid', 'empire'], ['wolf', 'hippo'], ['fridge', 'rhino'], ['bee', 'hamster'], ['whale', 'a380'],
+  ['jet', 'an225'], ['shard', 'skytree'], ['horse', 'david'], ['bike', 'smart'], ['car', 'f40'], ['giraffe', 'ostrich'], ['ladybug', 'monarch'],
+  ['golfball', 'chessking'], ['football', 'amfootball'], ['guitar', 'violin'], ['heli', 'b737'], ['tram', 'shuttle'], ['tokyotower', 'londoneye'], ['iss', 'hindenburg'],
 ];

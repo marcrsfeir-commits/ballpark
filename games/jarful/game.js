@@ -4,15 +4,13 @@
 // pile, so the answer is always exactly the number of items drawn in the jar.
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { Runner } from './sim.js';
+import { ITEMS, KINDS, JARS, JAR_TYPES, capacity, MAX_BODIES } from './catalog.js';
 
 const BP = window.Ballpark;
 const store = BP.store('jarful');
 const $ = s => document.querySelector(s);
 const ACCENTS = ['#a78bfa', '#ff2d6f', '#7ee2c4', '#3fd9f0', '#ffb547'];
-const KINDS = ['sphere', 'egg', 'capsule', 'cone', 'coin', 'cube'];
-const JARS = ['cylinder', 'box', 'beaker'];
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const DEBUG = location.search.includes('debug');
 const ICON = {
@@ -58,8 +56,8 @@ let fitDist = 17;
 function fitCamera(reset) {
   if (!dims) return;
   const t = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
-  const halfW = dims.R * 1.45, halfH = dims.Hv / 2 + 1;
-  fitDist = Math.max(halfH / t, halfW / (t * camera.aspect)) + dims.R;
+  const halfW = dims.ext, halfH = dims.Hv / 2 + 1;
+  fitDist = Math.max(halfH / t, halfW / (t * camera.aspect)) + dims.ext / 1.45;
   controls.minDistance = fitDist * 0.6; controls.maxDistance = fitDist * 1.6;
   controls.target.set(0, dims.Hv * 0.45, 0);
   const dir = camera.position.clone().sub(controls.target);
@@ -83,37 +81,139 @@ renderer.domElement.addEventListener('webglcontextrestored', () => {
 
 // ---------- jar + items ----------
 let mesh = null, jarGroup = null, spec = null, dims = null;
-function geometryFor(kind) {
+// Every item is ONE geometry (merged parts, per-vertex colours for fixed details like a duck's beak or candy-corn
+// stripes) drawn with one InstancedMesh, so a full jar is still a single draw call. Sizes match sim.js shapeFor().
+function painted(g, rgb) {
+  g = g.index ? g.toNonIndexed() : g;
+  const pos = g.attributes.position, c = new Float32Array(pos.count * 3);
+  for (let i = 0; i < pos.count; i++) { const v = typeof rgb === 'function' ? rgb(pos.getX(i), pos.getY(i), pos.getZ(i)) : rgb; c[i * 3] = v[0]; c[i * 3 + 1] = v[1]; c[i * 3 + 2] = v[2]; }
+  g.setAttribute('color', new THREE.BufferAttribute(c, 3));
+  return g;
+}
+function merge(parts) {
+  const out = new THREE.BufferGeometry(), names = ['position', 'normal', 'uv', 'color'];
+  for (const n of names) {
+    const size = parts[0].attributes[n].itemSize, arr = new Float32Array(parts.reduce((s, g) => s + g.attributes[n].count * size, 0));
+    let o = 0; for (const g of parts) { arr.set(g.attributes[n].array, o); o += g.attributes[n].array.length; }
+    out.setAttribute(n, new THREE.BufferAttribute(arr, size));
+  }
+  parts.forEach(g => g.dispose());
+  return out;
+}
+const sphere = (r, w = 14, h = 10) => new THREE.SphereGeometry(r, w, h);
+const W = [1, 1, 1];
+// canvas textures (made once, kept for the page's life)
+const texCache = {};
+function canvasTex(key, w, h, draw) {
+  if (texCache[key]) return texCache[key];
+  const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+  return (texCache[key] = t);
+}
+// six die faces side by side; opposite faces add up to 7 (+x 1, -x 6, +y 2, -y 5, +z 3, -z 4)
+const dieTex = () => canvasTex('die', 768, 128, (x, w, h) => {
+  const P = { 1: [[.5, .5]], 2: [[.27, .27], [.73, .73]], 3: [[.25, .25], [.5, .5], [.75, .75]], 4: [[.27, .27], [.73, .27], [.27, .73], [.73, .73]], 5: [[.25, .25], [.75, .25], [.5, .5], [.25, .75], [.75, .75]], 6: [[.28, .24], [.72, .24], [.28, .5], [.72, .5], [.28, .76], [.72, .76]] };
+  [1, 6, 2, 5, 3, 4].forEach((n, f) => {
+    const ox = f * 128;
+    x.fillStyle = '#bdb8ad'; x.fillRect(ox, 0, 128, 128);
+    x.fillStyle = '#ffffff'; x.beginPath(); x.roundRect(ox + 5, 5, 118, 118, 26); x.fill();
+    x.fillStyle = '#1b1b22';
+    for (const [u, v] of P[n]) { x.beginPath(); x.arc(ox + u * 128, v * 128, n === 1 ? 15 : 11, 0, Math.PI * 2); x.fill(); }
+  });
+});
+const swirlTex = () => canvasTex('swirl', 256, 128, (x, w, h) => {
+  x.fillStyle = '#c9c9c9'; x.fillRect(0, 0, w, h);
+  for (const [a, ph, lw, col] of [[22, 0, 14, '#ffffff'], [16, 2.1, 7, '#8a8a8a'], [26, 4.2, 10, '#f2f2f2']]) {
+    x.strokeStyle = col; x.lineWidth = lw; x.beginPath();
+    for (let i = 0; i <= w; i += 4) { const y = h / 2 + Math.sin(i / w * Math.PI * 4 + ph) * a + Math.sin(i / w * Math.PI * 2) * 12; i ? x.lineTo(i, y) : x.moveTo(i, y); }
+    x.stroke();
+  }
+});
+const tokenTex = () => canvasTex('token', 128, 128, (x) => {
+  x.fillStyle = '#ffffff'; x.fillRect(0, 0, 128, 128);
+  x.strokeStyle = '#9a9a9a'; x.lineWidth = 6; x.beginPath(); x.arc(64, 64, 46, 0, Math.PI * 2); x.stroke();
+  x.fillStyle = '#a8a8a8'; x.beginPath();
+  for (let i = 0; i < 10; i++) { const r = i % 2 ? 13 : 30, a = -Math.PI / 2 + i * Math.PI / 5; x.lineTo(64 + Math.cos(a) * r, 64 + Math.sin(a) * r); }
+  x.fill();
+});
+function itemModel(kind) {
   switch (kind) {
-    case 'egg': { const g = new THREE.SphereGeometry(0.42, 18, 12); g.scale(0.85, 1.15, 0.85); return g; }
-    case 'capsule': return new THREE.CapsuleGeometry(0.24, 0.5, 4, 12);
-    case 'cone': return new THREE.ConeGeometry(0.4, 0.8, 16);
-    case 'coin': return new THREE.CylinderGeometry(0.45, 0.45, 0.16, 6);   // hex token: same shape as its physics body
-    case 'cube': return new RoundedBoxGeometry(0.7, 0.7, 0.7, 2, 0.12);
-    default: return new THREE.SphereGeometry(0.42, 18, 12);
+    case 'marble': return { geo: painted(sphere(0.3, 16, 12), W), map: swirlTex() };
+    case 'pingpong': return { geo: painted(sphere(0.52, 18, 12), W) };
+    case 'egg': {   // narrower at the top, like a real egg
+      const g = sphere(1, 16, 12), p = g.attributes.position;
+      for (let i = 0; i < p.count; i++) { const y = p.getY(i) * 0.47, k = 0.36 * (1 - 0.16 * Math.max(0, y / 0.47)); p.setXYZ(i, p.getX(i) * k, y, p.getZ(i) * k); }
+      g.computeVertexNormals(); return { geo: painted(g, W) };
+    }
+    case 'bean': { const g = new THREE.CapsuleGeometry(0.2, 0.34, 4, 10); g.rotateZ(Math.PI / 2); g.scale(1, 1, 0.85); return { geo: painted(g, W) }; }
+    case 'corn': {   // yellow base, orange middle, white tip
+      const g = new THREE.ConeGeometry(0.4, 0.8, 14, 16);
+      return { geo: painted(g, (x, y) => (y < -0.13 ? [1, 0.6, 0.02] : y < 0.14 ? [0.98, 0.3, 0.02] : [1, 1, 0.95])) };
+    }
+    case 'token': return { geo: painted(new THREE.CylinderGeometry(0.45, 0.45, 0.16, 6), W), capMap: tokenTex() };
+    case 'die': {
+      const g = new THREE.BoxGeometry(0.6, 0.6, 0.6), uv = g.attributes.uv;
+      for (let i = 0; i < uv.count; i++) uv.setX(i, (Math.floor(i / 4) + uv.getX(i)) / 6);   // 4 verts per face, faces in +x -x +y -y +z -z order
+      return { geo: painted(g, W), map: dieTex() };
+    }
+    case 'brick': {
+      const parts = [painted(new THREE.BoxGeometry(0.96, 0.38, 0.48), W)];
+      for (const sx of [-0.36, -0.12, 0.12, 0.36]) for (const sz of [-0.12, 0.12]) { const s = new THREE.CylinderGeometry(0.09, 0.09, 0.09, 10); s.translate(sx, 0.23, sz); parts.push(painted(s, [0.94, 0.94, 0.94])); }
+      return { geo: merge(parts) };
+    }
+    case 'duck': {
+      const body = sphere(1, 16, 12); body.scale(0.45, 0.32, 0.33); body.translate(0, -0.02, 0);
+      const tail = new THREE.ConeGeometry(0.15, 0.3, 8); tail.rotateZ(0.95); tail.translate(-0.4, 0.14, 0);
+      const head = sphere(0.23, 14, 10); head.translate(0.2, 0.36, 0);
+      const beak = sphere(0.12, 10, 6); beak.scale(1.3, 0.45, 1); beak.translate(0.43, 0.32, 0);
+      const eyes = [-1, 1].map(s => { const e = sphere(0.04, 6, 4); e.translate(0.36, 0.43, s * 0.12); return painted(e, [0.05, 0.05, 0.06]); });
+      return { geo: merge([painted(body, W), painted(tail, W), painted(head, W), painted(beak, [1, 0.42, 0.06]), ...eyes]) };
+    }
+    case 'sweet': {   // a round sweet with a twisted wrapper at each end
+      const mid = sphere(1, 14, 10); mid.scale(0.3, 0.25, 0.25);
+      const ends = [-1, 1].map(s => { const c = new THREE.ConeGeometry(0.17, 0.24, 8); c.rotateZ(s * Math.PI / 2); c.translate(s * 0.36, 0, 0); return painted(c, W); });
+      return { geo: merge([painted(mid, [0.78, 0.78, 0.78]), ...ends]) };
+    }
+    default: return { geo: painted(sphere(0.42, 18, 12), W) };   // gumball
   }
 }
 function jarDims(type) {
-  const H = type === 'box' ? 5.2 : type === 'beaker' ? 6.6 : 6, R = type === 'box' ? 2.6 : type === 'beaker' ? 2.7 : 3;
-  return { type, H, Hv: H, R, top: type === 'beaker' ? R * 1.18 : R };
+  const j = JARS[type];
+  return { type, ...j, Hv: j.H, ext: j.rect ? Math.hypot(j.Rx, j.Rz) * 1.08 : Math.max(j.R, j.top) * 1.45 };
 }
-// visual only; the physics walls are in sim.js. Hv can grow past H when a big pile heaps above the rim, so every
-// counted item is always inside the drawn glass.
+// visual only; the physics walls are in sim.js (same R / top / Rx / Rz / H). Hv can grow past H when a big pile heaps
+// above the rim (the physics walls carry on straight up), so every counted item is always inside the drawn glass.
+function ring(y, r, mat) {
+  const pts = Array.from({ length: 65 }, (_, i) => new THREE.Vector3(Math.cos(i / 64 * Math.PI * 2) * r, y, Math.sin(i / 64 * Math.PI * 2) * r));
+  return new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), mat);
+}
 function buildJarVisual(accent) {
   if (jarGroup) { scene.remove(jarGroup); jarGroup.traverse(o => { o.geometry?.dispose(); o.material?.dispose(); }); }
   jarGroup = new THREE.Group();
   const glass = new THREE.MeshLambertMaterial({ color: 0xffffff, transparent: true, opacity: 0.07, side: THREE.DoubleSide, depthWrite: false });
   const edge = new THREE.LineBasicMaterial({ color: new THREE.Color(accent).lerp(new THREE.Color('#ffffff'), 0.55) });
-  const { type, Hv: H, R, top } = dims;
-  if (type === 'box') {
-    const g = new THREE.BoxGeometry(R * 2, H, R * 2); g.translate(0, H / 2, 0);
+  const d = dims, Hv = d.Hv;
+  if (d.rect) {
+    const g = new THREE.BoxGeometry(d.Rx * 2, Hv, d.Rz * 2); g.translate(0, Hv / 2, 0);
     jarGroup.add(new THREE.Mesh(g, glass), new THREE.LineSegments(new THREE.EdgesGeometry(g), edge));
+    if (d.type === 'tank') {   // dark base and a lip around the top, so it reads as an aquarium
+      const base = new THREE.Mesh(new THREE.BoxGeometry(d.Rx * 2 + 0.3, 0.3, d.Rz * 2 + 0.3), new THREE.MeshLambertMaterial({ color: 0x1b1b26 }));
+      base.position.y = -0.15;
+      const lip = new THREE.BoxGeometry(d.Rx * 2 + 0.16, 0.14, d.Rz * 2 + 0.16); lip.translate(0, Hv, 0);
+      jarGroup.add(base, new THREE.LineSegments(new THREE.EdgesGeometry(lip), edge));
+    }
   } else {
-    const g = new THREE.CylinderGeometry(top, R, H, 48, 1, true); g.translate(0, H / 2, 0);
-    jarGroup.add(new THREE.Mesh(g, glass));
-    for (const [y, r] of [[0.02, R], [H, top]]) {
-      const pts = Array.from({ length: 65 }, (_, i) => new THREE.Vector3(Math.cos(i / 64 * Math.PI * 2) * r, y, Math.sin(i / 64 * Math.PI * 2) * r));
-      jarGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), edge));
+    // side profile: bottom radius R -> rim radius `top` at H, then straight up if the pile heaped above the rim
+    const prof = [new THREE.Vector2(d.R, 0), new THREE.Vector2(d.top, d.H)];
+    if (Hv > d.H + 0.01) prof.push(new THREE.Vector2(d.top, Hv));
+    if (d.type === 'vase') prof.push(new THREE.Vector2(d.top + 0.35, Hv + 0.25));   // flared lip
+    jarGroup.add(new THREE.Mesh(new THREE.LatheGeometry(prof, 48), glass));
+    const rimR = prof[prof.length - 1].x, rimY = prof[prof.length - 1].y;
+    jarGroup.add(ring(0.02, d.R, edge), ring(rimY, rimR, edge));
+    if (d.type === 'bowl') jarGroup.add(ring(0.02, d.R * 0.7, edge));
+    if (d.handle) {   // glass mug handle on the +x side
+      const h = new THREE.TorusGeometry(Math.min(1.25, d.H * 0.27), 0.2, 10, 28, Math.PI); h.rotateZ(-Math.PI / 2); h.translate(d.R, d.H * 0.5, 0);
+      jarGroup.add(new THREE.Mesh(h, new THREE.MeshLambertMaterial({ color: 0xffffff, emissive: 0x2a2a34, transparent: true, opacity: 0.2, depthWrite: false })));
     }
   }
   jarGroup.renderOrder = 1;
@@ -181,24 +281,32 @@ function newJar(cfg) {
   document.documentElement.style.setProperty('--accent', cfg.accent);
   dims = jarDims(cfg.jar);
   buildJarVisual(cfg.accent);
-  if (mesh) { scene.remove(mesh); mesh.geometry.dispose(); mesh.material.dispose(); mesh.dispose(); }
-  const mat = new THREE.MeshStandardMaterial({ roughness: 0.4, metalness: 0, emissive: new THREE.Color(cfg.accent), emissiveIntensity: 0.12 });
-  mesh = new THREE.InstancedMesh(geometryFor(cfg.kind), mat, Math.max(1, cfg.max));
+  if (mesh) { scene.remove(mesh); mesh.geometry.dispose(); [].concat(mesh.material).forEach(m => m.dispose()); mesh.dispose(); }
+  const item = ITEMS[cfg.kind], model = itemModel(cfg.kind);
+  const matOf = map => new THREE.MeshStandardMaterial({ roughness: item.rough, metalness: item.metal, vertexColors: true, map: map || null, emissive: new THREE.Color(cfg.accent), emissiveIntensity: 0.04 });
+  // tokens: plain metal rim, embossed star on both faces (cylinder groups: 0 side, 1 top, 2 bottom)
+  const mat = model.capMap ? [matOf(null), matOf(model.capMap), matOf(model.capMap)] : matOf(model.map);
+  mesh = new THREE.InstancedMesh(model.geo, mat, Math.max(1, cfg.max));
+  if (model.capMap) { const g = mesh.geometry; g.clearGroups(); const per = g.attributes.position.count; const side = 6 * 6; g.addGroup(0, side, 0); g.addGroup(side, (per - side) / 2, 1); g.addGroup(side + (per - side) / 2, (per - side) / 2, 2); }
   // The default bounding sphere is computed once, from whatever instances existed on the first frame (often none),
   // and never updated; three then culls the whole pile whenever that stale sphere leaves the view. That was the
   // "jar empties when I rotate it / my friend never saw anything" bug. The pile is always on screen, so no culling.
   mesh.frustumCulled = false;
   mesh.count = 0;
   palette.length = 0;
-  const base = new THREE.Color(cfg.accent), white = new THREE.Color('#ffffff');
-  for (let i = 0; i < mesh.instanceMatrix.count; i++) { const c = base.clone().lerp(white, 0.25 + cfg.rand() * 0.6); palette.push(c); mesh.setColorAt(i, c); }
+  // real colours per item (a few shades of each), picked from the jar's own seeded rng
+  const cols = item.colors.map(h => new THREE.Color(h));
+  for (let i = 0; i < mesh.instanceMatrix.count; i++) {
+    const c = cols[Math.floor(cfg.rand() * cols.length)].clone().offsetHSL(0, 0, (cfg.rand() - 0.5) * 0.06);
+    palette.push(c); mesh.setColorAt(i, c);
+  }
   scene.add(mesh);
   spawned = 0; latest = null; applied = null; pouring = false;
   fitCamera(true);
   phase = 'dropping';
   gen++;
   lastStart = {
-    gen, jar: cfg.jar, kind: cfg.kind, R: dims.R, H: dims.H, top: dims.top, fill: !!cfg.fill,
+    gen, jar: cfg.jar, kind: cfg.kind, H: dims.H, R: dims.R, top: dims.top, rect: !!dims.rect, Rx: dims.Rx, Rz: dims.Rz, fill: !!cfg.fill,
     count: cfg.fill ? 0 : cfg.count, max: cfg.max, seed: Math.floor(cfg.rand() * 4294967296),
     spawnRate: Math.max(1, cfg.count / (reduce ? 50 : 140)), pourRate: Math.max(8, (cfg.target || 0) / 4), fast: document.hidden,
   };
@@ -230,7 +338,7 @@ function loop(now) {
   if (!contextLost) renderer.render(scene, camera);
   if (DEBUG) document.title = `${phase} ${spawned}/${spec?.count} ${Math.ceil(timeLeft)}`;
 }
-if (DEBUG) window.__jarful = () => ({ phase, shown: mesh?.count ?? 0, count: spec?.count, inJar: latest?.frozen ? latest.n : null, removed: latest?.removed ?? 0, topY: latest?.topY, jarH: dims?.Hv, worker: !!worker, frustumCulled: mesh?.frustumCulled, dpr: renderer.getPixelRatio(), steps: latest?.steps, calls: renderer.info.render.calls, tris: renderer.info.render.triangles });
+if (DEBUG) window.__jarful = () => ({ phase, kind: spec?.kind, jar: spec?.jar, Hv: dims?.Hv, shown: mesh?.count ?? 0, count: spec?.count, inJar: latest?.frozen ? latest.n : null, removed: latest?.removed ?? 0, topY: latest?.topY, jarH: dims?.Hv, worker: !!worker, frustumCulled: mesh?.frustumCulled, dpr: renderer.getPixelRatio(), steps: latest?.steps, calls: renderer.info.render.calls, tris: renderer.info.render.triangles });
 resize();
 requestAnimationFrame(loop);
 
@@ -239,8 +347,15 @@ let mode = 'daily', round = 0, results = [], streak = 0, dailyDone = null;
 const today = BP.today(), dayNo = BP.dayNumber('2026-09-15');
 function cfgFor(rand, i, fill = false) {
   const ranges = [[12, 40], [30, 80], [50, 140], [80, 220], [120, 300]][Math.min(i, 4)];
-  const count = Math.round(ranges[0] + rand() * (ranges[1] - ranges[0]));
-  return { rand, count, max: fill ? 320 : count, kind: KINDS[Math.floor(rand() * KINDS.length)], jar: JARS[Math.floor(rand() * JARS.length)], accent: ACCENTS[i % ACCENTS.length], timed: true, fill };
+  let count = Math.round(ranges[0] + rand() * (ranges[1] - ranges[0]));
+  let kind = KINDS[Math.floor(rand() * KINDS.length)], jar = JAR_TYPES[Math.floor(rand() * JAR_TYPES.length)];
+  if (DEBUG) { const q = new URLSearchParams(location.search); if (ITEMS[q.get('kind')]) kind = q.get('kind'); if (JARS[q.get('jar')]) jar = q.get('jar'); }
+  // big things in a small container: keep the pile around the rim instead of a mountain (or a capped stream)
+  const cap = capacity(jar, kind), r2 = rand();
+  if (count > cap * 0.9) count = Math.round(cap * (0.55 + 0.35 * r2));
+  count = Math.max(5, Math.min(MAX_BODIES, count));
+  const max = fill ? Math.min(320, Math.max(count + 30, Math.ceil(cap * 1.15))) : count;
+  return { rand, count, max, kind, jar, accent: ACCENTS[i % ACCENTS.length], timed: true, fill };
 }
 const score = (g, a) => (g > 0 && a > 0 ? Math.round(100 * Math.exp(-4 * Math.abs(Math.log(g / a)))) : 0);
 const react = s => (s >= 95 ? 'Bang on!' : s >= 80 ? 'So close.' : s >= 55 ? 'Not bad.' : s >= 25 ? 'Ballpark-ish.' : 'Way off!');
@@ -281,7 +396,7 @@ function renderControls(state) {
   const c = $('#controls'), ask = $('#ask'), hint = $('#hint');
   $('#timer').textContent = mode === 'fill' ? '' : ':15';
   $('#timer').classList.remove('low');
-  if (state === 'dropping') { ask.textContent = 'HOW MANY?'; c.innerHTML = `<div class="stepper"><button disabled>−</button><input id="g" disabled placeholder="…"><button disabled>+</button></div><button class="submit" disabled>DROPPING…</button>`; hint.textContent = 'watch them fall'; return; }
+  if (state === 'dropping') { ask.textContent = `HOW MANY ${ITEMS[spec.kind].name.toUpperCase()}?`; c.innerHTML = `<div class="stepper"><button disabled>−</button><input id="g" disabled placeholder="…"><button disabled>+</button></div><button class="submit" disabled>DROPPING…</button>`; hint.textContent = `watch the ${ITEMS[spec.kind].name} fall into the ${JARS[spec.jar].name}`; return; }
   if (mode === 'overunder') {
     ask.textContent = `MORE OR FEWER THAN ${spec.line}?`;
     c.innerHTML = `<div class="target">${spec.line}</div><div class="pair"><button id="under">FEWER ${ICON.down}</button><button id="over" class="solid">MORE ${ICON.up}</button></div>`;
@@ -290,7 +405,7 @@ function renderControls(state) {
     return;
   }
   if (mode === 'fill') {
-    ask.textContent = 'FILL TO:';
+    ask.textContent = `FILL WITH ${ITEMS[spec.kind].name.toUpperCase()} TO:`;
     c.innerHTML = `<div class="target">${spec.target}</div><div class="pair"><button id="hold">HOLD TO POUR</button><button id="done" class="solid">SUBMIT</button></div>`;
     $('#hold').addEventListener('pointerdown', e => { e.preventDefault(); setPouring(true); });
     $('#hold').addEventListener('pointerleave', () => setPouring(false));
@@ -298,7 +413,7 @@ function renderControls(state) {
     hint.textContent = 'hold the button (or Space), release, then submit';
     return;
   }
-  ask.textContent = 'HOW MANY?';
+  ask.textContent = `HOW MANY ${ITEMS[spec.kind].name.toUpperCase()}?`;
   c.innerHTML = `<div class="stepper"><button id="minus">−</button><input id="g" inputmode="numeric" autocomplete="off" aria-label="Your guess"><button id="plus">+</button></div><button id="sub" class="submit">SUBMIT</button>`;
   const g = $('#g');
   const bump = d => { g.value = Math.max(0, (parseInt(g.value) || 0) + d); };
@@ -333,7 +448,7 @@ function scoreRound(guess) {
     const n = mode === 'daily' || isFill ? 5 : 0;
     const last = n && results.length >= n;
     showOverlay(`<div><div class="k">${isFill ? 'YOU POURED' : 'THERE WERE'}</div><div class="big">${actual}</div>
-      <div class="sub">${isFill ? `target ${spec.target}` : `you said ${guess || '—'}`} · ${react(pts)}</div><div class="pts">+${pts} pts</div>
+      <div class="sub">${ITEMS[spec.kind].name} · ${isFill ? `target ${spec.target}` : `you said ${guess || '—'}`} · ${react(pts)}</div><div class="pts">+${pts} pts</div>
       <button class="go" id="next">${last ? 'SEE TOTAL' : `NEXT JAR ${ICON.next}`}</button></div>`);
     $('#next').onclick = () => { round++; if (last) finish(); else nextRound(); };
     $('#next').focus();
@@ -346,7 +461,7 @@ function overUnder(more) {
     const ok = more ? spec.count > spec.line : spec.count < spec.line;
     if (ok) { streak++; if (streak > store.get('bestStreak', 0)) store.set('bestStreak', streak); }
     chime(ok ? 100 : 0);
-    showOverlay(`<div><div class="k">THERE WERE</div><div class="big">${spec.count}</div><div class="sub">${ok ? `Correct — streak ${streak}` : `Nope. Streak ended at ${streak}.`}</div>
+    showOverlay(`<div><div class="k">THERE WERE</div><div class="big">${spec.count}</div><div class="sub">${ITEMS[spec.kind].name} · ${ok ? `Correct — streak ${streak}` : `Nope. Streak ended at ${streak}.`}</div>
       <button class="go" id="next">${ok ? `NEXT JAR ${ICON.next}` : 'TRY AGAIN'}</button></div>`);
     if (!ok) streak = 0;
     $('#next').onclick = () => nextRound();
@@ -357,7 +472,7 @@ function overUnder(more) {
 function countUp(done) {
   const total = Math.min(spec.count, mesh.count), start = performance.now(), dur = reduce ? 300 : 2200;
   showOverlay(`<div><div class="k">COUNTING</div><div class="big" id="cnt">0</div></div>`);
-  const hi = new THREE.Color('#ffffff');
+  const hi = new THREE.Color(ITEMS[spec.kind].light ? spec.accent : '#ffffff');   // white things light up in the accent
   let shownN = 0, ended = false;
   const step = () => {
     if (ended) return;

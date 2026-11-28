@@ -16,6 +16,7 @@
       <button data-mode="classic" class="on" role="tab">Classic</button>
       <button data-mode="rush" role="tab">Rush · 60s</button>
       <button data-mode="daily" role="tab">Daily</button>
+      <button data-mode="shades" role="tab">Shades</button>
     </nav>
   </header>
 
@@ -26,6 +27,7 @@
       <span id="hudRight">Best <b id="best">0</b></span>
     </div>
     <div id="grid" class="grid" aria-label="Color blocks"></div>
+    <div id="strip" class="strip" aria-label="Shade strip" hidden></div>
     <p id="msg" class="msg">Tap the block that's different.</p>
     <div id="over" class="over" hidden>
       <p id="overTitle" class="over-title"></p>
@@ -41,6 +43,7 @@
     <p><b>Classic</b> — one wrong tap ends the run. Blocks get closer in colour as you go.</p>
     <p><b>Rush</b> — 60 seconds, the grid grows, a wrong tap costs 3 seconds.</p>
     <p><b>Daily</b> — a fresh set of colours each day. Only your first run counts.</p>
+    <p><b>Shades</b> — drag the tiles (or tap two to swap) into a smooth fade between the two pinned ends. Each sorted strip adds time; strips get longer and closer.</p>
   </section>
 </main>
 <div id="toast" class="toast" hidden></div>

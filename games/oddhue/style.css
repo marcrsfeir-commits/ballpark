@@ -47,3 +47,26 @@ h1 { margin: 0; font-size: 44px; font-weight: 800; letter-spacing: -.02em; }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 .grid button { overflow: hidden; background: none; }
 .grid button canvas { display: block; width: 100%; height: 100%; pointer-events: none; }
+[hidden] { display: none !important; }
+
+/* ---------- Shades mode: a strip of tiles you sort into a smooth fade ---------- */
+.strip { display: grid; gap: 8px; margin: 0 auto; width: min(100%, 420px); height: 260px; transition: gap .35s ease; }
+.strip button { position: relative; border: 0; padding: 0; min-width: 0; border-radius: 10px; overflow: hidden; background: none; cursor: grab;
+  touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;
+  transition: transform .22s cubic-bezier(.2,.8,.3,1), box-shadow .15s, border-radius .35s; outline-offset: 3px; }
+.strip button canvas { display: block; width: 100%; height: 100%; pointer-events: none; }
+.strip button.pin { cursor: default; }
+.strip button.pin::after { content: ''; position: absolute; left: 50%; bottom: 12px; width: 8px; height: 8px; margin-left: -4px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 2px rgba(0,0,0,.22); }
+.strip button.sel { transform: translateY(-10px); box-shadow: 0 0 0 3px #fff, 0 0 0 6px var(--accent); }
+.strip button.dragging { transition: box-shadow .15s; z-index: 2; cursor: grabbing; box-shadow: 0 14px 28px rgba(0,0,0,.25); }
+.strip.instant button { transition: none; }
+.strip.solved, .strip.reveal { gap: 0; }
+.strip.solved button, .strip.reveal button { border-radius: 0; cursor: default; }
+.strip.solved button:first-child, .strip.reveal button:first-child { border-radius: 10px 0 0 10px; }
+.strip.solved button:last-child, .strip.reveal button:last-child { border-radius: 0 10px 10px 0; }
+.strip.solved { animation: glow .75s ease; }
+@keyframes glow { 40% { transform: scale(1.025); } }
+.strip.pop { animation: pop .18s ease; }
+.strip.solved.pop { animation: glow .75s ease; }
+@media (max-width: 420px) { .strip { height: 220px; gap: 6px; } .modes button { padding: 8px 11px; } }
+@media (prefers-reduced-motion: reduce) { .strip button { transition: none !important; } }

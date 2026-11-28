@@ -1,15 +1,18 @@
 # TO SCALE: turn the side-profile cut-out photos (games/toscale/photos/<id>.webp) into crisp silhouette masks
 # (games/toscale/sil/<id>.png, white on transparent; the game tints them). Hardens the alpha, drops specks, trims.
-#   python tools/toscale-sil.py            (needs Pillow, numpy, scipy)
-import os, glob
+#   python tools/toscale-sil.py [id ...]   (needs Pillow, numpy, scipy; with ids, only those are rebuilt)
+import os, sys, glob
 import numpy as np
 from PIL import Image
 from scipy import ndimage
 
 root = os.path.join(os.path.dirname(__file__), '..', 'games', 'toscale')
 os.makedirs(os.path.join(root, 'sil'), exist_ok=True)
+only = set(sys.argv[1:])
 for p in sorted(glob.glob(os.path.join(root, 'photos', '*.webp'))):
     id = os.path.basename(p)[:-5]
+    if only and id not in only:
+        continue
     a = np.array(Image.open(p).convert('RGBA'))[..., 3] > 128
     lab, n = ndimage.label(a)
     if n:
