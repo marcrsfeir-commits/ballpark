@@ -95,3 +95,11 @@ One verified improvement per run (scheduled task `ballpark-daily`). Sundays = a 
 - Big Spender / Been There: content counts — check if they run out fast (or add more content if played fast).
 - FAIR SHARE: a "two cuts into thirds" round, a weekly hard mode.
 - Performance tuning on other games if measured framerate drops.
+
+## 2026-11-28 (Sat, with Marc) — Favourites update (5 changes)
+- Marc's favourites are KRILLDIVE, To Scale, Jarful (then Napkin, Odd Hue, SANDLOT, DOWNHILL). Trolley Trouble and Big Spender are fillers: don't spend runs on them.
+- KRILLDIVE: Pokemon pack (21 prompts, 2,380 answers) and Minecraft pack (21 prompts, 1,419 answers), both 0 validator errors, emblems in sprites.js. 45 packs total.
+- To Scale: 29 new objects (86 -> 115) with rembg silhouettes and credits, 14 new curated pairs (16 -> 30). toscale-sil.py takes optional ids.
+- Jarful: catalog.js with 11 item types x 7 containers; plane walls stop items escaping (was ~1 in 96 big pours).
+- Odd Hue: Shades mode (drag tiles into a smooth fade, timer, best score saved as best.shades).
+- Verified: hub + 6 games at 1280 and 375 wide: 0 errors, no horizontal scroll.
