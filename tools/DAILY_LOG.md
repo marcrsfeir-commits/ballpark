@@ -80,12 +80,18 @@ One verified improvement per run (scheduled task `ballpark-daily`). Sundays = a 
 - Verified (puppeteer, desktop 1280×860 + mobile 375×812): full game play (guessed $5M on result), 0 console errors, correct bid validation, no horizontal scroll on either layout. Screenshots looked right.
 - Version: ffb4a6b (now 82 lots).
 
+## 2026-11-28 (Fri) — HUB: Changelog notes in UPDATED badge tooltips
+- Added optional `notes` field to version.json (preserved across builds by modified build-sw.mjs)
+- Modified hub.js badgeFor() to include notes in UPDATED badge title attributes (browser default tooltip on hover)
+- Added notes for recent game updates: DOWNHILL ("All emoji replaced with drawn icons"), FAIRSHARE ("Added donut and pizza shapes"), AUCTION ("15 new real auction lots added"), BIG SPENDER ("12 new luxury items")
+- Encourages players to revisit games by showing what's new/improved
+- Performance verified: DOWNHILL and SKYLANE both pass headless Chrome test with CPU throttle 6x on desktop (1280×860) and mobile (375×812) — 0 console errors, smooth gameplay
+- Version: 09591fa.
+
 ## Ideas backlog (updated)
 - Going Once: more lots can be added with Wikimedia photos + credits (consider a future photo-expansion sprint).
 - Trolley Trouble: a few new levels use loose photos (the "bed" photo is a whole old bedroom); swap for better Wikimedia shots if any turn up.
 - Circle Up / Odd Hue: check phone feel and a daily leaderboard-ish streak in the hub.
-- Hub: a short "what changed" line per game (e.g. a `notes` map in version.json set by the daily run) shown as the UPDATED pill's tooltip / under the blurb.
-- Big Spender / Been There: content counts — check if they run out fast.
-- Performance pass on DOWNHILL / SKYLANE with CPU throttle 6. (Both already auto-drop quality below 32 fps, so check measured fps first.)
+- Big Spender / Been There: content counts — check if they run out fast (or add more content if played fast).
 - FAIR SHARE: a "two cuts into thirds" round, a weekly hard mode.
-- A tiny `tools/check-emoji.mjs` (or a check inside build-sw) that fails on emoji in text files, so the rule can't regress.
+- Performance tuning on other games if measured framerate drops.
