@@ -53,6 +53,8 @@ for (const id of fs.readdirSync(path.join(root, 'games')).sort()) {
     try { d = execSync(`git log -1 --format=%cs -- games/${id}`, { cwd: root, encoding: 'utf8' }).trim() || day; } catch { /* no git */ }
   }
   games[id] = { h: hex, d };
+  // preserve optional changelog notes across builds (e.g., "New features" or "Bug fixes")
+  if (prev[id] && prev[id].n) games[id].n = prev[id].n;
 }
 fs.writeFileSync(path.join(root, 'version.json'), JSON.stringify({ v: version.slice(9, 16), built: `${now.getFullYear()}.${pad(now.getMonth() + 1)}.${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`, games }));
 const bytes = files.reduce((s, f) => s + fs.statSync(path.join(root, f)).size, 0);

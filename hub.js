@@ -148,7 +148,11 @@ function badgeFor(id) {
   const b = builds && builds[id], seen = read(SEEN, null);
   if (!b || !seen) return '';
   if (!(id in seen)) return `<span class="fresh new" title="New game">NEW</span>`;
-  if (seen[id] !== b.h) return `<span class="fresh" title="Changed on ${fmtDay(b.d)} since you last played">UPDATED ${fmtDay(b.d)}</span>`;
+  if (seen[id] !== b.h) {
+    const note = b.n ? ` · ${b.n}` : '';
+    const title = `Changed on ${fmtDay(b.d)} since you last played${note}`;
+    return `<span class="fresh" title="${title}">UPDATED ${fmtDay(b.d)}</span>`;
+  }
   return '';
 }
 function markSeen(id) {
